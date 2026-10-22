@@ -1,0 +1,35 @@
+name: Spike - remote D1 features
+
+# Manual only. Creates a throwaway D1 database, runs scripts/spikes/d1-features.sql
+# against it, prints every result, then deletes the database. Never touches netmate-db.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  d1-features:
+    name: Remote D1 feature check
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      DB_NAME: netmate-spike-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - name: Create throwaway database
+        run: bunx wrangler d1 create "$DB_NAME" --location apac
+      - name: Run feature checks
+        run: node scripts/spikes/run-d1-spike.mjs "$DB_NAME"
+      - name: Delete throwaway database
+        if: always()
+        run: bunx wrangler d1 delete "$DB_NAME" -y
