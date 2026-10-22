@@ -9,6 +9,13 @@ if [ "${REF:-}" = "refs/heads/main" ]; then
   exit 0
 fi
 
+case "${REF:-}" in
+  refs/heads/release-please--*|refs/heads/dependabot/*)
+    echo "Bot branch (${REF}): bots cannot sign off. A maintainer reviews the PR. Skipping."
+    exit 0
+    ;;
+esac
+
 zero="0000000000000000000000000000000000000000"
 if [ -z "${BEFORE:-}" ] || [ "$BEFORE" = "$zero" ]; then
   git fetch --no-tags --quiet origin main || true

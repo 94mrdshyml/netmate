@@ -1,0 +1,31 @@
+name: Bug report
+description: Something does not work as the PRD says it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problem? Do not file it here. See SECURITY.md.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you saw. Screenshots help.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag or commit hash of your instance
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      description: For example iPhone Safari 19, Pixel Chrome 140

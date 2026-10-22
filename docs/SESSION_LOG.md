@@ -25,6 +25,15 @@ Append-only. One entry per session, newest last. Read only the last 2 entries at
 - Decisions: `glob` overridden to 10.5.0 to clear an advisory. One advisory (braces, GHSA-vfj7-8cjw-p6xm) has no patched release and reaches us only through the ESLint plugin, so the CI audit ignores that single id (comment in ci.yml says to remove it once fixed). Vitest config is `.mts` (the repo is CommonJS by default).
 - Open: owner must put `CLOUDFLARE_API_TOKEN` in `.env` and add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub secrets before the deploy job can pass. No a11y or theme tests yet (no UI to test).
 - Next: watch CI on the PR, merge order #2 then this one, then spikes 2 and 3 on remote D1.
+- Outcome: merged as PR #4 (the stacked PR #3 had merged into the scaffold branch after #2, so #4 carried it to main). First deploy to Cloudflare worked: https://netmate.mridu.workers.dev reports D1 and R2 ok; `netmate-db` and `netmate-media` created. Lesson: do not stack PRs; `gh run watch` and run-level status can lie, poll job statuses.
+
+## 03. Open-source foundation (2026-10-22)
+- Branch / PR: chore/oss-foundation
+- Done: AGPL-3.0 `LICENSE`, `README`, `CONTRIBUTING` (DCO), Contributor Covenant 2.1 `CODE_OF_CONDUCT` (contact = private report via the Security tab / owner's GitHub profile), `SECURITY`, `TRADEMARK`, issue and PR templates, `CODEOWNERS`, Dependabot (bun + actions), release-please workflow and config (starts at 0.0.0, pre-1.0 minor bumps), PR-title check for Conventional Commits. DCO script now skips release-please and dependabot branches (bots cannot sign off). `package.json` repository fields.
+- Tests: lint and typecheck pass; CI result in the PR.
+- Decisions: none new.
+- Open: owner enables branch protection on `main` (PR, green checks, squash only, no force-push) and, in Settings > Actions > General, allows Actions to create PRs for release-please. GitHub Actions PRs made with the default token do not trigger CI; if release PRs need checks, add a PAT later. The deploy button only works once the repo is public. Enable private vulnerability reporting in Security settings.
+- Next: spike 2 (Better Auth on D1).
 
 ## 04. Spike 2: Better Auth on D1 (2026-10-22)
 - Branch / PR: chore/spike-better-auth

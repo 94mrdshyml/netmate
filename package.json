@@ -47,5 +47,13 @@
   },
   "overrides": {
     "glob": "10.5.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/94mrdshyml/netmate.git"
+  },
+  "bugs": {
+    "url": "https://github.com/94mrdshyml/netmate/issues"
+  },
+  "homepage": "https://github.com/94mrdshyml/netmate#readme"
 }
