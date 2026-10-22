@@ -59,3 +59,11 @@ Append-only. One entry per session, newest last. Read only the last 2 entries at
 - Decisions: ids are random, not time-ordered, so ordering uses the time column and cursors stay `(milliseconds, id)`. Invite link codes will be a separate longer random value, not an id. No data migration needed: no users exist yet.
 - Open: none.
 - Next: spike 3 on remote D1, then the schema (instance, profiles, invites) and theme tokens.
+
+## 07. Replace release-please with manual releases (2026-10-22)
+- Branch / PR: ci/manual-releases
+- Done: the first Release run after the ids PR opened release PR #20 "release 1.0.0" (release-please defaults a first release to 1.0.0 because `initial-version` was not set; the manifest's 0.0.0 had no matching tag). It was merged, which created release and tag v1.0.0 and set package.json to 1.0.0. The next Release run then failed again with a GitHub GraphQL error. Owner decisions: delete v1.0.0 (done with `gh release delete --cleanup-tag`) and replace release-please with manual releases. Removed the release-please workflow, config, manifest and CHANGELOG.md; package.json back to 0.0.0; new `.github/workflows/release.yml` (workflow_dispatch with a version, from main only, requires a green CI run on that commit, creates the tag and a GitHub Release with generated notes, 0.x marked pre-release). PRD section 14 and decision 17, CONTRIBUTING (Releases) and CLAUDE.md updated.
+- Tests: lint and typecheck pass; the Release workflow itself can only be run after merge to main (GitHub only dispatches workflows that exist on the default branch).
+- Decisions: tag is the version, package.json stays 0.0.0. Contributors never bump versions.
+- Open: PR #21 (spike 3 workflow) is independent and still waiting for merge. No release has been cut yet; first intended one is 0.1.0 after the setup flow works.
+- Next: run the spike 3 workflow after #21 merges, then the schema and theme tokens.

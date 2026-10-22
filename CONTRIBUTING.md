@@ -46,6 +46,10 @@ Trunk-based. `main` is protected and always deployable.
 
 Never skip or weaken a test, a lint rule or a size limit to get green. If a check is wrong, say so in the PR.
 
+## Releases
+
+Maintainers cut releases by hand. In **Actions > Release > Run workflow**, choose `main` and enter a version such as `0.1.0`. The workflow checks that CI is green on that commit, creates the tag and a GitHub Release, and GitHub writes the notes from the merged PR titles, which is why titles must be Conventional Commits. Versions below 1.0 are marked as pre-releases. Contributors do not bump versions.
+
 ## Database changes
 
 Migrations are **forward-only** and must be safe to run on an instance at any older version: add first, remove in a later release (expand, then contract). CI applies them from empty and from the previous release.
