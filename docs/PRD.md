@@ -527,7 +527,7 @@ Worker "netmate"  ── Next.js 16 via @opennextjs/cloudflare
 - **Cron.** One daily trigger deletes analytics view/tap rows older than 60 days and old `rate_hits`.
 - **Upgrades.** Instances upgrade by pulling a release and redeploying. Migrations are forward-only and safe on any older instance (expand, then contract across releases).
 - **Backups.** Documented D1 export/Time Travel guidance. Virtual (FTS) tables are dropped before export and rebuilt after import.
-- **Local dev.** `wrangler dev` with local D1 and R2; `wrangler d1 migrations`. pnpm is the package manager.
+- **Local dev.** `wrangler dev` with local D1 and R2; `wrangler d1 migrations`. Bun is the package manager and script runner (the app itself runs on Workers).
 
 ## 13. Security and privacy
 
@@ -648,7 +648,7 @@ Phases 4 to 6 can overlap once phase 2 is done. Phases 1 to 3 give the first usa
 | 12 | Repo | Single app plus `docs/` |
 | 13 | Search | Full-text index (FTS5) from the start |
 | 14 | Cloudflare extras | WAF and Turnstile optional after v1 |
-| 15 | Package manager | pnpm |
+| 15 | Package manager | Bun (changed from pnpm by the owner, 2026-10-22) |
 
 ## 19. Not in v1, and ideas
 
