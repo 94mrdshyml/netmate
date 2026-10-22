@@ -624,13 +624,13 @@ Phases 4 to 6 can overlap once phase 2 is done. Phases 1 to 3 give the first usa
 |---|---|---|
 | R1 | D1 has no interactive transactions; use `db.batch()` and SQL counters | Planned |
 | R2 | D1 limits: 100 bound values per query, 100 KB per statement, 10 GB database on Paid | Planned around |
-| R3 | `ln`, `pow`, window functions on D1 | Open (spike 3). Score is in TypeScript either way |
+| R3 | `ln`, `pow`, window functions on D1 | Passed on real D1 (spike 3, run 39818136641, 2026-10-22). The For you score is still computed in TypeScript by design |
 | R4 | OpenNext and Next 16: Node middleware unsupported | Edge `middleware.ts` or layout check. Open (spike 1) |
 | R5 | Better Auth on D1 with text ids; hashing fits CPU limit | Passed locally (spike 2, 2026-10-22): Better Auth 1.7.12 + Drizzle SQLite adapter work on D1 with UUID text ids, millisecond timestamps, cascade deletes, case-insensitive email, 8 to 128 password rule. Hashing took about 110 to 280 ms in local workerd, far over the 10 ms Free limit and far under the Paid 30 s limit, so Workers Paid stays required. Still to confirm: the migration on remote D1 (`unixepoch('subsecond')` defaults need SQLite 3.42 or newer) and timing on the live Worker. The Drizzle D1 adapter has no transactions, so sign-up (user row, then account row) is not atomic: a failure between them can leave a user without an account, handled in phase 2 |
 | R6 | Worker bundle size limit (10 MiB compressed on Paid) | Open |
 | R7 | Self-hosters on Workers Free will hit CPU and query limits | Document Paid as required; test on Paid |
 | R8 | Font fetch: Google Fonts API behaviour, OFL-only, file size | Open (spike 5) |
-| R9 | D1 export does not include virtual (FTS) tables; FTS5 trigram tokenizer availability; FTS triggers inside `db.batch()` | Open (spike 3). Index is rebuildable; backup guide covers it |
+| R9 | D1 export does not include virtual (FTS) tables; FTS5 trigram tokenizer availability; FTS triggers inside `db.batch()` | FTS5 with accent-insensitive prefix matching and triggers, and the `trigram` tokenizer, all run on real D1 (spike 3). Still open: D1 export of virtual tables (index stays rebuildable; backup guide covers it) and triggers inside `db.batch()` |
 | R10 | Link-preview fetcher can't pin resolved addresses on Workers | Open (spike 6). Fallback: feature off |
 | R11 | Migration safety across instances on different versions | Policy: expand then contract; CI checks upgrade from previous release |
 | R12 | Email deliverability depends on the admin verifying a sending domain | Document clearly; show Resend's errors |
@@ -639,7 +639,7 @@ Phases 4 to 6 can overlap once phase 2 is done. Phases 1 to 3 give the first usa
 | R15 | Invite abuse (leaked link, quota gaming) | Rate limits, revoke, approval past quota |
 | R16 | Losing `SETTINGS_ENCRYPTION_KEY` | Documented; recovery is re-entering keys |
 | R17 | Accessible colour derivation for any hex, both themes | Design and test in phase 1 |
-| R18 | Search over scripts without spaces (CJK) needs the trigram tokenizer | Open (spike 3) |
+| R18 | Search over scripts without spaces (CJK) needs the trigram tokenizer | Available on real D1 (spike 3). Decide in the search phase whether to index with `trigram` instead of or beside word-prefix matching |
 
 ## 18. Decisions log
 

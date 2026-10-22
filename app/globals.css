@@ -1,0 +1,30 @@
+/* Colours, radius and font come from the instance theme variables injected in the
+   page head (src/instance/theme.ts). Nothing here may hard-code a brand value. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* One centred phone-width column (docs/PRD.md section 2, rule 1). */
+.column {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+
+a {
+  color: var(--brand-text);
+}
