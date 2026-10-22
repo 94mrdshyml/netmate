@@ -15,7 +15,9 @@
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "vitest run --project unit",
+    "test:int": "vitest run --project int",
+    "test:e2e": "playwright test",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
@@ -26,6 +28,8 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.4.6",
+    "@playwright/test": "1.64.1",
     "@types/node": "26.6.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
@@ -34,5 +38,8 @@
     "typescript": "5.9.3",
     "vitest": "4.1.12",
     "wrangler": "4.151.3"
+  },
+  "overrides": {
+    "glob": "10.5.0"
   }
 }
