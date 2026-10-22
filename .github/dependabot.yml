@@ -1,18 +1,33 @@
 version: 2
 updates:
+  # App dependencies: minor and patch updates arrive as one weekly PR.
+  # Major versions are never proposed: CLAUDE.md says not to upgrade a major
+  # without asking, and several packages are pinned on purpose (TypeScript 5,
+  # ESLint 9, Vitest 4 for @cloudflare/vitest-plugin). A human opens a major
+  # upgrade deliberately.
   - package-ecosystem: bun
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
+        patterns: ["*"]
         update-types: [minor, patch]
+  # GitHub Actions: everything in one monthly PR, majors included, so a
+  # maintainer reviews them together.
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    open-pull-requests-limit: 2
     commit-message:
       prefix: "ci(deps)"
+    groups:
+      actions:
+        patterns: ["*"]
