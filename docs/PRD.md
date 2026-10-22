@@ -584,7 +584,7 @@ Worker "netmate"  ── Next.js 16 via @opennextjs/cloudflare
 
 - **Licence: AGPL-3.0.** Anyone can run it for any group, free. Anyone running a modified version for others must publish their changes.
 - **Name and logo** are covered by a short trademark note (`TRADEMARK.md`): forks may rebrand freely but may not pass as the official project.
-- **Contribution terms:** DCO (a `Signed-off-by` line on each commit), recommended over a CLA; see decisions log.
+- **Contribution terms:** DCO. Every commit carries a `Signed-off-by` line (`git commit -s`), enforced by a CI check. There is no CLA; contributors keep their copyright and their code is licensed AGPL-3.0.
 - **Root files:** `README.md` (what, screenshots, one-click deploy, plan requirements), `LICENSE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, `TRADEMARK.md`; `.github/` issue and PR templates, `CODEOWNERS`, Dependabot.
 - **Docs:** self-hosting guide (deploy, secrets, Resend, custom domain, media domain, backups, upgrading), admin guide (`/hq`), contributor guide (local setup, tests, architecture).
 - **Repo layout:** single app plus `docs/` (see `CLAUDE.md`).
@@ -641,7 +641,7 @@ Phases 4 to 6 can overlap once phase 2 is done. Phases 1 to 3 give the first usa
 | 5 | Licence | AGPL-3.0 |
 | 6 | `SETUP_TOKEN` | Required at `/setup` |
 | 7 | Media domain | Separate media subdomain |
-| 8 | Contribution terms | **DCO recommended; owner to confirm** (DCO vs CLA explained in the session, owner has not chosen yet) |
+| 8 | Contribution terms | DCO (sign-off on every commit), no CLA. Confirmed by the owner 2026-10-22 |
 | 9 | Fonts | Self-hosted in R2 (chosen by assistant: no reader contact with Google, works offline from the instance) |
 | 10 | Demo instance | Yes, with scheduled reset, after phase 7 |
 | 11 | Defaults | Name "Netmate" with a built-in logo and favicon |
