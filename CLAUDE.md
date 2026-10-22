@@ -15,7 +15,7 @@ Read only what the task needs:
 - Any UI work → `DESIGN.md` in the project root (not written yet; until it exists, UI follows the PRD's design rules in section 8.13)
 - Design skills: the app is **product UI**, so use the `impeccable` skill for app screens. The `design-taste-frontend` ("taste") skill is installed at user level and explicitly covers landing pages, portfolios and redesigns, not product UI; use it only for marketing pages, the README site or the demo landing page
 - Why a v1 rule exists (feed scoring, `visibleTo`, analytics) → `docs/NETMATE-PRD.md` (old first-idea spec, **reference only**: nothing from `netmate.vercel.app`, no data, code, assets or brand, is reused)
-- Start of every session → the last 2 entries of `docs/SESSION_LOG.md` only
+- Start of every session → the two highest-numbered files in `docs/sessions/` only (one file per session, so PRs never conflict)
 
 ## Stack
 
@@ -53,7 +53,7 @@ src/
 migrations/       D1 migrations (generated, then READ)
 scripts/          dev and test helpers (seed is DEV/TEST ONLY)
 tests/            unit/  integration/  e2e/  email/  a11y/  theme/
-docs/             PRD, ARCHITECTURE, SESSION_LOG, NETMATE-PRD (old reference)
+docs/             PRD, ARCHITECTURE, sessions/ (one log file per session), NETMATE-PRD (old reference)
 .github/          workflows, issue and PR templates, CODEOWNERS
 wrangler.jsonc    bindings, cron, vars
 DESIGN.md         design system (root)
@@ -154,7 +154,7 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 
 ## How a session runs
 
-1. Read the last 2 entries of `docs/SESSION_LOG.md` and run `git status`. Create a branch from an up-to-date `main`.
+1. Read the two highest-numbered files in `docs/sessions/` and run `git status`. Create a branch from an up-to-date `main`.
 2. State a short plan with a check for each step (`[step] → verify: [check]`). If the prompt has two readings, ask.
 3. Implement. Read every file before editing it. Make the smallest change that solves the task, matching existing style. Remove only what your change orphaned, and mention any other dead code you notice. Write tests with the code.
 4. Run locally: typecheck, lint, the affected unit tests, plus `test:int` when you touched `src/db` or `src/server`, `test:email` for email, `test:theme` and `test:a11y` for UI or theme.
@@ -170,7 +170,7 @@ If you break something, say so plainly and fix it in the same session. Use `git 
 - No hard-coded brand, and extreme brand colours still pass contrast.
 - No new dependency without approval. `docs/PRD.md` updated if behaviour changed.
 - CI green, or stopped after 3 attempts with a written report.
-- Session log entry appended.
+- Session log file added in `docs/sessions/`.
 
 ## When compacting
 

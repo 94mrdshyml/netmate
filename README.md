@@ -2,7 +2,7 @@
 
 An open-source, self-hostable, Twitter/X-style microblog for a private community: family and friends, a school, or an organisation. One deployment is one instance, with its own members, data, name and look. Invite-only, phone-first, and it runs entirely on Cloudflare.
 
-> **Status: early development (pre-0.1).** The app does not do anything useful yet. Follow progress in [`docs/SESSION_LOG.md`](docs/SESSION_LOG.md) and the roadmap below.
+> **Status: early development (pre-0.1).** The app does not do anything useful yet. Follow progress in [`docs/sessions/`](docs/sessions/) and the roadmap below.
 
 ## What it will be
 

@@ -1,0 +1,8 @@
+# 04. Spike 2: Better Auth on D1 (2026-10-22)
+- Branch / PR: chore/spike-better-auth
+- Done: added better-auth 1.7.12, drizzle-orm 0.45.4, drizzle-kit 0.31.11. Generated the auth schema with `bunx auth@1.7.12 generate` (SQLite, text ids, ms timestamps) into `src/db/auth-schema.ts`, migration `migrations/0000_auth_tables.sql`, `createAuth(env)` factory in `src/auth/index.ts` (UUID ids, IP tracking off, 8 to 128 password length, no transactions). Vitest `int` project now applies the real migrations before each file. `db:generate`, `db:migrate:local`, `db:check` scripts.
+- Tests: 6 new integration tests (sign-up, duplicate email, sign-in + session, wrong password, password length, cascade delete). Local: 16 integration tests pass, typecheck and lint pass. Hashing about 110 ms (sign-in) to 280 ms (cold sign-up) in local workerd.
+- Decisions: the Better Auth CLI is the `auth` package at the same version as `better-auth`, run with `bunx auth@1.7.12`; `@better-auth/cli` is stale (1.4.x) and not used.
+- Open: the first remote migration happens in the deploy job after merge (needs SQLite 3.42+ for `unixepoch('subsecond')`; if it fails the migration rolls back and deploy stops, fix on a new branch). Sign-up is not atomic without transactions (PRD R5). No auth route or `/setup` yet (phase 2). `AUTH_SECRET` is not set in production yet.
+- Next: spike 3 on remote D1, then schema (instance, profiles, invites) and the theme tokens.
+- Outcome: merged as PR #6. The auth migration applied on remote D1 (no SQLite version problem) and the deploy succeeded; the live site still reports D1 and R2 ok.
