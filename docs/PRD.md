@@ -581,13 +581,13 @@ Worker "netmate"  ── Next.js 16 via @opennextjs/cloudflare
 
 - Every PR gets a preview deploy (separate Worker, D1, R2).
 - Merge to `main` deploys the official **demo instance**, data reset on a schedule (after phase 7).
-- A release tag creates a GitHub Release with notes.
+- The Release workflow creates the tag and a GitHub Release with notes (manual, see Branching).
 
 **Branching (trunk-based)**
 
 - `main` is protected: PR required, CI green, at least one review (the owner may self-merge until there are other maintainers), linear history, squash merge, no force pushes.
 - Short-lived branches `feat/…`, `fix/…`, `docs/…`, `chore/…`.
-- **Conventional Commits** enforced on PR titles. **release-please** opens release PRs, bumps semver and writes the changelog. Before 1.0, breaking changes bump the minor version.
+- **Conventional Commits** enforced on PR titles, so release notes read well. Releases are cut **by hand**: the owner runs the **Release** workflow (Actions, manual, from `main`) with a version such as `0.1.0`. It checks that CI is green on that commit, creates the tag and a GitHub Release, and GitHub generates the notes from merged PR titles. `package.json` stays at `0.0.0` (the git tag is the version). Before 1.0, a breaking change bumps the minor version.
 - `v0.x` while the feature set settles; `v1.0` when upgrade paths and setup are stable.
 - Hotfixes: branch from `main`, fast PR, patch release.
 
@@ -661,6 +661,7 @@ Phases 4 to 6 can overlap once phase 2 is done. Phases 1 to 3 give the first usa
 | 14 | Cloudflare extras | WAF and Turnstile optional after v1 |
 | 15 | Package manager | Bun (changed from pnpm by the owner, 2026-10-22) |
 | 16 | Ids | Stripe-style prefixed ids (`usr_` + 24 base62 characters), replacing UUIDs. Owner request, 2026-10-22 |
+| 17 | Releases | Manual: a Release workflow (workflow_dispatch with a version) tags and creates a GitHub Release with generated notes. release-please was tried and removed on 2026-10-22: GitHub GraphQL errors, default first version 1.0.0, release PRs without CI. Owner decision |
 
 ## 19. Not in v1, and ideas
 
