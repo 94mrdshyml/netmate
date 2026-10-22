@@ -135,9 +135,9 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 
 - D1 has **no interactive transactions**. Use `db.batch()` (atomic) with fixed statement lists and counter changes done in SQL. Anything that reads then writes becomes conditional SQL.
 - D1 allows 100 bound values per query and 100 KB per statement: cap `IN (…)` lists and write in small batches.
-- Search is FTS5 (`posts_fts`, `profiles_fts`) kept in sync by triggers, results filtered by `visibleTo`. Escape user input before it reaches the index. D1 export does not carry virtual tables: the index must be rebuildable from the normal tables. The `trigram` tokenizer is unverified (spike 3); until then queries match word starts.
+- Search is FTS5 (`posts_fts`, `profiles_fts`) kept in sync by triggers, results filtered by `visibleTo`. Escape user input before it reaches the index. D1 export does not carry virtual tables: the index must be rebuildable from the normal tables. The `trigram` tokenizer exists on real D1 (spike 3); the search phase decides whether to use it.
 - SQLite `LIKE` ignores case only for plain English letters. Lower-case in code for names in other scripts (applies to non-search lookups such as username checks).
-- `ln`, `pow` and window functions on D1 are unverified (spike 3). The For you score is computed in TypeScript over simple SQL candidates.
+- `ln`, `pow`, window functions, recursive queries, FTS5 and `unixepoch('subsecond')` all work on real D1 (spike 3). `sqlite_version()` is not allowed. The For you score is still computed in TypeScript over simple SQL candidates.
 - OpenNext does not support Next 16 `proxy.ts` (Node middleware). Use an Edge `middleware.ts` for the cheap setup redirect or check in the root layout. Every page and action still checks the session.
 - Never stack PRs (a PR whose base is another feature branch). GitHub's GraphQL `associatedPullRequests` returned internal errors for commits that belong to two merged PRs (#3 and #4), which broke release-please until it was removed. Releases are now manual, but stacked PRs still leave a confusing history. Open every PR against `main`.
 - Workers Free will exceed CPU and query limits. Test on Paid.
