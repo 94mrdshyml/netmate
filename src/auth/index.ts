@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "@/db/schema";
+import { isIdModel, newId } from "@/lib/ids";
 
 export type AuthEnv = {
   DB: D1Database;
@@ -23,9 +24,16 @@ export function createAuth(env: AuthEnv) {
       minPasswordLength: 8,
       maxPasswordLength: 128,
     },
-    // Ids are UUID strings made in code (docs/PRD.md section 10).
+    // Stripe-style ids such as usr_... made in code (docs/PRD.md section 10).
     advanced: {
-      database: { generateId: () => crypto.randomUUID() },
+      database: {
+        generateId: ({ model }) => {
+          if (!isIdModel(model)) {
+            throw new Error(`No id prefix registered for "${model}". Add it to src/lib/ids.ts.`);
+          }
+          return newId(model);
+        },
+      },
       ipAddress: { disableIpTracking: true },
     },
   });

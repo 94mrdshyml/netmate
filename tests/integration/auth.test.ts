@@ -2,14 +2,16 @@ import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { createAuth } from "@/auth";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const USER_ID = /^usr_[0-9A-Za-z]{24}$/;
+const ACCOUNT_ID = /^acc_[0-9A-Za-z]{24}$/;
+const SESSION_ID = /^sess_[0-9A-Za-z]{24}$/;
 
 function auth() {
   return createAuth({ DB: env.DB, AUTH_SECRET: (env as unknown as { AUTH_SECRET: string }).AUTH_SECRET });
 }
 
 describe("Better Auth on D1 (spike 2)", () => {
-  it("signs up with a UUID text id and stores a password hash, never the password", async () => {
+  it("signs up with a Stripe-style id and stores a password hash, never the password", async () => {
     const t0 = performance.now();
     const res = await auth().api.signUpEmail({
       body: { email: "Riya@Example.com", password: "correct horse battery", name: "Riya Sen" },
@@ -17,13 +19,13 @@ describe("Better Auth on D1 (spike 2)", () => {
     const ms = Math.round(performance.now() - t0);
     console.info(`[spike 2] sign-up (includes password hashing): ${ms} ms`);
 
-    expect(res.user.id).toMatch(UUID);
+    expect(res.user.id).toMatch(USER_ID);
     expect(res.user.email).toBe("riya@example.com");
 
     const account = await env.DB.prepare("select id, password from account where user_id = ?")
       .bind(res.user.id)
       .first<{ id: string; password: string }>();
-    expect(account?.id).toMatch(UUID);
+    expect(account?.id).toMatch(ACCOUNT_ID);
     expect(account?.password).toBeTruthy();
     expect(account?.password).not.toContain("correct horse battery");
   });
@@ -51,7 +53,7 @@ describe("Better Auth on D1 (spike 2)", () => {
     });
     console.info(`[spike 2] sign-in (includes password verify): ${Math.round(performance.now() - t0)} ms`);
 
-    expect(response.user.id).toMatch(UUID);
+    expect(response.user.id).toMatch(USER_ID);
     const cookie = headers.get("set-cookie");
     expect(cookie).toBeTruthy();
 
@@ -60,6 +62,7 @@ describe("Better Auth on D1 (spike 2)", () => {
     });
     expect(session?.user.email).toBe("mina@example.com");
     expect(session?.session.userId).toBe(response.user.id);
+    expect(session?.session.id).toMatch(SESSION_ID);
   });
 
   it("rejects a wrong password", async () => {

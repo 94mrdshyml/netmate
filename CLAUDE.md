@@ -122,7 +122,7 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 
 ## Conventions
 
-- **IDs:** UUID strings created in code (D1 and Better Auth use text ids). Times are integer milliseconds UTC. Yes/no is 0/1. Enums are text with a check. Feed cursors are `(milliseconds, id)`.
+- **IDs:** Stripe-style, `{prefix}_{24 base62 chars}` such as `usr_3kT9xQ0mYb7LpA2vNc8RzEd1`, made only by `newId()` in `src/lib/ids.ts` (never `crypto.randomUUID()`). Add the prefix to `ID_PREFIXES` in the same change that adds a table, and to the table in `docs/PRD.md` section 10. Better Auth gets its ids from the same function and throws for a model with no prefix. Times are integer milliseconds UTC. Yes/no is 0/1. Enums are text with a check. Feed cursors are `(milliseconds, id)`.
 - **Roles:** Admin (one at setup), Member, Pending (cannot sign in). Another member's private resource returns 404, never 403.
 - **Validation:** Zod at every boundary. Verify webhook signatures and make handlers idempotent.
 - **Error handling:** handle failures at every I/O boundary (D1, R2, Resend, fetch). Skip handling only for truly impossible states.

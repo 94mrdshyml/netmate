@@ -439,7 +439,18 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 
 ## 10. Data
 
-All data is on Cloudflare D1. Ids are UUID strings created in code (Better Auth uses text ids too). Times are integer milliseconds UTC. Yes/no is 0/1. Enums are text with a check.
+All data is on Cloudflare D1. Times are integer milliseconds UTC. Yes/no is 0/1. Enums are text with a check.
+
+**Ids are Stripe-style.** A short prefix that names the thing, an underscore, then 24 random base62 characters (`0-9A-Za-z`, about 143 bits), made in code with the Web Crypto API and stored as text. Example: `usr_3kT9xQ0mYb7LpA2vNc8RzEd1`. A person can tell what an id is from its prefix, and an id of the wrong kind is easy to spot. Ids are random, not time-ordered, so lists are ordered by their time column, and feed cursors are `(milliseconds, id)`. The prefix table lives in `src/lib/ids.ts`; add a prefix in the same change that adds a table. Better Auth gets its ids from the same function.
+
+| Prefix | Thing |
+|---|---|
+| `usr_` | user (Better Auth) |
+| `sess_` | session (Better Auth) |
+| `acc_` | sign-in account of a user (Better Auth) |
+| `ver_` | verification token (Better Auth) |
+
+More prefixes are added as their tables are created (posts, invites, notifications and so on). Invite link codes are a separate, longer random value, not an id.
 
 | Table | Holds |
 |---|---|
@@ -649,6 +660,7 @@ Phases 4 to 6 can overlap once phase 2 is done. Phases 1 to 3 give the first usa
 | 13 | Search | Full-text index (FTS5) from the start |
 | 14 | Cloudflare extras | WAF and Turnstile optional after v1 |
 | 15 | Package manager | Bun (changed from pnpm by the owner, 2026-10-22) |
+| 16 | Ids | Stripe-style prefixed ids (`usr_` + 24 base62 characters), replacing UUIDs. Owner request, 2026-10-22 |
 
 ## 19. Not in v1, and ideas
 
