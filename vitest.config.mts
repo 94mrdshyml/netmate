@@ -1,8 +1,9 @@
-import { cloudflareTest } from "@cloudflare/vitest-plugin";
+import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 const alias = { "@": fileURLToPath(new URL("./src", import.meta.url)) };
+const migrations = await readD1Migrations(fileURLToPath(new URL("./migrations", import.meta.url)));
 
 export default defineConfig({
   test: {
@@ -23,12 +24,14 @@ export default defineConfig({
               compatibilityFlags: ["nodejs_compat"],
               d1Databases: ["DB"],
               r2Buckets: ["MEDIA"],
+              bindings: { TEST_MIGRATIONS: migrations, AUTH_SECRET: "test-secret-test-secret-test-secret-0123" },
             },
           }),
         ],
         test: {
           name: "int",
           include: ["tests/integration/**/*.test.ts"],
+          setupFiles: ["tests/integration/setup.ts"],
         },
       },
     ],

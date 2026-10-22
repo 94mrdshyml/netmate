@@ -615,7 +615,7 @@ Phases 4 to 6 can overlap once phase 2 is done. Phases 1 to 3 give the first usa
 | R2 | D1 limits: 100 bound values per query, 100 KB per statement, 10 GB database on Paid | Planned around |
 | R3 | `ln`, `pow`, window functions on D1 | Open (spike 3). Score is in TypeScript either way |
 | R4 | OpenNext and Next 16: Node middleware unsupported | Edge `middleware.ts` or layout check. Open (spike 1) |
-| R5 | Better Auth on D1 with text ids; hashing fits CPU limit | Open (spike 2) |
+| R5 | Better Auth on D1 with text ids; hashing fits CPU limit | Passed locally (spike 2, 2026-10-22): Better Auth 1.7.12 + Drizzle SQLite adapter work on D1 with UUID text ids, millisecond timestamps, cascade deletes, case-insensitive email, 8 to 128 password rule. Hashing took about 110 to 280 ms in local workerd, far over the 10 ms Free limit and far under the Paid 30 s limit, so Workers Paid stays required. Still to confirm: the migration on remote D1 (`unixepoch('subsecond')` defaults need SQLite 3.42 or newer) and timing on the live Worker. The Drizzle D1 adapter has no transactions, so sign-up (user row, then account row) is not atomic: a failure between them can leave a user without an account, handled in phase 2 |
 | R6 | Worker bundle size limit (10 MiB compressed on Paid) | Open |
 | R7 | Self-hosters on Workers Free will hit CPU and query limits | Document Paid as required; test on Paid |
 | R8 | Font fetch: Google Fonts API behaviour, OFL-only, file size | Open (spike 5) |
