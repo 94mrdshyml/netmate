@@ -139,6 +139,8 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 - SQLite `LIKE` ignores case only for plain English letters. Lower-case in code for names in other scripts (applies to non-search lookups such as username checks).
 - `ln`, `pow` and window functions on D1 are unverified (spike 3). The For you score is computed in TypeScript over simple SQL candidates.
 - OpenNext does not support Next 16 `proxy.ts` (Node middleware). Use an Edge `middleware.ts` for the cheap setup redirect or check in the root layout. Every page and action still checks the session.
+- Never stack PRs (a PR whose base is another feature branch). GitHub's GraphQL `associatedPullRequests` returns an internal error for commits that belong to two merged PRs, which happened with #3 and #4. release-please walks history through that query, so it fails for ever once it reaches those commits. `bootstrap-sha` in `release-please-config.json` stops the walk at a newer commit (the merge of #17). Never move it back to an older commit. After the first release exists, release-please stops at that tag instead.
+- release-please always reads its config and history from `main`, even when the workflow runs from another branch, so it can only be tested after merging to `main` (use `workflow_dispatch` there).
 - Workers Free will exceed CPU and query limits. Test on Paid.
 - No I/O (D1, R2, fetch) at module scope. Use bindings per request.
 - Workers cannot pin a resolved DNS address like Node can. The link-preview fetcher needs its own safe design (resolve over DNS-over-HTTPS and refuse private ranges, re-check every redirect), or the feature stays off.
