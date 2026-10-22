@@ -1,16 +1,16 @@
 ---
 name: log-session
-description: Append an entry to docs/SESSION_LOG.md at the end of a work session. Use after the ship skill, or when stopping work.
+description: Write the session log file for this work session in docs/sessions/. Use after the ship skill, or when stopping work.
 ---
 
 # Log session
 
-Append one entry to the end of `docs/SESSION_LOG.md`. Never edit earlier entries. Keep it under 15 lines.
+Create one new file `docs/sessions/NN-short-title.md` (NN is the highest existing number plus one, two digits; the title is a few lowercase words joined by hyphens). Never edit earlier session files. Never append to a shared file: one file per session means two open PRs cannot conflict. Keep it under 15 lines.
 
 Format:
 
 ```
-## NN. <short title> (YYYY-MM-DD)
+# NN. <short title> (YYYY-MM-DD)
 - Branch / PR: <branch>, <PR url or "none">
 - Done: <what changed, one line each>
 - Tests: <what ran and the result; say so if anything was skipped or failing>
@@ -20,6 +20,6 @@ Format:
 ```
 
 Rules:
-- NN is the previous entry's number plus one.
 - Be honest: failed checks, skipped steps and known gaps go in.
 - Never log secrets, emails, tokens or IP addresses.
+- The file goes in the same PR as the change it describes.
