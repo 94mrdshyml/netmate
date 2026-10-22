@@ -1,0 +1,83 @@
+// Reads the instance row (docs/PRD.md sections 3 and 5). No row means /setup has not run yet.
+
+import { eq } from "drizzle-orm";
+import type { Db } from "@/db";
+import { instance } from "@/db/schema";
+import { DEFAULT_AVATAR_STYLE, DEFAULT_INSTANCE_NAME, DEFAULT_INVITE_QUOTA, DEFAULT_THEME } from "@/instance/defaults";
+import { RADII, type Radius } from "@/instance/theme";
+
+export type InstanceSettings = {
+  name: string;
+  logoKey: string | null;
+  faviconKey: string | null;
+  primaryColor: string;
+  radius: Radius;
+  fontFamily: string;
+  avatarStyle: string;
+  themeDefault: "dark" | "light" | "system";
+  inviteQuota: number;
+  gifsEnabled: boolean;
+  placesEnabled: boolean;
+  linkPreviewsEnabled: boolean;
+};
+
+export type InstanceState = { configured: boolean; settings: InstanceSettings };
+
+export const DEFAULT_SETTINGS: InstanceSettings = {
+  name: DEFAULT_INSTANCE_NAME,
+  logoKey: null,
+  faviconKey: null,
+  primaryColor: DEFAULT_THEME.primary,
+  radius: DEFAULT_THEME.radius,
+  fontFamily: DEFAULT_THEME.fontFamily,
+  avatarStyle: DEFAULT_AVATAR_STYLE,
+  themeDefault: "system",
+  inviteQuota: DEFAULT_INVITE_QUOTA,
+  gifsEnabled: false,
+  placesEnabled: false,
+  linkPreviewsEnabled: false,
+};
+
+const isRadius = (v: string): v is Radius => Object.hasOwn(RADII, v);
+const isThemeDefault = (v: string): v is InstanceSettings["themeDefault"] => v === "dark" || v === "light" || v === "system";
+
+/** Reads the instance row. Before setup it returns the defaults with `configured: false`. */
+export async function readInstance(db: Db): Promise<InstanceState> {
+  const row = await db.select().from(instance).where(eq(instance.id, "singleton")).get();
+  if (!row) return { configured: false, settings: DEFAULT_SETTINGS };
+
+  return {
+    configured: true,
+    settings: {
+      name: row.name,
+      logoKey: row.logoKey,
+      faviconKey: row.faviconKey,
+      primaryColor: row.primaryColor,
+      // The database CHECKs these; fall back rather than crash if one is ever wrong.
+      radius: isRadius(row.radius) ? row.radius : DEFAULT_SETTINGS.radius,
+      fontFamily: row.fontFamily,
+      avatarStyle: row.avatarStyle,
+      themeDefault: isThemeDefault(row.themeDefault) ? row.themeDefault : "system",
+      inviteQuota: row.inviteQuota,
+      gifsEnabled: row.gifsEnabled,
+      placesEnabled: row.placesEnabled,
+      linkPreviewsEnabled: row.linkPreviewsEnabled,
+    },
+  };
+}
+
+// Per-isolate cache: the check runs on every request (PRD section 3). Saving settings
+// clears this isolate at once; other isolates catch up within the TTL.
+const TTL_MS = 30_000;
+let cached: { at: number; state: InstanceState } | null = null;
+
+export async function readInstanceCached(db: Db, now: number = Date.now()): Promise<InstanceState> {
+  if (cached && now - cached.at < TTL_MS) return cached.state;
+  const state = await readInstance(db);
+  cached = { at: now, state };
+  return state;
+}
+
+export function clearInstanceCache(): void {
+  cached = null;
+}
