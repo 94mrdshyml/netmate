@@ -8,12 +8,14 @@ const ALPHABET_SIZE = ALPHABET.length; // 62
 
 export const ID_LENGTH = 24;
 
-/** Better Auth model name -> prefix. Keys must match the table's Better Auth model. */
+/** Model name -> prefix. Better Auth models use its own names (user, session, account, verification). */
 export const ID_PREFIXES = {
   user: "usr",
   session: "sess",
   account: "acc",
   verification: "ver",
+  inviteLink: "inv",
+  inviteUse: "invu",
 } as const;
 
 export type IdModel = keyof typeof ID_PREFIXES;

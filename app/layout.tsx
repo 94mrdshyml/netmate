@@ -1,11 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { DEFAULT_INSTANCE_NAME, DEFAULT_THEME } from "@/instance/defaults";
+import { getInstanceState } from "@/instance/request";
 import { buildThemeCss } from "@/instance/theme";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: DEFAULT_INSTANCE_NAME,
-};
+// Read per request: the instance name and look come from the database.
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { settings } = await getInstanceState();
+  return { title: settings.name };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -13,10 +17,14 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // Instance settings come from the database in the next step; for now the defaults.
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { settings } = await getInstanceState();
   // buildThemeCss validates every value, so what reaches the stylesheet is safe.
-  const { css } = buildThemeCss(DEFAULT_THEME);
+  const { css } = buildThemeCss({
+    primary: settings.primaryColor,
+    radius: settings.radius,
+    fontFamily: settings.fontFamily,
+  });
 
   return (
     <html lang="en">

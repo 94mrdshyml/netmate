@@ -455,12 +455,12 @@ More prefixes are added as their tables are created (posts, invites, notificatio
 | Table | Holds |
 |---|---|
 | Auth tables (Better Auth) | users, accounts (password hash), sessions, verifications |
-| `instance` | one row: configured flag and time, name, logo key, favicon key, primary colour, radius, font family, avatar style, theme default, invite quota, sign-up policy, feature flags (GIFs, places, link previews) |
-| `instance_secrets` | encrypted Resend key and Klipy key, separate from `instance` |
+| `instance` | one row, **present only once setup has finished** (no row means not configured; the fixed primary key `singleton` makes setup one-time): name, logo key, favicon key, primary colour, radius, font family, avatar style, theme default, invite quota, sign-up policy, feature flags (GIFs, places, link previews), created and updated time. The database itself checks the name length, hex colour, radius, theme default and quota |
+| `instance_secrets` | encrypted Resend key, Resend sender address and Klipy key, one row per name, stored as `v1:<nonce>:<ciphertext>` (AES-256-GCM, key derived from `SETTINGS_ENCRYPTION_KEY`, the name bound into the ciphertext). Separate from `instance` so theme code never reads them |
 | `fonts` | cached font files for the chosen family: storage key, weight, style |
-| `profiles` | one per user: username (unique, lower case), first and last name, bio, link, location, private flag, avatar and banner keys, `role` (admin or member), `status` (active or pending), `invited_by`, `email_verified_at`, created time |
-| `invite_links` | member id, code, created, revoked, uses count |
-| `invite_uses` | invite link, new user, time, outcome (`approved` or `pending`) |
+| `profiles` | one per user: username (unique, lower case), first and last name, bio, link, location, private flag, avatar and banner keys, `role` (admin or member), `status` (active or pending), `invited_by`, `email_verified_at`, created time |. The database enforces the username rules (3 to 15 characters of a-z, 0-9, underscore), name and bio lengths, role and status values, and **exactly one admin** (a partial unique index). If the inviter is deleted, `invited_by` becomes empty
+| `invite_links` | id (`inv_`), member id, long random code (not an id), uses count, created, revoked. At most one active (not revoked) link per member |
+| `invite_uses` | id (`invu_`), invite link, new user (one use per person), time, outcome (`approved` or `pending`) |
 | `posts` | body (up to 280), author, parent (reply), quoted post, reply/like/repost counts, created, deleted |
 | `post_media` | up to 4 per post: kind (`image` or `gif`), key (storage key, or full Klipy address for GIFs), width, height, position |
 | `post_links` | one link card per post: url, title, description, image, site |

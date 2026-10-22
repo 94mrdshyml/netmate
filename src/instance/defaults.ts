@@ -4,6 +4,8 @@
 import type { ThemeSettings } from "@/instance/theme";
 
 export const DEFAULT_INSTANCE_NAME = "Netmate";
+export const DEFAULT_AVATAR_STYLE = "cameo";
+export const DEFAULT_INVITE_QUOTA = 5;
 
 export const DEFAULT_THEME: ThemeSettings = {
   primary: "#2F6FED",
