@@ -12,3 +12,6 @@ coverage/
 playwright-report/
 test-results/
 .claude/settings.local.json
+
+*.tsbuildinfo
+next-env.d.ts

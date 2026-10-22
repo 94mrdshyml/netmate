@@ -53,8 +53,8 @@ const rules = [
     why: "Never skip hooks or signing.",
   },
   {
-    test: (c) => /\bnpm\s+(i|install|ci|run)\b|\byarn\b|\bbun\s+(i|install|add|run)\b/.test(c),
-    why: "pnpm only. Never npm, yarn or bun.",
+    test: (c) => /\bnpm\s+(i|install|ci|run|exec)\b|\bnpx\b|\byarn\b|\bpnpm\b/.test(c),
+    why: "bun only. Never npm, npx, yarn or pnpm (use bun, bunx).",
   },
 ];
 

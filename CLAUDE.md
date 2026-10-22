@@ -12,7 +12,8 @@ If a session prompt or another doc conflicts with this file, follow this file, p
 Read only what the task needs:
 - Product or feature scope → `docs/PRD.md` (the full spec; every feature rule and number lives there)
 - Data flow, bindings, schema, deploy → `docs/ARCHITECTURE.md`
-- Any UI work → `DESIGN.md` in the project root
+- Any UI work → `DESIGN.md` in the project root (not written yet; until it exists, UI follows the PRD's design rules in section 8.13)
+- Design skills: the app is **product UI**, so use the `impeccable` skill for app screens. The `design-taste-frontend` ("taste") skill is installed at user level and explicitly covers landing pages, portfolios and redesigns, not product UI; use it only for marketing pages, the README site or the demo landing page
 - Why a v1 rule exists (feed scoring, `visibleTo`, analytics) → `docs/NETMATE-PRD.md` (old first-idea spec, **reference only**: nothing from `netmate.vercel.app`, no data, code, assets or brand, is reused)
 - Start of every session → the last 2 entries of `docs/SESSION_LOG.md` only
 
@@ -21,7 +22,7 @@ Read only what the task needs:
 Versions are pinned in `package.json`. Do not upgrade a major version without asking.
 
 - **Language:** TypeScript (strict) everywhere
-- **Package manager:** **pnpm only**, never npm, yarn or bun
+- **Package manager and script runner:** **bun only** (`bun install`, `bun run`, `bunx`), never npm, npx, yarn or pnpm. The lockfile is `bun.lock`. Code still runs on Workers, not on Bun
 - **App:** Next.js 16 (App Router, Server Components, Server Actions) built for Workers with `@opennextjs/cloudflare`
 - **Runtime:** Cloudflare Workers + D1 (`DB`) + R2 (`MEDIA`) + Workers Rate Limiting (`LIMITER`) + Cron Triggers. Workers Paid is the minimum plan. No other host, no Node-only APIs
 - **Database:** D1 (SQLite) with Drizzle ORM (SQLite driver) and Wrangler migrations
@@ -63,22 +64,23 @@ DESIGN.md         design system (root)
 If a script below is missing from `package.json`, add it in the same change.
 
 ```
-pnpm install                         # CI uses --frozen-lockfile
-pnpm dev                             # next dev with local D1 and R2
-pnpm preview                         # OpenNext build run in the Workers runtime
-pnpm typecheck && pnpm lint
-pnpm test                            # unit tests
-pnpm vitest run path/to/file.test.ts # one test file: prefer this while working
-pnpm test:int                        # Workers integration against local D1
-pnpm test:email                      # email templates render with a sample brand
-pnpm test:e2e                        # Playwright journeys at phone width
-pnpm test:a11y                       # axe on key screens, light and dark, extreme brand colours
-pnpm test:theme                      # radius / colour / font matrix
-pnpm db:generate                     # drizzle-kit generate. Then READ the SQL
-pnpm db:migrate:local                # wrangler d1 migrations apply --local
-pnpm db:check                        # schema matches migrations
-pnpm db:seed                         # local/test data only, refuses a configured production instance
-pnpm build                           # OpenNext build
+bun install                          # CI uses --frozen-lockfile
+bun run dev                          # next dev with local D1 and R2
+bun run preview                      # OpenNext build run in the Workers runtime
+bun run typecheck && bun run lint
+bun run test                         # unit tests (Vitest; never plain `bun test`)
+bunx vitest run path/to/file.test.ts # one test file: prefer this while working
+bun run test:int                     # Workers integration against local D1
+bun run test:email                   # email templates render with a sample brand
+bun run test:e2e                     # Playwright journeys at phone width
+bun run test:a11y                    # axe on key screens, light and dark, extreme brand colours
+bun run test:theme                   # radius / colour / font matrix
+bun run db:generate                  # drizzle-kit generate. Then READ the SQL
+bun run db:migrate:local             # wrangler d1 migrations apply --local
+bun run db:check                     # schema matches migrations
+bun run db:seed                      # local/test data only, refuses a configured production instance
+bun run build                        # next build (OpenNext calls this; never point it at OpenNext)
+bun run build:cf                     # OpenNext build for Workers
 ```
 
 Local secrets live in `.dev.vars` (gitignored). Production secrets are set by a human, never by an agent.
