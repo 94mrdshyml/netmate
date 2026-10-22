@@ -1,0 +1,55 @@
+name: Release
+
+# Manual. Run from main with a version such as 0.1.0. Creates the git tag and a
+# GitHub Release whose notes GitHub generates from the merged PR titles.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version without the leading v, for example 0.1.0 or 0.2.0-rc.1"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    name: Tag and publish a GitHub Release
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check the request
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::'$VERSION' is not a version like 0.1.0"; exit 1
+          fi
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run this workflow from main, not $GITHUB_REF"; exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::Tag v$VERSION already exists"; exit 1
+          fi
+
+      - name: Require a green CI run on this exact commit
+        run: |
+          ok="$(gh run list --workflow ci.yml --commit "$GITHUB_SHA" --status success --json databaseId --jq 'length')"
+          if [ "$ok" -lt 1 ]; then
+            echo "::error::No successful CI run found for $GITHUB_SHA. Wait for CI on main to finish."; exit 1
+          fi
+
+      - name: Create the release
+        run: |
+          flags=""
+          # 0.x and any version with a suffix are pre-releases.
+          if [[ "$VERSION" == 0.* || "$VERSION" == *-* ]]; then flags="--prerelease"; fi
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "v$VERSION" --generate-notes $flags
+          echo "Released v$VERSION at $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"

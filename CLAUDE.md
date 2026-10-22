@@ -32,7 +32,7 @@ Versions are pinned in `package.json`. Do not upgrade a major version without as
 - **Validation:** Zod on every request body, query and form
 - **Tests:** Vitest (unit, and Workers integration with `@cloudflare/vitest-pool-workers`), Playwright (browser + end to end, phone width), axe-core
 - **Icons:** Feather only
-- **CI/CD:** GitHub Actions, release-please, Wrangler
+- **CI/CD:** GitHub Actions and Wrangler. Releases are cut by hand with the Release workflow
 
 Layers: pages → actions → `src/server` → `src/db`. Pages and actions never write SQL.
 
@@ -128,7 +128,7 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 - **Error handling:** handle failures at every I/O boundary (D1, R2, Resend, fetch). Skip handling only for truly impossible states.
 - **UI:** follow `DESIGN.md`. Flat, no shadows or gradients. One brand colour, used sparingly. Feather icons only. No emoji and no em dashes in interface text. Tap targets at least 44px, safe areas respected. Plain-English copy. Zeros show as zeros, "new" is never a percentage.
 - **Dependencies:** ask before adding any package.
-- **Git:** trunk-based. `main` is protected (PR, green CI, linear history, squash merge). Short-lived branches `feat/…`, `fix/…`, `docs/…`, `chore/…`. Conventional commits, also used for PR titles (release-please reads them). Sign off commits (`git commit -s`) for the DCO. Never use `--no-verify`.
+- **Git:** trunk-based. `main` is protected (PR, green CI, linear history, squash merge). Short-lived branches `feat/…`, `fix/…`, `docs/…`, `chore/…`. Conventional commits, also used for PR titles (GitHub builds release notes from merged PR titles). Sign off commits (`git commit -s`) for the DCO. Never use `--no-verify`.
 - **Docs:** if a change alters behaviour, update `docs/PRD.md` in the same PR.
 
 ## Gotchas
@@ -139,8 +139,7 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 - SQLite `LIKE` ignores case only for plain English letters. Lower-case in code for names in other scripts (applies to non-search lookups such as username checks).
 - `ln`, `pow` and window functions on D1 are unverified (spike 3). The For you score is computed in TypeScript over simple SQL candidates.
 - OpenNext does not support Next 16 `proxy.ts` (Node middleware). Use an Edge `middleware.ts` for the cheap setup redirect or check in the root layout. Every page and action still checks the session.
-- Never stack PRs (a PR whose base is another feature branch). GitHub's GraphQL `associatedPullRequests` returns an internal error for commits that belong to two merged PRs, which happened with #3 and #4. release-please walks history through that query, so it fails for ever once it reaches those commits. `bootstrap-sha` in `release-please-config.json` stops the walk at a newer commit (the merge of #17). Never move it back to an older commit. After the first release exists, release-please stops at that tag instead.
-- release-please always reads its config and history from `main`, even when the workflow runs from another branch, so it can only be tested after merging to `main` (use `workflow_dispatch` there).
+- Never stack PRs (a PR whose base is another feature branch). GitHub's GraphQL `associatedPullRequests` returned internal errors for commits that belong to two merged PRs (#3 and #4), which broke release-please until it was removed. Releases are now manual, but stacked PRs still leave a confusing history. Open every PR against `main`.
 - Workers Free will exceed CPU and query limits. Test on Paid.
 - No I/O (D1, R2, fetch) at module scope. Use bindings per request.
 - Workers cannot pin a resolved DNS address like Node can. The link-preview fetcher needs its own safe design (resolve over DNS-over-HTTPS and refuse private ranges, re-check every redirect), or the feature stays off.
