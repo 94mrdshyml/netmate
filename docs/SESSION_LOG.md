@@ -17,3 +17,11 @@ Append-only. One entry per session, newest last. Read only the last 2 entries at
 - Decisions: `build` is `next build` and `build:cf` is the OpenNext build (pointing `build` at OpenNext recurses). TypeScript pinned to 5.9.3 and ESLint to 9.39.5 for peer compatibility; vitest 4.1.12 because `@cloudflare/vitest-pool-workers` 0.23 needs vitest 4.1. The `taste` design skill covers landing pages, not product UI, so app screens use `impeccable`.
 - Open: `unrs-resolver` postinstall is blocked by bun (not needed so far). The Cloudflare account is shared with other projects; prefix every resource with `netmate-`.
 - Next: spikes 2 (Better Auth on D1) and 3 (D1 SQL + FTS5), then migrations and CI.
+
+## 02. Tests and GitHub Actions CI/CD (2026-10-22)
+- Branch / PR: chore/ci-tests, stacked on chore/scaffold-app (PR #2)
+- Done: Vitest projects `unit` (Node) and `int` (Workers runtime via `@cloudflare/vitest-plugin`, which replaces the deprecated pool-workers package), Playwright phone-width smoke test, first real code with tests (`src/lib/username.ts`). `.github/workflows/ci.yml`: DCO, typecheck+lint+unit+int, OpenNext build, e2e, audit, gitleaks, then deploy on push to main (ensure netmate-* resources, migrations, deploy, smoke test). `.env` (gitignored) and `.env.example`.
+- Tests: local typecheck, lint, 6 unit, 10 integration, 1 e2e pass. Integration tests also answer part of spike 3 on local D1: batch rollback, ln/pow, window functions, insert or ignore, recursive queries, foreign key cascades, FTS5 with accent-insensitive prefix match and triggers. Remote D1 is still unconfirmed.
+- Decisions: `glob` overridden to 10.5.0 to clear an advisory. One advisory (braces, GHSA-vfj7-8cjw-p6xm) has no patched release and reaches us only through the ESLint plugin, so the CI audit ignores that single id (comment in ci.yml says to remove it once fixed). Vitest config is `.mts` (the repo is CommonJS by default).
+- Open: owner must put `CLOUDFLARE_API_TOKEN` in `.env` and add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub secrets before the deploy job can pass. No a11y or theme tests yet (no UI to test).
+- Next: watch CI on the PR, merge order #2 then this one, then spikes 2 and 3 on remote D1.
