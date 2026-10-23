@@ -47,6 +47,8 @@ export function Composer({
   leading,
   places = false,
   gifKey = null,
+  quoteId,
+  quoteCard,
 }: {
   parentId?: string;
   placeholder?: string;
@@ -58,6 +60,9 @@ export function Composer({
   places?: boolean;
   /** Klipy's key, given only while the admin has GIF search on. Without it there is no GIF button. */
   gifKey?: string | null;
+  /** Quoting this post: its card sits under the text, and pictures and a GIF are not offered (PRD 8.2). */
+  quoteId?: string;
+  quoteCard?: ReactNode;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -82,7 +87,7 @@ export function Composer({
   const failed = photos.some((p) => p.error !== null);
   const hasWords = text.trim().length > 0;
   const hasPhotos = photos.length > 0;
-  const blocked = pending || uploading || failed || (!hasWords && !hasPhotos && !gif) || used > POST_MAX;
+  const blocked = pending || uploading || failed || (!hasWords && !hasPhotos && !gif && !quoteId) || used > POST_MAX;
 
   async function addPhotos(files: FileList | null) {
     const room = PHOTO_MAX - photos.length;
@@ -129,6 +134,7 @@ export function Composer({
             photos: photos.flatMap((p) => (p.key ? [p.key] : [])),
             place: place ?? undefined,
             gif: gif ?? undefined,
+            quote: quoteId,
           });
           if (result.ok) {
             // A reply stays on the page: clear the box and show it. (A new post goes Home instead.)
@@ -183,6 +189,7 @@ export function Composer({
               ))}
             </ul>
           ) : null}
+          {quoteCard ? <div className="composer-quote">{quoteCard}</div> : null}
           {gif ? (
             <div className="composer-gif" style={{ width: `min(100%, ${gif.width}px)` }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- a picture straight from Klipy, which its rules require */}
@@ -237,6 +244,7 @@ export function Composer({
               event.target.value = "";
             }}
           />
+          {quoteId ? null : (
           <button
             type="button"
             className="icon-btn"
@@ -246,7 +254,8 @@ export function Composer({
           >
             <Icon name="image" />
           </button>
-          {gifKey ? (
+          )}
+          {gifKey && !quoteId ? (
             <button
               type="button"
               className="icon-btn gif-btn"

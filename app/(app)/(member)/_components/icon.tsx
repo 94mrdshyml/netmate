@@ -253,6 +253,15 @@ const PATHS = {
       <circle cx="12" cy="12" r="3" />
     </>
   ),
+  repeat: (
+    <>
+      <polyline points="17 1 21 5 17 9" />
+      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+      <polyline points="7 23 3 19 7 15" />
+      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+    </>
+  ),
+  bookmark: <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />,
 } as const;
 
 export type IconName = keyof typeof PATHS;

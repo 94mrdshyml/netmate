@@ -1,9 +1,34 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
-import { deletePostAction, setLikeAction } from "../posts/actions";
+import { useEffect, useRef, useState, useTransition, type RefObject } from "react";
+import { deletePostAction, setBookmarkAction, setLikeAction, setRepostAction } from "../posts/actions";
 import { Icon } from "./icon";
+
+/** Closes a small panel on an outside tap or Escape (and gives focus back to its button). */
+function useDismiss(open: boolean, close: () => void, root: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (event: PointerEvent) => {
+      if (root.current && !root.current.contains(event.target as Node)) close();
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        close();
+        root.current?.querySelector("button")?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+    // `close` only sets state, so it is safe to leave out.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, root]);
+}
 
 export function LikeButton({ postId, liked, count }: { postId: string; liked: boolean; count: number }) {
   const [state, setState] = useState({ liked, count });
@@ -50,6 +75,130 @@ export function LikeButton({ postId, liked, count }: { postId: string; liked: bo
 }
 
 /**
+ * The repost button. It opens a small sheet: Repost (or Undo repost) and Quote. A private account's
+ * posts have no button at all, and a reply can only be quoted. The server checks every press again.
+ */
+export function RepostButton({
+  postId,
+  reposted,
+  count,
+  share,
+}: {
+  postId: string;
+  reposted: boolean;
+  count: number;
+  share: "repost_or_quote" | "quote";
+}) {
+  const root = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(false);
+  const [up, setUp] = useState(false);
+  const [state, setState] = useState({ reposted, count });
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  useDismiss(open, () => setOpen(false), root);
+
+  return (
+    <span className="post-menu" ref={root}>
+      <button
+        type="button"
+        className="action"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-pressed={state.reposted}
+        // Not "reposts": the word "posts" in a label would also match the label of the whole list of posts.
+        aria-label={`Repost, ${state.count} ${state.count === 1 ? "time" : "times"}`}
+        onClick={() => {
+          if (!open && root.current) setUp(window.innerHeight - root.current.getBoundingClientRect().bottom < 200);
+          setOpen(!open);
+          setError(null);
+        }}
+      >
+        <Icon name="repeat" />
+        <span>{state.count}</span>
+      </button>
+      {open ? (
+        <div className={up ? "post-menu-panel start up" : "post-menu-panel start"} role="menu" aria-label="Repost">
+          {share === "repost_or_quote" ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="post-menu-item"
+              disabled={pending}
+              onClick={() => {
+                const wanted = !state.reposted;
+                // Show the change at once, then settle on what the server says.
+                setState({ reposted: wanted, count: Math.max(0, state.count + (wanted ? 1 : -1)) });
+                setOpen(false);
+                setError(null);
+                start(async () => {
+                  const result = await setRepostAction(postId, wanted);
+                  if (result.ok) setState({ reposted: result.reposted, count: result.repostCount });
+                  else {
+                    setState({ reposted: !wanted, count: state.count });
+                    setError(result.message);
+                  }
+                });
+              }}
+            >
+              <Icon name="repeat" />
+              <span>{state.reposted ? "Undo repost" : "Repost"}</span>
+            </button>
+          ) : null}
+          <Link role="menuitem" className="post-menu-item" href={`/compose?quote=${postId}`}>
+            <Icon name="edit-2" />
+            <span>Quote</span>
+          </Link>
+        </div>
+      ) : null}
+      {error ? (
+        <span className="error" role="alert">
+          {error}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** Saves a post privately. No count is shown, to anyone. */
+export function BookmarkButton({ postId, saved }: { postId: string; saved: boolean }) {
+  const [on, setOn] = useState(saved);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  return (
+    <>
+      <button
+        type="button"
+        className="action"
+        aria-pressed={on}
+        aria-label={on ? "Remove from saved" : "Save post"}
+        disabled={pending}
+        onClick={() => {
+          const wanted = !on;
+          setOn(wanted);
+          setError(null);
+          start(async () => {
+            const result = await setBookmarkAction(postId, wanted);
+            if (result.ok) setOn(result.saved);
+            else {
+              setOn(!wanted);
+              setError(result.message);
+            }
+          });
+        }}
+      >
+        <Icon name="bookmark" filled={on} />
+      </button>
+      {error ? (
+        <span className="error" role="alert">
+          {error}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+/**
  * The "..." on your own posts. It opens a small menu (today: Delete post), and deleting still asks
  * first. Posts by other people have no menu, because there is nothing in it for them yet.
  */
@@ -62,28 +211,14 @@ export function PostMenu({ postId, goHomeAfter = false }: { postId: string; goHo
   const [up, setUp] = useState(false);
   const [pending, start] = useTransition();
 
-  useEffect(() => {
-    if (!open) return;
-    const close = () => {
+  useDismiss(
+    open,
+    () => {
       setOpen(false);
       setConfirming(false);
-    };
-    const onPointer = (event: PointerEvent) => {
-      if (root.current && !root.current.contains(event.target as Node)) close();
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        close();
-        root.current?.querySelector("button")?.focus();
-      }
-    };
-    document.addEventListener("pointerdown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+    },
+    root,
+  );
 
   return (
     <span className="post-menu action-end" ref={root}>

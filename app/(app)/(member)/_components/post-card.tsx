@@ -3,9 +3,10 @@ import { relativeTime } from "@/lib/time";
 import type { PostView } from "@/server/posts";
 import { Avatar } from "./avatar";
 import { Icon } from "./icon";
-import { LikeButton, PostMenu } from "./post-actions";
+import { BookmarkButton, LikeButton, PostMenu, RepostButton } from "./post-actions";
 import { PostGif } from "./post-gif";
 import { PostPhotos } from "./post-photos";
+import { QuoteCard } from "./quote-card";
 
 /** One post in a list. The text is always rendered as text, never as markup. */
 export function PostCard({
@@ -24,6 +25,14 @@ export function PostCard({
 
   return (
     <article className={linkToPost ? "post" : "post post-focus"} aria-label={`Post by ${name}`}>
+      {post.repostedBy ? (
+        <p className="post-reposted">
+          <Icon name="repeat" size={14} />
+          <Link href={`/${post.repostedBy.username}`}>
+            {post.repostedBy.userId === viewerId ? "You" : `${post.repostedBy.firstName} ${post.repostedBy.lastName}`} reposted
+          </Link>
+        </p>
+      ) : null}
       <Link href={`/${post.author.username}`} className="post-avatar" tabIndex={-1} aria-hidden="true">
         <Avatar userId={post.author.userId} avatarKey={post.author.avatarKey} size={40} />
       </Link>
@@ -40,6 +49,7 @@ export function PostCard({
           </time>
         </header>
         {post.body ? <p className="post-body">{post.body}</p> : null}
+        {post.quote ? <QuoteCard quote={post.quote} now={now} /> : null}
         <PostPhotos keys={post.photos} name={name} />
         {post.gif ? <PostGif gif={post.gif} /> : null}
         {post.place ? (
@@ -60,7 +70,11 @@ export function PostCard({
               <span>{post.replyCount}</span>
             </span>
           )}
+          {post.share !== "none" ? (
+            <RepostButton postId={post.id} reposted={post.repostedByMe} count={post.repostCount} share={post.share} />
+          ) : null}
           <LikeButton postId={post.id} liked={post.likedByMe} count={post.likeCount} />
+          <BookmarkButton postId={post.id} saved={post.bookmarkedByMe} />
           {post.author.userId === viewerId ? <PostMenu postId={post.id} goHomeAfter={!linkToPost} /> : null}
         </footer>
       </div>

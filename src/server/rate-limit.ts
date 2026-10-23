@@ -16,6 +16,8 @@ export const LIMITS = {
   signUpLink: { name: "signup:link", max: 20, windowMs: 10 * MINUTE },
   posts: { name: "posts", max: 10, windowMs: MINUTE },
   likes: { name: "likes", max: 60, windowMs: MINUTE },
+  reposts: { name: "reposts", max: 30, windowMs: MINUTE },
+  saves: { name: "saves", max: 60, windowMs: MINUTE },
   follows: { name: "follows", max: 30, windowMs: 10 * MINUTE },
   uploads: { name: "uploads", max: 30, windowMs: 10 * MINUTE },
   places: { name: "places", max: 40, windowMs: MINUTE },
@@ -94,6 +96,12 @@ export const limitPost = (db: D1Database, salt: string, userId: string, now?: nu
 
 export const limitLike = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.likes, userId, salt, now);
+
+export const limitRepost = (db: D1Database, salt: string, userId: string, now?: number) =>
+  takeSlot(db, LIMITS.reposts, userId, salt, now);
+
+export const limitSave = (db: D1Database, salt: string, userId: string, now?: number) =>
+  takeSlot(db, LIMITS.saves, userId, salt, now);
 
 export const limitFollow = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.follows, userId, salt, now);
