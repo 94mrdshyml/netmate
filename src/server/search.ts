@@ -9,7 +9,7 @@ import { posts, profiles } from "@/db/schema";
 import { buildSearchQuery } from "@/lib/search-query";
 import type { PersonView } from "@/server/follows";
 import { decodeCursor, olderThan, PAGE_SIZE, postColumns, toPage, type Page } from "@/server/posts";
-import { visiblePosts } from "@/server/visibility";
+import { notBlockedWith, visiblePosts } from "@/server/visibility";
 
 export const PEOPLE_RESULTS = 20;
 export const SUGGESTION_COUNT = 8;
@@ -48,6 +48,7 @@ type PersonRow = {
   bio: string;
   avatar_key: string | null;
   i_follow: number;
+  requested: number;
 };
 
 const toPerson = (viewerId: string) => (r: PersonRow): PersonView => ({
@@ -58,6 +59,7 @@ const toPerson = (viewerId: string) => (r: PersonRow): PersonView => ({
   bio: r.bio,
   avatarKey: r.avatar_key,
   iFollow: Boolean(r.i_follow),
+  requested: Boolean(r.requested),
   isMe: r.user_id === viewerId,
 });
 
@@ -73,10 +75,11 @@ export async function searchPeople(db: Db, viewerId: string, rawQuery: unknown):
   const typed = query.terms.join(" ").toLowerCase();
   const rows = await db.all<PersonRow>(sql`
     select p.user_id, p.username, p.first_name, p.last_name, p.bio, p.avatar_key,
-      exists (select 1 from follows f where f.follower_id = ${viewerId} and f.followee_id = p.user_id) as i_follow
+      exists (select 1 from follows f where f.follower_id = ${viewerId} and f.followee_id = p.user_id) as i_follow,
+      exists (select 1 from follow_requests rq where rq.requester_id = ${viewerId} and rq.target_id = p.user_id) as requested
     from profiles_fts
     join profiles p on p.user_id = profiles_fts.user_id
-    where profiles_fts match ${query.match} and p.status = 'active'
+    where profiles_fts match ${query.match} and p.status = 'active' and ${notBlockedWith(viewerId, sql`p.user_id`)}
     order by (p.username = ${typed}) desc,
       (substr(p.username, 1, length(${typed})) = ${typed}) desc,
       profiles_fts.rank,
@@ -92,7 +95,8 @@ export async function searchPeople(db: Db, viewerId: string, rawQuery: unknown):
  */
 export async function suggestPeople(db: Db, viewerId: string, limit = SUGGESTION_COUNT): Promise<PersonView[]> {
   const rows = await db.all<PersonRow>(sql`
-    select p.user_id, p.username, p.first_name, p.last_name, p.bio, p.avatar_key, 0 as i_follow
+    select p.user_id, p.username, p.first_name, p.last_name, p.bio, p.avatar_key, 0 as i_follow,
+      exists (select 1 from follow_requests rq where rq.requester_id = ${viewerId} and rq.target_id = p.user_id) as requested
     from profiles p
     left join (
       select followee_id as user_id, count(*) as shared
@@ -101,6 +105,7 @@ export async function suggestPeople(db: Db, viewerId: string, limit = SUGGESTION
       group by followee_id
     ) s on s.user_id = p.user_id
     where p.status = 'active'
+      and ${notBlockedWith(viewerId, sql`p.user_id`)}
       and p.user_id <> ${viewerId}
       and p.user_id not in (select followee_id from follows where follower_id = ${viewerId})
     order by coalesce(s.shared, 0) desc, p.created_at desc, p.user_id desc

@@ -32,6 +32,7 @@ const ICONS: Record<AlertItem["type"], { icon: IconName; filled?: boolean }> = {
 function hrefFor(item: AlertItem): string | null {
   const actor = item.actors[0];
   if (item.type === "pending_approval") return "/hq/approvals";
+  if (item.type === "follow_request") return "/privacy/requests";
   if (item.post) return `/${item.post.authorUsername}/status/${item.post.id}`;
   return actor?.active ? `/${actor.username}` : null;
 }

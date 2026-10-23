@@ -1854,6 +1854,91 @@ a.srow:hover > svg {
   }
 }
 
+/* ---- Privacy: the on and off switch, follow request buttons and the unblock line ---- */
+
+/* The switch is flat: an outline when off, the brand colour when on. The tap area is 44px tall. */
+.switch {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 44px;
+  margin-right: -4px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.switch-track {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  background: var(--bg);
+  border: 1px solid var(--line-input);
+  border-radius: 999px;
+  transition:
+    background-color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: var(--line-input);
+  border-radius: 50%;
+  transition:
+    transform 0.18s var(--ease),
+    background-color 0.15s var(--ease);
+}
+
+.switch[aria-checked="true"] .switch-track {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.switch[aria-checked="true"] .switch-thumb {
+  background: var(--on-brand);
+  transform: translateX(20px);
+}
+
+.switch:focus-visible {
+  outline: none;
+}
+
+.switch:focus-visible .switch-track {
+  outline: 2px solid var(--brand-text);
+  outline-offset: 2px;
+}
+
+.switch[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* A request row puts Approve and Decline on a line of their own, under the name. */
+.person-request {
+  flex-wrap: wrap;
+}
+
+.person-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.person-request .person-actions {
+  flex-basis: 100%;
+  padding-left: 56px;
+}
+
+.blocked-action {
+  display: flex;
+  justify-content: center;
+}
+
 /* ---- /hq: the only wide layout (CLAUDE.md architecture invariants) ----
    A side menu and a content area on a wide screen, a strip along the top on a phone. The content
    sits on the quiet page shade (--surface) and every panel is flat, with a hairline edge and no

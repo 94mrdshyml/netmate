@@ -9,7 +9,7 @@ import type { Db } from "@/db";
 import { notifications, posts, profiles, type NotificationType } from "@/db/schema";
 import { GROUPED_TYPES } from "@/lib/alert-text";
 import { isId, newId } from "@/lib/ids";
-import { visiblePosts } from "@/server/visibility";
+import { notBlockedWith, notMutedBy, visiblePosts } from "@/server/visibility";
 
 export const ALERTS_PAGE_SIZE = 30;
 
@@ -53,6 +53,33 @@ export function removeFollowAlert(db: Db, actorId: string, targetId: string) {
     .where(and(eq(notifications.actorId, actorId), eq(notifications.recipientId, targetId), eq(notifications.type, "follow")));
 }
 
+/** Someone asked to follow the private account `targetId`. */
+export function alertOnFollowRequest(db: Db, actorId: string, targetId: string) {
+  return db
+    .insert(notifications)
+    .values({ id: newId("notification"), recipientId: targetId, actorId, type: "follow_request" })
+    .onConflictDoNothing();
+}
+
+/** The request was answered or taken back, so its alert goes too. */
+export function removeFollowRequestAlert(db: Db, actorId: string, targetId: string) {
+  return db
+    .delete(notifications)
+    .where(and(eq(notifications.actorId, actorId), eq(notifications.recipientId, targetId), eq(notifications.type, "follow_request")));
+}
+
+/** Every alert either of two people caused for the other. A block takes them all away. */
+export function removeAlertsBetween(db: Db, a: string, b: string) {
+  return db
+    .delete(notifications)
+    .where(
+      or(
+        and(eq(notifications.recipientId, a), eq(notifications.actorId, b)),
+        and(eq(notifications.recipientId, b), eq(notifications.actorId, a)),
+      ),
+    );
+}
+
 /** `replyId` is a reply to `parentId`. The author of the parent hears about it, unless it is the replier. */
 export function alertOnReply(db: Db, actorId: string, parentId: string, replyId: string) {
   return db
@@ -92,8 +119,16 @@ export const SHOWN_ACTORS = 3;
 
 const postAuthor = alias(profiles, "post_author");
 
-/** An alert about a post is shown only while that post is visible to the reader. */
-const shown = (viewerId: string) => or(isNull(notifications.postId), visiblePosts(viewerId));
+/**
+ * An alert about a post is shown only while that post is visible to the reader. No alert is shown
+ * from someone you blocked, who blocked you, or whom you muted.
+ */
+const shown = (viewerId: string) =>
+  and(
+    or(isNull(notifications.postId), visiblePosts(viewerId)),
+    notBlockedWith(viewerId, notifications.actorId),
+    notMutedBy(viewerId, notifications.actorId),
+  );
 
 function encodeCursor(createdAt: number, id: string): string {
   return `${createdAt}_${id}`;

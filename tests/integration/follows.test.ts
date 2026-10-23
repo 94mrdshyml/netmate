@@ -25,12 +25,12 @@ describe("setFollow", () => {
     const a = await member();
     const b = await member();
 
-    expect(await setFollow(db(), a.id, b.id, true)).toEqual({ ok: true, following: true });
-    expect(await setFollow(db(), a.id, b.id, true)).toEqual({ ok: true, following: true });
+    expect(await setFollow(db(), a.id, b.id, true)).toEqual({ ok: true, state: "following" });
+    expect(await setFollow(db(), a.id, b.id, true)).toEqual({ ok: true, state: "following" });
     expect(await count("select count(*) as n from follows where follower_id = ? and followee_id = ?", a.id, b.id)).toBe(1);
 
-    expect(await setFollow(db(), a.id, b.id, false)).toEqual({ ok: true, following: false });
-    expect(await setFollow(db(), a.id, b.id, false)).toEqual({ ok: true, following: false });
+    expect(await setFollow(db(), a.id, b.id, false)).toEqual({ ok: true, state: "none" });
+    expect(await setFollow(db(), a.id, b.id, false)).toEqual({ ok: true, state: "none" });
     expect(await count("select count(*) as n from follows where follower_id = ?", a.id)).toBe(0);
   });
 

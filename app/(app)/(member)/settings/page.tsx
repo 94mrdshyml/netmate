@@ -14,6 +14,7 @@ type Row = { href: string; title: string; sub: string; icon: IconName };
 const ROWS: Row[] = [
   { href: "/profile", title: "Edit profile", sub: "Name, bio and photos", icon: "user" },
   { href: "/invite", title: "Invite people", sub: "Share your link and see who joined", icon: "user-plus" },
+  { href: "/privacy", title: "Privacy", sub: "Private account, blocked and muted people", icon: "lock" },
 ];
 
 // Only the admin sees this row. /hq checks the role again on the server every time.

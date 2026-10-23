@@ -3,9 +3,10 @@
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db";
-import { follows, profiles, user } from "@/db/schema";
+import { blocks, followRequests, follows, mutes, profiles, user } from "@/db/schema";
 import { LINK_MAX, normalizeLink } from "@/lib/link";
 import { normalizeUsername } from "@/lib/username";
+import { personVisible } from "@/server/visibility";
 import { isAttachable, removePicture } from "@/storage/upload";
 
 export type ProfileView = {
@@ -22,6 +23,15 @@ export type ProfileView = {
   followerCount: number;
   followingCount: number;
   iFollow: boolean;
+  /** You asked to follow this private account and are waiting. */
+  requested: boolean;
+  isPrivate: boolean;
+  /** You blocked them, they blocked you, and you muted them (docs/PRD.md section 8.8). */
+  blockedByMe: boolean;
+  blockedMe: boolean;
+  mutedByMe: boolean;
+  /** The one visibility rule for this person: false for a private account you do not follow, and for a block. */
+  canSeeContent: boolean;
   isMe: boolean;
   /** People you follow who follow this person: a few names, and how many in all. */
   mates: { names: string[]; total: number };
@@ -46,6 +56,12 @@ export async function getProfile(db: Db, viewerId: string, username: string): Pr
       followerCount: sql<number>`(select count(*) from ${follows} where ${follows.followeeId} = ${profiles.userId})`,
       followingCount: sql<number>`(select count(*) from ${follows} where ${follows.followerId} = ${profiles.userId})`,
       iFollow: sql<number>`exists (select 1 from ${follows} as v where v.follower_id = ${viewerId} and v.followee_id = ${profiles.userId})`,
+      requested: sql<number>`exists (select 1 from ${followRequests} as rq where rq.requester_id = ${viewerId} and rq.target_id = ${profiles.userId})`,
+      isPrivate: profiles.isPrivate,
+      blockedByMe: sql<number>`exists (select 1 from ${blocks} as b1 where b1.blocker_id = ${viewerId} and b1.blocked_id = ${profiles.userId})`,
+      blockedMe: sql<number>`exists (select 1 from ${blocks} as b2 where b2.blocker_id = ${profiles.userId} and b2.blocked_id = ${viewerId})`,
+      mutedByMe: sql<number>`exists (select 1 from ${mutes} as m1 where m1.muter_id = ${viewerId} and m1.muted_id = ${profiles.userId})`,
+      canSeeContent: sql<number>`${personVisible(viewerId, profiles.userId)}`,
     })
     .from(profiles)
     .where(and(eq(profiles.username, normalizeUsername(username)), eq(profiles.status, "active")))
@@ -53,7 +69,8 @@ export async function getProfile(db: Db, viewerId: string, username: string): Pr
   if (!row) return null;
 
   const isMe = row.userId === viewerId;
-  const mates = isMe ? { names: [], total: 0 } : await getMates(db, viewerId, row.userId);
+  // The Mates line would name followers of a private account, so it shows only when its posts do.
+  const mates = isMe || !row.canSeeContent ? { names: [], total: 0 } : await getMates(db, viewerId, row.userId);
 
   return {
     userId: row.userId,
@@ -69,6 +86,12 @@ export async function getProfile(db: Db, viewerId: string, username: string): Pr
     followerCount: row.followerCount,
     followingCount: row.followingCount,
     iFollow: Boolean(row.iFollow),
+    requested: Boolean(row.requested),
+    isPrivate: row.isPrivate,
+    blockedByMe: Boolean(row.blockedByMe),
+    blockedMe: Boolean(row.blockedMe),
+    mutedByMe: Boolean(row.mutedByMe),
+    canSeeContent: Boolean(row.canSeeContent),
     isMe,
     mates,
   };

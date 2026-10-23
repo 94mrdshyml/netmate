@@ -12,7 +12,10 @@ import { Avatar } from "../_components/avatar";
 import { EmptyState } from "../_components/empty-state";
 import { FollowButton } from "../_components/follow-button";
 import { Icon } from "../_components/icon";
+import { PageHeader } from "../_components/page-header";
 import { PostCard } from "../_components/post-card";
+import { ProfileMenu } from "../_components/profile-menu";
+import { UnblockButton } from "../privacy/unblock-button";
 
 export const dynamic = "force-dynamic";
 
@@ -40,13 +43,39 @@ export default async function ProfilePage({
 
   const profile = await getProfile(db, viewer.userId, username);
   if (!profile) notFound();
-
-  const showReplies = tab === "replies";
-  const page = await listByAuthor(db, viewer.userId, profile.userId, { replies: showReplies, cursor });
-  const now = currentTime();
   const name = `${profile.firstName} ${profile.lastName}`;
+
+  // A block, in either direction, hides the person's profile. Nothing else of theirs is shown, and
+  // the one who blocked can undo it here.
+  if (profile.blockedByMe) {
+    return (
+      <main className="column">
+        <PageHeader title={`@${profile.username}`} back={{ href: "/", label: "Back to Home" }} />
+        <EmptyState icon="slash" title={`You blocked @${profile.username}.`}>
+          You cannot see each other&apos;s posts. They are not told.
+        </EmptyState>
+        <div className="blocked-action">
+          <UnblockButton userId={profile.userId} name={name} />
+        </div>
+      </main>
+    );
+  }
+  if (profile.blockedMe) {
+    return (
+      <main className="column">
+        <PageHeader title={`@${profile.username}`} back={{ href: "/", label: "Back to Home" }} />
+        <EmptyState icon="slash" title="You cannot see this profile." />
+      </main>
+    );
+  }
+
+  const locked = !profile.canSeeContent;
+  const showReplies = tab === "replies";
+  const page = locked ? { items: [], nextCursor: null } : await listByAuthor(db, viewer.userId, profile.userId, { replies: showReplies, cursor });
+  const now = currentTime();
   const base = `/${profile.username}`;
   const more = profile.mates.total - profile.mates.names.length;
+  const followState = profile.iFollow ? "following" : profile.requested ? "requested" : "none";
 
   return (
     <main className="column">
@@ -66,7 +95,10 @@ export default async function ProfilePage({
                 Edit profile
               </Link>
             ) : (
-              <FollowButton userId={profile.userId} name={name} following={profile.iFollow} />
+              <>
+                <FollowButton userId={profile.userId} name={name} state={followState} />
+                <ProfileMenu userId={profile.userId} name={name} username={profile.username} muted={profile.mutedByMe} />
+              </>
             )}
           </div>
         </div>
@@ -98,14 +130,30 @@ export default async function ProfilePage({
           </li>
         </ul>
 
+        {/* The lists are for followers of a private account, so the counts are plain numbers there. */}
         <p className="counts">
-          <Link href={`${base}/following`}>
-            <strong>{profile.followingCount}</strong> Following
-          </Link>
-          <Link href={`${base}/followers`}>
-            <strong>{profile.followerCount}</strong> {profile.followerCount === 1 ? "Follower" : "Followers"}
-          </Link>
+          {locked ? (
+            <>
+              <span>
+                <strong>{profile.followingCount}</strong> Following
+              </span>
+              <span>
+                <strong>{profile.followerCount}</strong> {profile.followerCount === 1 ? "Follower" : "Followers"}
+              </span>
+            </>
+          ) : (
+            <>
+              <Link href={`${base}/following`}>
+                <strong>{profile.followingCount}</strong> Following
+              </Link>
+              <Link href={`${base}/followers`}>
+                <strong>{profile.followerCount}</strong> {profile.followerCount === 1 ? "Follower" : "Followers"}
+              </Link>
+            </>
+          )}
         </p>
+
+        {profile.mutedByMe ? <p className="muted">You muted this person. Their posts stay out of your Home feed and alerts.</p> : null}
 
         {profile.mates.total > 0 ? (
           <p className="muted">
@@ -115,36 +163,46 @@ export default async function ProfilePage({
         ) : null}
       </header>
 
-      <nav className="tabs tabs-top" aria-label="Profile sections">
-        <Link href={base} aria-current={showReplies ? undefined : "page"}>
-          Posts
-        </Link>
-        <Link href={`${base}?tab=replies`} aria-current={showReplies ? "page" : undefined}>
-          Replies
-        </Link>
-      </nav>
+      {locked ? (
+        <EmptyState icon="lock" title="This account is private.">
+          {profile.requested ? "Your request is waiting for an answer." : "Ask to follow to see their posts and who they follow."}
+        </EmptyState>
+      ) : null}
 
-      <section aria-label={showReplies ? "Replies" : "Posts"}>
-        {page.items.map((post) => (
-          <PostCard key={post.id} post={post} viewerId={viewer.userId} now={now} />
-        ))}
-        {page.items.length === 0 ? (
-          showReplies ? (
-            <EmptyState icon="message-circle" title="No replies yet." />
-          ) : profile.isMe ? (
-            <EmptyState icon="feather" title="No posts yet." action={{ href: "/compose", label: "Write a post" }}>
-              Say hello. Your posts show up here.
-            </EmptyState>
-          ) : (
-            <EmptyState icon="feather" title="No posts yet." />
-          )
-        ) : null}
-        {page.nextCursor ? (
-          <Link className="btn btn-ghost more" href={`${base}?${showReplies ? "tab=replies&" : ""}cursor=${page.nextCursor}`}>
-            Older
-          </Link>
-        ) : null}
-      </section>
+      {locked ? null : (
+        <>
+          <nav className="tabs tabs-top" aria-label="Profile sections">
+            <Link href={base} aria-current={showReplies ? undefined : "page"}>
+              Posts
+            </Link>
+            <Link href={`${base}?tab=replies`} aria-current={showReplies ? "page" : undefined}>
+              Replies
+            </Link>
+          </nav>
+
+          <section aria-label={showReplies ? "Replies" : "Posts"}>
+            {page.items.map((post) => (
+              <PostCard key={post.id} post={post} viewerId={viewer.userId} now={now} />
+            ))}
+            {page.items.length === 0 ? (
+              showReplies ? (
+                <EmptyState icon="message-circle" title="No replies yet." />
+              ) : profile.isMe ? (
+                <EmptyState icon="feather" title="No posts yet." action={{ href: "/compose", label: "Write a post" }}>
+                  Say hello. Your posts show up here.
+                </EmptyState>
+              ) : (
+                <EmptyState icon="feather" title="No posts yet." />
+              )
+            ) : null}
+            {page.nextCursor ? (
+              <Link className="btn btn-ghost more" href={`${base}?${showReplies ? "tab=replies&" : ""}cursor=${page.nextCursor}`}>
+                Older
+              </Link>
+            ) : null}
+          </section>
+        </>
+      )}
     </main>
   );
 }
