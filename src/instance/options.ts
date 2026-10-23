@@ -12,7 +12,7 @@ export const FONT_OPTIONS = [
   "JetBrains Mono",
 ] as const;
 
-/** DiceBear styles for default avatars, generated inside the app. */
+/** DiceBear styles for default avatars, generated inside the app. Artwork is CC0 or MIT only. */
 export const AVATAR_STYLES = [
   "initials",
   "thumbs",
@@ -20,9 +20,8 @@ export const AVATAR_STYLES = [
   "identicon",
   "rings",
   "glass",
-  "lorelei",
-  "notionists",
-  "bottts",
+  "pixel-art-neutral",
+  "notionists-neutral",
 ] as const;
 
 export const RADIUS_OPTIONS = ["zero", "sm", "md", "lg"] as const;

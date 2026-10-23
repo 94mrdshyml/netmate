@@ -109,7 +109,7 @@ All values live in instance settings, are first chosen in `/setup`, edited in `/
 | **Primary colour** | any hex colour. See "Colour derivation" below |
 | **Corner radius** | `zero`, `sm`, `md`, `lg` = 0, 4, 8, 16 px. Applies to buttons and form fields. Avatars stay round; post media keeps its own fixed radius |
 | **Font** | any open-licence (OFL) family from Google Fonts, chosen from a searchable list. The font file is fetched once at save time and **stored and served from our own bucket**, so readers never contact Google |
-| **Default avatar style** | any DiceBear style (for example Initials, Thumbs, Shapes). Generated inside the app from the member's id, so it is stable and makes no outside request |
+| **Default avatar style** | one of the DiceBear styles whose artwork is CC0 or MIT: Initials, Thumbs, Shapes, Identicon, Rings, Glass, Pixel art, Notionists (neutral). Generated inside the app, so it makes no outside request, and seeded from the member's id so it is stable. The Initials style draws letters, so it is seeded from the name. An unknown stored style falls back to Initials. Styles with a CC BY or custom licence are left out on purpose (no attribution duty) |
 | **Theme default** | dark, light or follow the phone. Members can still override with a toggle (a cookie) |
 | **Invite quota** | number of auto-approved sign-ups per member link. Default 5 |
 | **Optional features** | GIF search (needs Klipy key), place suggestions |
@@ -190,7 +190,7 @@ Rules:
 | Username | 3 to 15 characters, letters, numbers, underscores; unique ignoring case; stored lower case; shown as `@username`; **cannot be changed later** |
 | Password | 8 to 128 characters |
 
-The username field checks availability as you type (after a short pause). Reserved usernames: `admin`, `api`, `auth`, `settings`, `home`, `explore`, `notifications`, `messages`, `search`, `compose`, `bookmarks`, `analytics`, `sign-in`, `sign-up`, `login`, `logout`, `onboarding`, `status`, `hq`, `setup`, `waiting`, `invite`, `profile`, `account`, `verify-email`, `forgot-password`, `reset-password`, `support`, `help`, `about`, `terms`, `privacy`, plus the instance name (lower-cased, letters and numbers only).
+The username field checks availability as you type (after a short pause). Reserved usernames: `admin`, `api`, `auth`, `settings`, `home`, `explore`, `notifications`, `messages`, `search`, `compose`, `bookmarks`, `analytics`, `sign-in`, `sign-up`, `login`, `logout`, `onboarding`, `status`, `hq`, `setup`, `waiting`, `invite`, `profile`, `account`, `avatar`, `media`, `verify-email`, `forgot-password`, `reset-password`, `support`, `help`, `about`, `terms`, `privacy`, plus the instance name (lower-cased, letters and numbers only).
 
 **Sign in** is email and password. **Sign out** is in Settings. **Forgot password** and **change email** use Resend (hidden or disabled without it).
 
@@ -438,6 +438,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/hq/invites` | Admin link, quota, member links with usage, revoke and regenerate | **wide** |
 | `/hq/email` | Resend key, sender, test email, status | **wide** |
 | `/api/auth/*`, `/api/me`, `/api/upload` | Auth, session probe, upload | n/a |
+| `/avatar/[userId]`, `/media/[...key]` | The drawn default picture; stored pictures from R2 (avatars, banners, posts only; random names, cached for ever). The media subdomain replaces `/media` later | n/a |
 
 `/hq` is admin-only; anyone else gets 404.
 

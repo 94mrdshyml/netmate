@@ -5,6 +5,7 @@ import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
 import { listPeople } from "@/server/follows";
 import { getProfile } from "@/server/profiles";
+import { Avatar } from "../../_components/avatar";
 import { FollowButton } from "../../_components/follow-button";
 import { Icon } from "../../_components/icon";
 
@@ -57,11 +58,14 @@ export default async function PeoplePage({
         {page.items.map((person) => (
           <li key={person.userId} className="person">
             <Link href={`/${person.username}`} className="person-info">
+              <Avatar userId={person.userId} avatarKey={person.avatarKey} size={40} />
+              <span className="person-text">
               <strong>
                 {person.firstName} {person.lastName}
               </strong>
               <span className="muted">@{person.username}</span>
               {person.bio ? <span className="person-bio">{person.bio}</span> : null}
+              </span>
             </Link>
             {person.isMe ? null : (
               <FollowButton userId={person.userId} name={`${person.firstName} ${person.lastName}`} following={person.iFollow} />

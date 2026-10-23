@@ -19,7 +19,7 @@ export type PostView = {
   likeCount: number;
   likedByMe: boolean;
   parentId: string | null;
-  author: { userId: string; username: string; firstName: string; lastName: string };
+  author: { userId: string; username: string; firstName: string; lastName: string; avatarKey: string | null };
 };
 
 export type Page = { items: PostView[]; nextCursor: string | null };
@@ -57,6 +57,7 @@ const columns = (viewerId: string) => ({
   username: profiles.username,
   firstName: profiles.firstName,
   lastName: profiles.lastName,
+  avatarKey: profiles.avatarKey,
 });
 
 type Row = {
@@ -71,6 +72,7 @@ type Row = {
   username: string;
   firstName: string;
   lastName: string;
+  avatarKey: string | null;
 };
 
 const toView = (r: Row): PostView => ({
@@ -81,7 +83,7 @@ const toView = (r: Row): PostView => ({
   likeCount: r.likeCount,
   likedByMe: Boolean(r.liked),
   parentId: r.parentId,
-  author: { userId: r.userId, username: r.username, firstName: r.firstName, lastName: r.lastName },
+  author: { userId: r.userId, username: r.username, firstName: r.firstName, lastName: r.lastName, avatarKey: r.avatarKey },
 });
 
 function toPage(rows: Row[], limit: number): Page {

@@ -1,4 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMember } from "@/auth/session";
@@ -7,6 +8,7 @@ import { displayLink } from "@/lib/link";
 import { currentTime } from "@/lib/time";
 import { getProfile } from "@/server/profiles";
 import { listByAuthor } from "@/server/posts";
+import { Avatar } from "../_components/avatar";
 import { FollowButton } from "../_components/follow-button";
 import { PostCard } from "../_components/post-card";
 
@@ -47,6 +49,14 @@ export default async function ProfilePage({
   return (
     <main className="column">
       <header className="profile-head">
+        {profile.bannerKey ? (
+          <Image className="banner-img" src={`/media/${profile.bannerKey}`} alt="" width={480} height={160} unoptimized />
+        ) : (
+          <div className="banner-img banner-flat" aria-hidden="true" />
+        )}
+        <div className="profile-avatar">
+          <Avatar userId={profile.userId} avatarKey={profile.avatarKey} size={80} />
+        </div>
         <div className="profile-title">
           <div>
             <h1>{name}</h1>

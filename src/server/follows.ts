@@ -14,6 +14,7 @@ export type PersonView = {
   firstName: string;
   lastName: string;
   bio: string;
+  avatarKey: string | null;
   iFollow: boolean;
   isMe: boolean;
 };
@@ -81,6 +82,7 @@ export async function listPeople(
       firstName: profiles.firstName,
       lastName: profiles.lastName,
       bio: profiles.bio,
+      avatarKey: profiles.avatarKey,
       iFollow: sql<number>`exists (select 1 from ${follows} as mine where mine.follower_id = ${viewerId} and mine.followee_id = ${profiles.userId})`,
     })
     .from(follows)
@@ -95,6 +97,7 @@ export async function listPeople(
     firstName: r.firstName,
     lastName: r.lastName,
     bio: r.bio,
+    avatarKey: r.avatarKey,
     iFollow: Boolean(r.iFollow),
     isMe: r.userId === viewerId,
   }));

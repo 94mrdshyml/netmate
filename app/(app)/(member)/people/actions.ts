@@ -38,7 +38,7 @@ export async function updateProfileAction(input: unknown): Promise<EditProfileAc
   if (!member) redirect("/sign-in");
   const { env } = await getCloudflareContext({ async: true });
 
-  const result = await updateProfile(getDb(env.DB), member.userId, input);
+  const result = await updateProfile(getDb(env.DB), member.userId, input, env.MEDIA);
   if (result.ok) {
     revalidatePath(`/${member.username}`);
     revalidatePath("/");
