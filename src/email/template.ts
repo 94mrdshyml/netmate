@@ -30,4 +30,15 @@ export function pngLogoUrl(origin: string | undefined, logoKey: string | null): 
   }
 }
 
-export const isWebUrl = (url: string) => /^https?:\/\/[^\s"'<>]+$/.test(url);
+/** An absolute address on this site for an email button, or null when the site address is unknown. */
+export function siteUrl(origin: string | undefined, path: string): string | null {
+  if (!origin) return null;
+  try {
+    const base = new URL(origin);
+    return base.protocol === "https:" || base.protocol === "http:" ? `${base.origin}${path}` : null;
+  } catch {
+    return null;
+  }
+}
+
+export const isWebUrl= (url: string) => /^https?:\/\/[^\s"'<>]+$/.test(url);
