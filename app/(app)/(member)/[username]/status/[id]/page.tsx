@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
 import { currentTime } from "@/lib/time";
+import { readKlipyKey } from "@/server/gifs";
 import { getPost, listReplies } from "@/server/posts";
 import { Composer } from "../../../_components/composer";
 import { EmptyState } from "../../../_components/empty-state";
@@ -36,6 +37,7 @@ export default async function PostPage({
 
   const replies = await listReplies(db, member.userId, post.id, { cursor });
   const now = currentTime();
+  const gifKey = await readKlipyKey(db, env.SETTINGS_ENCRYPTION_KEY);
 
   return (
     <main className="column">
@@ -46,6 +48,7 @@ export default async function PostPage({
           parentId={post.id}
           placeholder="Write your reply"
           submitLabel="Reply"
+          gifKey={gifKey}
           leading={<Avatar userId={member.userId} avatarKey={member.avatarKey} size={40} />}
         />
       </section>

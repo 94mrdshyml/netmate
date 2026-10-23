@@ -2,8 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import type { PostGif } from "@/lib/gif";
 import { POST_MAX, countCharacters } from "@/lib/post-text";
 import { createPostAction } from "../posts/actions";
+import { GifPicker } from "./gif-picker";
 import { Icon } from "./icon";
 import { PlacePicker } from "./place-picker";
 
@@ -44,6 +46,7 @@ export function Composer({
   autoFocus = false,
   leading,
   places = false,
+  gifKey = null,
 }: {
   parentId?: string;
   placeholder?: string;
@@ -53,6 +56,8 @@ export function Composer({
   leading?: ReactNode;
   /** Offer "Add a place" (the admin has place suggestions on, and this is a post, not a reply). */
   places?: boolean;
+  /** Klipy's key, given only while the admin has GIF search on. Without it there is no GIF button. */
+  gifKey?: string | null;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -61,6 +66,8 @@ export function Composer({
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [place, setPlace] = useState<string | null>(null);
   const [choosingPlace, setChoosingPlace] = useState(false);
+  const [gif, setGif] = useState<PostGif | null>(null);
+  const [choosingGif, setChoosingGif] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
   const photosRef = useRef(photos);
@@ -75,7 +82,7 @@ export function Composer({
   const failed = photos.some((p) => p.error !== null);
   const hasWords = text.trim().length > 0;
   const hasPhotos = photos.length > 0;
-  const blocked = pending || uploading || failed || (!hasWords && !hasPhotos) || used > POST_MAX;
+  const blocked = pending || uploading || failed || (!hasWords && !hasPhotos && !gif) || used > POST_MAX;
 
   async function addPhotos(files: FileList | null) {
     const room = PHOTO_MAX - photos.length;
@@ -121,6 +128,7 @@ export function Composer({
             parentId,
             photos: photos.flatMap((p) => (p.key ? [p.key] : [])),
             place: place ?? undefined,
+            gif: gif ?? undefined,
           });
           if (result.ok) {
             // A reply stays on the page: clear the box and show it. (A new post goes Home instead.)
@@ -128,6 +136,7 @@ export function Composer({
             photos.forEach((p) => URL.revokeObjectURL(p.preview));
             setPhotos([]);
             setPlace(null);
+            setGif(null);
             router.refresh();
           } else {
             setError(result.message);
@@ -174,6 +183,15 @@ export function Composer({
               ))}
             </ul>
           ) : null}
+          {gif ? (
+            <div className="composer-gif" style={{ width: `min(100%, ${gif.width}px)` }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- a picture straight from Klipy, which its rules require */}
+              <img src={gif.url} alt={gif.title ?? "The GIF you chose"} width={gif.width} height={gif.height} referrerPolicy="no-referrer" />
+              <button type="button" className="composer-photo-remove" aria-label="Remove GIF" onClick={() => setGif(null)}>
+                <Icon name="x" size={16} />
+              </button>
+            </div>
+          ) : null}
           {place ? (
             <p className="composer-place">
               <Icon name="map-pin" size={16} />
@@ -190,6 +208,16 @@ export function Composer({
                 setChoosingPlace(false);
               }}
               onClose={() => setChoosingPlace(false)}
+            />
+          ) : null}
+          {choosingGif && gifKey ? (
+            <GifPicker
+              gifKey={gifKey}
+              onPick={(chosen) => {
+                setGif(chosen);
+                setChoosingGif(false);
+              }}
+              onClose={() => setChoosingGif(false)}
             />
           ) : null}
         </div>
@@ -212,12 +240,27 @@ export function Composer({
           <button
             type="button"
             className="icon-btn"
-            aria-label={photos.length >= PHOTO_MAX ? "Add pictures (4 is the most)" : "Add pictures"}
-            disabled={photos.length >= PHOTO_MAX || pending}
+            aria-label={gif ? "Add pictures (not with a GIF)" : photos.length >= PHOTO_MAX ? "Add pictures (4 is the most)" : "Add pictures"}
+            disabled={photos.length >= PHOTO_MAX || pending || gif !== null}
             onClick={() => picker.current?.click()}
           >
             <Icon name="image" />
           </button>
+          {gifKey ? (
+            <button
+              type="button"
+              className="icon-btn gif-btn"
+              aria-label={hasPhotos ? "Add a GIF (not with pictures)" : gif ? "Change GIF" : "Add a GIF"}
+              aria-expanded={choosingGif}
+              disabled={hasPhotos || pending}
+              onClick={() => {
+                setChoosingPlace(false);
+                setChoosingGif((open) => !open);
+              }}
+            >
+              GIF
+            </button>
+          ) : null}
           {places ? (
             <button
               type="button"
@@ -225,7 +268,10 @@ export function Composer({
               aria-label={place ? "Change place" : "Add a place"}
               aria-expanded={choosingPlace}
               disabled={pending}
-              onClick={() => setChoosingPlace((open) => !open)}
+              onClick={() => {
+                setChoosingGif(false);
+                setChoosingPlace((open) => !open);
+              }}
             >
               <Icon name="map-pin" />
             </button>

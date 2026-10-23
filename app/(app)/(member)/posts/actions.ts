@@ -21,12 +21,15 @@ const MESSAGES = {
   place_too_long: "That place name is over 60 characters.",
   place_bad_characters: "That place name has characters we cannot use.",
   place_off: "Adding a place is turned off here.",
+  bad_gif: "That GIF could not be used. Remove it and try another.",
+  gif_with_photos: "A post can have pictures or a GIF, not both.",
+  gif_off: "GIFs are turned off here.",
 } as const;
 
 export type CreatePostActionResult = { ok: true } | { ok: false; message: string };
 
 /** Posts (then goes Home), or replies when `parentId` is given (then stays, so the page can show the reply). */
-export async function createPostAction(input: { body: string; parentId?: string; photos?: string[]; place?: string }): Promise<CreatePostActionResult> {
+export async function createPostAction(input: { body: string; parentId?: string; photos?: string[]; place?: string; gif?: unknown }): Promise<CreatePostActionResult> {
   const member = await getMember();
   if (!member) redirect("/sign-in");
   const { env } = await getCloudflareContext({ async: true });
@@ -43,7 +46,10 @@ export async function createPostAction(input: { body: string; parentId?: string;
   const wantsPlace = typeof input?.place === "string" && input.place.trim() !== "";
   if (wantsPlace && !(await readInstance(getDb(env.DB))).settings.placesEnabled) return { ok: false, message: MESSAGES.place_off };
 
-  const result = await createPost(getDb(env.DB), member.userId, input?.body, input?.parentId, photos, input?.place);
+  // A GIF is only taken while the admin has GIF search on. The address itself is checked in createPost.
+  if (input?.gif != null && !(await readInstance(getDb(env.DB))).settings.gifsEnabled) return { ok: false, message: MESSAGES.gif_off };
+
+  const result = await createPost(getDb(env.DB), member.userId, input?.body, input?.parentId, photos, input?.place, input?.gif);
   if (!result.ok) return { ok: false, message: MESSAGES[result.code] };
 
   revalidatePath("/");

@@ -98,7 +98,7 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 3. **Setup and admin.**
    - `/setup` is one-time and atomic: admin, settings and the configured flag are written together or not at all. Once configured it returns 404 for ever. It requires `SETUP_TOKEN` when that decision is on.
    - `/hq` and its actions check the admin role on the server every time. A non-admin gets 404, not 403.
-   - Secrets (Resend key, Klipy key) are encrypted in D1 with `SETTINGS_ENCRYPTION_KEY`, are never returned to the browser, and are never logged.
+   - Secrets (Resend key, Klipy key) are encrypted in D1 with `SETTINGS_ENCRYPTION_KEY`, are never shown back in `/hq` after saving, and are never logged. The Resend key never goes to any browser. The one exception is the Klipy key (owner decision, session 34): Klipy puts the key in the address of every search and requires searches to come from the member's own browser, so while GIF search is on, signed-in members' browsers are given that key (and only that key). It is never logged, never emailed and never sent to a signed-out visitor.
 4. **One visibility rule.** `visibleTo` decides who sees what. Every list of posts, the post page, replies, quotes, bookmarks, the feed, search, notifications and analytics recording use it. Never re-implement it.
 5. **Every server action checks the session itself.** Never trust a user id from the client.
 6. **No hard-coded brand.** No fixed name, logo, colour, font or avatar style in UI, titles, share text or emails. Everything reads instance settings and CSS variables.

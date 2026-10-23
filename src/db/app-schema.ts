@@ -204,6 +204,34 @@ export const postMedia = sqliteTable(
   ],
 );
 
+/**
+ * The one GIF a post may carry (docs/PRD.md section 8.2). The picture stays at Klipy: we keep only its
+ * address (never a copy, as Klipy's rules require) and its size so the page does not jump. The
+ * database accepts only Klipy's own media hosts; the server checks the address again with a real
+ * URL parser. A GIF never goes with photos, which the server enforces.
+ */
+export const postGifs = sqliteTable(
+  "post_gifs",
+  {
+    postId: text("post_id")
+      .primaryKey()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    /** Klipy's title for it, used as the picture's description. */
+    title: text("title"),
+  },
+  (t) => [
+    check(
+      "post_gifs_url",
+      sql`${t.url} like 'https://static.klipy.com/%' or ${t.url} like 'https://static1.klipy.com/%' or ${t.url} like 'https://static2.klipy.com/%'`,
+    ),
+    check("post_gifs_size", sql`${t.width} between 1 and 4096 and ${t.height} between 1 and 4096`),
+    check("post_gifs_title", sql`${t.title} is null or length(${t.title}) <= 140`),
+  ],
+);
+
 /** One row per person per post. Idempotent: liking twice leaves one row. */
 export const likes = sqliteTable(
   "likes",

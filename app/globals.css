@@ -2205,6 +2205,135 @@ a.srow:hover > svg {
   overflow-wrap: anywhere;
 }
 
+/* ---- GIF on a post: the GIF button, the search box, the chosen GIF, and the GIF on a post ---- */
+
+.gif-btn {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.gif-btn:disabled,
+.icon-btn:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.gif-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.gif-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--line-input);
+  border-radius: var(--radius);
+}
+
+.gif-field:focus-within {
+  border-color: var(--brand-text);
+}
+
+.gif-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0;
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
+.gif-note,
+.gif-credit {
+  margin: 0;
+}
+
+.gif-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 52vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+.gif-choice {
+  display: block;
+  width: 100%;
+  height: 120px;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.gif-choice:hover,
+.gif-choice:focus-visible {
+  border-color: var(--brand-text);
+}
+
+.gif-choice img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gif-more {
+  align-self: stretch;
+}
+
+.composer-gif {
+  position: relative;
+  display: block;
+  min-width: 88px;
+  max-width: 100%;
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.composer-gif img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 240px;
+  object-fit: contain;
+}
+
+.post-gif {
+  max-width: 100%;
+  margin-top: 8px;
+}
+
+.post-gif img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 380px;
+  object-fit: contain;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
 /* ---- /hq: the only wide layout (CLAUDE.md architecture invariants) ----
    A side menu and a content area on a wide screen, a strip along the top on a phone. The content
    sits on the quiet page shade (--surface) and every panel is flat, with a hairline edge and no

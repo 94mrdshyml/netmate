@@ -4,6 +4,7 @@ import type { PostView } from "@/server/posts";
 import { Avatar } from "./avatar";
 import { Icon } from "./icon";
 import { LikeButton, PostMenu } from "./post-actions";
+import { PostGif } from "./post-gif";
 import { PostPhotos } from "./post-photos";
 
 /** One post in a list. The text is always rendered as text, never as markup. */
@@ -40,6 +41,7 @@ export function PostCard({
         </header>
         {post.body ? <p className="post-body">{post.body}</p> : null}
         <PostPhotos keys={post.photos} name={name} />
+        {post.gif ? <PostGif gif={post.gif} /> : null}
         {post.place ? (
           <p className="post-place">
             <Icon name="map-pin" size={14} />

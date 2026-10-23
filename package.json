@@ -57,7 +57,8 @@
     "wrangler": "4.151.3"
   },
   "overrides": {
-    "glob": "10.5.0"
+    "glob": "10.5.0",
+    "zod": "4.6.7"
   },
   "repository": {
     "type": "git",

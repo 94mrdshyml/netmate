@@ -12,6 +12,7 @@ import { getInstanceState } from "@/instance/request";
 import { saveBrandingForm, type BrandingResult } from "@/instance/branding";
 import { clearInstanceCache } from "@/instance/settings";
 import { isId } from "@/lib/ids";
+import { removeKlipyKey, saveKlipyKey, type SaveKlipyResult } from "@/server/gifs";
 import { approvePending, regenerateInvite, rejectPending, setInviteQuota, setPlacesEnabled } from "@/server/admin";
 import { emailApproved, emailRejected, pendingContact } from "@/server/status-emails";
 import { mailContext } from "@/server/mail-context";
@@ -143,4 +144,33 @@ export async function savePlacesAction(wanted: unknown): Promise<ServicesResult>
     revalidatePath("/compose");
   }
   return result;
+}
+
+/**
+ * Saves the Klipy key and turns GIF search on. The admin's own browser has already tried the key with Klipy
+ * (Klipy wants every request from a browser), so this only checks its shape and stores it encrypted.
+ */
+export async function saveKlipyKeyAction(input: unknown): Promise<SaveKlipyResult> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await saveKlipyKey(getDb(env.DB), env.SETTINGS_ENCRYPTION_KEY, input);
+  if (result.ok) {
+    clearInstanceCache();
+    revalidatePath("/hq/services");
+    revalidatePath("/compose");
+  }
+  return result;
+}
+
+/** Forgets the Klipy key and turns GIF search off. GIFs already on posts stay. */
+export async function removeKlipyKeyAction(): Promise<{ ok: boolean }> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const ok = await removeKlipyKey(getDb(env.DB));
+  if (ok) {
+    clearInstanceCache();
+    revalidatePath("/hq/services");
+    revalidatePath("/compose");
+  }
+  return { ok };
 }
