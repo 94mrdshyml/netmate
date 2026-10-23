@@ -1,4 +1,4 @@
-# 23. /hq/email (2026-10-23)
+# 24. /hq/email (2026-10-23)
 - Branch / PR: feat/hq-email
 - Before this: #39 (logo, favicon, fonts) and #40 (impeccable off) are merged and live. #41 (CI Playwright cache) was still open when this started; this branch does not depend on it.
 - Done:
@@ -6,7 +6,7 @@
   - Every `/hq` page shows the banner "Email is not set up, ..." until both secrets exist. Nav gains Email.
   - `src/server/email.ts`: `saveEmailSettings` (zod, a new key is checked with a real Resend call, blank key keeps the saved one, key and sender stored encrypted in `instance_secrets` in one batch), `readEmailConfig` (missing or unreadable, never a crash when the encryption key changed), `sendEmail` (the one place that sends and records), `sendTestEmail`, `removeEmailSettings`, `emailPanel`.
   - `src/email/transport.ts`: real transport over `fetch` to Resend (no package), and a fake used only when `ENV` is exactly `test`. `scrubError` strips addresses and keys from Resend's text before it is stored or shown. `src/email/template.ts`: branded HTML plus text copy (name, PNG logo only, brand colour, corner style, font stack, escaped, only http(s) buttons).
-  - Migration `0006_email_state.sql`: one-row `email_state` table (last sent, last error, error time; error up to 300 characters). Plain CREATE TABLE.
+  - Migration `0007_email_state.sql`: one-row `email_state` table (last sent, last error, error time; error up to 300 characters). Plain CREATE TABLE.
   - Test email limit: 5 an hour per admin (`limitTestEmail`).
   - `ENV=test` is passed to the e2e preview (`playwright.config.ts`) and to the integration Workers (`vitest.config.mts`).
 - Bug found by an e2e test and fixed: when the sender was invalid, the key was ignored, so the page said "Enter your Resend key" instead of "A Resend key starts with re_". Both problems are now reported together (integration tests added).

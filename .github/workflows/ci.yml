@@ -69,7 +69,18 @@ jobs:
         with:
           node-version: 24
       - run: bun install --frozen-lockfile
-      - run: bunx playwright install --with-deps chromium
+      # The slow part used to be `--with-deps`: apt sometimes fetched its 26 MB at about 50 kB/s
+      # (8 minutes). The runner image already carries Chrome's system libraries, so only the
+      # browser is installed, and it is cached by Playwright version.
+      - id: playwright
+        run: echo "version=$(bunx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        id: browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+      - run: bunx playwright install chromium
+        if: steps.browsers.outputs.cache-hit != 'true'
       - run: bun run test:e2e
       - uses: actions/upload-artifact@v7
         if: failure()
