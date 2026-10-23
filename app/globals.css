@@ -810,6 +810,7 @@ a.alert-link:focus-visible {
 
 .post {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin: 0 calc(-1 * var(--gx));
   padding: 14px var(--gx) 6px;
@@ -928,6 +929,11 @@ a.alert-link:focus-visible {
   border-radius: var(--radius);
 }
 
+.post-menu-panel.start {
+  right: auto;
+  left: 0;
+}
+
 .post-menu-panel.up {
   top: auto;
   bottom: calc(100% + 4px);
@@ -943,6 +949,7 @@ a.alert-link:focus-visible {
   font: inherit;
   color: var(--fg);
   text-align: left;
+  text-decoration: none;
   background: transparent;
   border: 0;
   cursor: pointer;
@@ -2334,6 +2341,78 @@ a.srow:hover > svg {
   border-radius: var(--radius);
 }
 
+/* ---- Repost, quote and bookmark: the line above a reposted post, the quoted card, and the sheet ---- */
+
+.post-reposted {
+  display: flex;
+  align-items: center;
+  flex: 0 0 100%;
+  gap: 6px;
+  margin: -4px 0 -6px 52px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.post-reposted a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.post-reposted a:hover {
+  color: var(--brand-text);
+}
+
+.quote-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+a.quote-card:hover {
+  background: var(--surface);
+}
+
+.quote-card-gone p {
+  margin: 0;
+}
+
+.quote-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.875rem;
+}
+
+.quote-head strong,
+.quote-head .muted {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quote-body {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.quote-extra {
+  font-size: 0.8125rem;
+}
+
+.composer-quote {
+  position: relative;
+  margin-top: 8px;
+}
+
 /* ---- /hq: the only wide layout (CLAUDE.md architecture invariants) ----
    A side menu and a content area on a wide screen, a strip along the top on a phone. The content
    sits on the quiet page shade (--surface) and every panel is flat, with a hairline edge and no
@@ -3152,4 +3231,8 @@ a.srow:hover > svg {
   border: 1px solid var(--line-input);
   border-radius: var(--radius);
   padding: 4px;
+}
+
+.alert-icon-repost {
+  color: var(--brand-text);
 }

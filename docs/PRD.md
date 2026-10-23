@@ -228,7 +228,7 @@ The username field checks availability as you type (after a short pause). Reserv
 
 **Like.** Idempotent. Notifies the author (not for liking your own post).
 
-**Repost and quote.** The repost button opens a small sheet: Repost (or Undo repost), or Quote. A repost shows "X reposted" above the post in followers' feeds. A quote opens the composer with the original under your text; the quote text may be empty. If the original is deleted or not visible, the card says "This post isn't available". A private account's posts can't be reposted or quoted. Quoting alerts the author.
+**Repost and quote.** **Built.** The repost button opens a small sheet: Repost (or Undo repost), or Quote. A repost shows "X reposted" (or "You reposted") above the post in the feeds of people who follow the reposter, and on the reposter's profile under Posts. A post can appear twice, once as itself and once as a repost; several reposts of one post on a page show once, the newest. Repost and quote are idempotent ("reposted", not a flip): the row, the counter on the post and the author's alert change in one batch. Reposting your own post is allowed and tells nobody. A reply cannot be reposted (replies never appear in feeds) but can be quoted. Taking a repost back always works. A quote (`/compose?quote=<post id>`) opens the composer with the original under your text; the quote text may be empty. A quote carries no pictures and no GIF (the composer hides those buttons and the server refuses the mix), may carry a place, and is not also a reply (the database checks that too). The quote card is the original's author, time and text, with "With 2 pictures" or "With a GIF" when it had them, and links to it. If the original is deleted or the reader may not see it (private, blocked), the card says "This post isn't available." A private account's posts can't be reposted or quoted, not even by their owner; their posts show no repost button. Reposting from a muted person, or of a muted person's post, is left out of your home feed (a profile you open on purpose still shows the reposts). Reposting alerts the author ("X reposted your post", grouped like likes); quoting alerts the author and the alert opens the new quote post. Limits: 30 reposts a minute. Share (the phone's share sheet) is not built yet.
 
 **Bookmark.** Private. See 8.9.
 
@@ -332,7 +332,7 @@ No typo tolerance, no trending tags in v1.
 
 `/notifications` (bell in the bottom bar, with unread badge). Types: **like, repost, follow, follow request, reply, quote, mention, invite used** (your link was used) and, for the admin only, **pending approval**. Never for your own actions. Newest first, paged (30). Likes and reposts of the same post within a page collapse ("Meera and 2 others liked your post"). Each row shows a snippet (up to 140 characters). Alerts from people you blocked, were blocked by, or muted are hidden. Opening the screen marks all read. A quote alert replaces a mention alert for the same person.
 
-**Built so far (session 24).** The kinds that exist in the app today: **like, follow, reply, invite used and pending approval**. Repost, follow request, quote and mention are allowed by the database already and arrive with their features. How it works:
+**Built so far (sessions 24, 33 and 36).** The kinds that exist in the app today: **like, repost, follow, follow request, reply, quote, invite used and pending approval**. Mention is allowed by the database already and arrives with hashtags and mentions. How it works:
 - An alert is written in the same `db.batch()` as the like, follow, reply or sign-up that causes it, and taken back in the batch that undoes it (unlike, unfollow). Approving a sign-up removes the admin's "pending approval" alert for that person; rejecting deletes the account, which removes it with it. A reply tells the author of the post it answers (not yourself). Invite used goes to the link's owner (the admin's link too); pending approval goes to the admin when a sign-up lands over the quota.
 - The database refuses an alert about your own action, an unknown kind, a post alert with no post (or a person alert with one), and the same alert twice (one partial unique index for alerts about a post, one for alerts about a person). Sending a like twice leaves one alert, and an old read alert does not come back as new.
 - Reading goes through `visiblePosts`: an alert about a deleted post is not shown or counted.
@@ -360,11 +360,11 @@ No typo tolerance, no trending tags in v1.
 - **Mute.** Only the muter is affected. The muted person's posts leave the Home feed (For you and Following) and their alerts are hidden and not counted; their profile, their posts on the post page and search still show. Unmuting brings everything back. No limit applies to mutes and blocks.
 - **The rule.** `src/server/visibility.ts` has the one rule. `personVisible(viewer, person)` is true for yourself, or for an active member who is public or followed by you and with no block either way; `visiblePosts` is that plus "not deleted". `notBlockedWith` and `notMutedBy` are the two smaller pieces used by lists of people, the feed and alerts. Mutes are not part of `personVisible`.
 - **Data.** `follow_requests`, `blocks` and `mutes` (migration 0009), each one row per pair, with no-self checks, cascading delete with the account, and the indexes the lists and the "who blocked me" check need. `profiles.is_private` already existed.
-- Not yet: reposts and quotes of a private account's posts being refused (reposts and quotes do not exist yet; they must use `personVisible` and also check "not private"); the For you ranking skipping muted people (it uses the same feed filter when it arrives).
+- Reposts and quotes of a private account's posts are refused (session 36: they use the visibility rule and also check "not private"). Not yet: the For you ranking skipping muted people (it uses the same feed filter when it arrives).
 
 ### 8.9 Bookmarks
 
-The bookmark icon saves a post privately. `/bookmarks` (linked from Settings) lists them, newest saved first, paged. Posts you can no longer see (deleted, author went private, blocked) are skipped. Nobody sees your list or a bookmark count on a post. The author sees only a total of saves in their own analytics.
+**Built.** The bookmark icon under each post saves it privately (the wanted state, not a flip; 60 saves a minute). `/bookmarks`, titled "Saved posts" and linked from Settings, lists them, newest saved first, paged. Posts you can no longer see (deleted, author went private, blocked) are skipped. Nobody sees your list or a bookmark count on a post. The author sees only a total of saves in their own analytics.
 
 ### 8.10 Analytics
 
@@ -469,7 +469,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/[username]/status/[id]` | Post and replies | mobile |
 | `/[username]/followers`, `/following` | People lists | mobile |
 | `/search?q=` | People and posts; suggestions when empty | mobile |
-| `/notifications`, `/bookmarks` | Alerts, saved posts | mobile |
+| `/notifications`, `/bookmarks` | Alerts, saved posts (built) | mobile |
 | `/analytics` (`?range=28`) | Your analytics | mobile |
 | `/settings` and `/profile`, `/account`, `/invite`, `/privacy`, `/privacy/requests`, `/privacy/blocked`, `/privacy/muted` | Settings | mobile |
 | `/hq` | Admin overview: members, waiting for approval and invite links as number panels, a "Needs you" list (sign-up requests, email) and a summary of the community's look. Reached from Settings, admin only | **wide** |
@@ -513,7 +513,7 @@ More prefixes are added as their tables are created (posts, invites, notificatio
 | `profiles` | one per user: username (unique, lower case), first and last name, bio, link, location, private flag, avatar and banner keys, `role` (admin or member), `status` (active or pending), `invited_by`, `email_verified_at`, created time |. The database enforces the username rules (3 to 15 characters of a-z, 0-9, underscore), name and bio lengths, role and status values, and **exactly one admin** (a partial unique index). If the inviter is deleted, `invited_by` becomes empty
 | `invite_links` | id (`inv_`), member id, long random code (not an id), uses count, created, revoked. At most one active (not revoked) link per member |
 | `invite_uses` | id (`invu_`), invite link, new user (one use per person), time, outcome (`approved` or `pending`) |
-| `posts` | body (up to 280), place (optional, 1 to 60 characters of plain text, checked by the database), author, parent (reply), quoted post, reply/like/repost counts, created, deleted |
+| `posts` | body (up to 280), place (optional, 1 to 60 characters of plain text, checked by the database), author, parent (reply), quoted post (optional; the database refuses a post that is both a reply and a quote; if the original row is removed the quote stays and its card says "not available"), reply/like/repost counts (repost count never negative), created, deleted |
 | `post_media` | up to 4 per post: position (0 to 3), key (storage key under `posts/`; checked by the database). Built for pictures |
 | `post_gifs` | one per post at most (post id is the key): Klipy address, width, height, title. The database accepts only https addresses on Klipy's three media hosts, sizes 1 to 4096 and a title of 140 characters or fewer. Removed with the post |
 | `post_links` | one link card per post: url, title, description, image, site |
@@ -521,7 +521,7 @@ More prefixes are added as their tables are created (posts, invites, notificatio
 | `posts_fts`, `profiles_fts` | FTS5 search indexes (rebuildable from the tables above) |
 | `follows`, `follow_requests` | follower/followee (no self-follow); pending asks for private accounts |
 | `blocks`, `mutes` | who blocked or muted whom |
-| `likes`, `reposts`, `bookmarks` | one row per person per post |
+| `likes`, `reposts`, `bookmarks` | one row per person per post (created time kept; reposts and bookmarks are indexed by person and time for the feed, a profile and the Saved list) |
 | `notifications` | id (`ntf_`), recipient, actor, type, post, created, read time. The database checks the kind, refuses an alert about yourself, requires a post for post alerts and none for person alerts, and allows one alert per actor, kind and post (two partial unique indexes) |
 | `rate_hits` | one row per allowed limited attempt: key (label plus a salted hash of the IP, email or link, never the raw value) and time in ms; plain row number as id because nothing refers to it; pruned daily |
 | `analytics_events` | append-only: owner, viewer, kind, post, day, time. Unique per person per thing per day for the six view/tap kinds; follows and unfollows never squashed |

@@ -41,7 +41,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
 
       <section aria-label="Posts">
         {feed.items.map((post) => (
-          <PostCard key={post.id} post={post} viewerId={member.userId} now={now} />
+          <PostCard key={`${post.repostedBy?.userId ?? ""}${post.id}`} post={post} viewerId={member.userId} now={now} />
         ))}
         {feed.items.length === 0 ? (
           following ? (

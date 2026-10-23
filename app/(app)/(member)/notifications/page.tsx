@@ -18,11 +18,11 @@ export const metadata = { title: "Alerts" };
 
 const ICONS: Record<AlertItem["type"], { icon: IconName; filled?: boolean }> = {
   like: { icon: "heart", filled: true },
-  repost: { icon: "heart" },
+  repost: { icon: "repeat" },
   follow: { icon: "user-plus" },
   follow_request: { icon: "user-plus" },
   reply: { icon: "message-circle" },
-  quote: { icon: "message-circle" },
+  quote: { icon: "edit-2" },
   mention: { icon: "message-circle" },
   invite_used: { icon: "user-plus" },
   pending_approval: { icon: "user-check" },

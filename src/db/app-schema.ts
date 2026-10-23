@@ -168,8 +168,16 @@ export const posts = sqliteTable(
      * drizzle would rebuild the whole table to add one, and a rebuild risks cascade deletes on D1).
      */
     place: text("place"),
+    /**
+     * The post this one quotes, or null. A post is a reply or a quote, never both (the database checks
+     * it, in a CHECK added by hand in migration 0013). If the original row is ever removed the quote stays
+     * and its card says the post is not available.
+     */
+    quotedPostId: text("quoted_post_id").references((): AnySQLiteColumn => posts.id, { onDelete: "set null" }),
     replyCount: integer("reply_count").notNull().default(0),
     likeCount: integer("like_count").notNull().default(0),
+    /** How many people reposted it. Never negative (checked by hand in migration 0013). */
+    repostCount: integer("repost_count").notNull().default(0),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
     /** Deleting hides the post everywhere but keeps the row. */
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
@@ -245,6 +253,41 @@ export const likes = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
   },
   (t) => [primaryKey({ columns: [t.userId, t.postId] }), index("likes_post_idx").on(t.postId)],
+);
+
+/** One row per person per post. Reposting twice leaves one row. The counter on the post changes in the same batch. */
+export const reposts = sqliteTable(
+  "reposts",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.postId] }),
+    index("reposts_post_idx").on(t.postId),
+    // A person's reposts, newest first (their profile and the feeds that include them).
+    index("reposts_user_idx").on(t.userId, t.createdAt),
+  ],
+);
+
+/** Private saves. Nobody sees another person's list or a count on a post (docs/PRD.md section 8.9). */
+export const bookmarks = sqliteTable(
+  "bookmarks",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.postId] }), index("bookmarks_user_idx").on(t.userId, t.createdAt)],
 );
 
 /** Who follows whom. One row per pair; the database refuses following yourself. */

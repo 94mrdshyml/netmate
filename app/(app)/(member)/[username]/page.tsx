@@ -182,7 +182,7 @@ export default async function ProfilePage({
 
           <section aria-label={showReplies ? "Replies" : "Posts"}>
             {page.items.map((post) => (
-              <PostCard key={post.id} post={post} viewerId={viewer.userId} now={now} />
+              <PostCard key={`${post.repostedBy?.userId ?? ""}${post.id}`} post={post} viewerId={viewer.userId} now={now} />
             ))}
             {page.items.length === 0 ? (
               showReplies ? (

@@ -38,6 +38,33 @@ export function removeLikeAlert(db: Db, actorId: string, postId: string) {
   return db.delete(notifications).where(and(eq(notifications.actorId, actorId), eq(notifications.type, "like"), eq(notifications.postId, postId)));
 }
 
+/** Someone reposted a post. Nothing is written for a repost of your own post. */
+export function alertOnRepost(db: Db, actorId: string, postId: string) {
+  return db
+    .insert(notifications)
+    .select(
+      sql`select ${newId("notification")}, p.author_id, ${actorId}, 'repost', p.id, ${Date.now()}, null
+          from ${posts} p where p.id = ${postId} and p.author_id <> ${actorId}`,
+    )
+    .onConflictDoNothing();
+}
+
+/** The repost was taken back, so its alert goes too. */
+export function removeRepostAlert(db: Db, actorId: string, postId: string) {
+  return db.delete(notifications).where(and(eq(notifications.actorId, actorId), eq(notifications.type, "repost"), eq(notifications.postId, postId)));
+}
+
+/** `quoteId` quotes `quotedId`. The author of the quoted post hears about it (the alert points at the new post), unless it is the quoter. */
+export function alertOnQuote(db: Db, actorId: string, quotedId: string, quoteId: string) {
+  return db
+    .insert(notifications)
+    .select(
+      sql`select ${newId("notification")}, p.author_id, ${actorId}, 'quote', ${quoteId}, ${Date.now()}, null
+          from ${posts} p where p.id = ${quotedId} and p.author_id <> ${actorId}`,
+    )
+    .onConflictDoNothing();
+}
+
 /** Someone followed `targetId`. */
 export function alertOnFollow(db: Db, actorId: string, targetId: string) {
   return db
