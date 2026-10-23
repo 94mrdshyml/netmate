@@ -15,6 +15,13 @@
       "when": 1792689762977,
       "tag": "0001_instance_and_access",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792741951696,
+      "tag": "0002_rate_hits",
+      "breakpoints": true
     }
   ]
 }

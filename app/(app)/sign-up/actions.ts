@@ -6,11 +6,13 @@ import { redirect } from "next/navigation";
 import { createNextAuth } from "@/auth/next";
 import { signInMember } from "@/auth/sign-in";
 import { getDb } from "@/db";
+import { findActiveInvite } from "@/server/invites";
+import { clientIp, limitSignUp, tooManyMessage } from "@/server/rate-limit";
 import { signUpWithInvite, type SignUpFailure } from "@/server/sign-up";
 
 export type SignUpActionResult = {
   ok: false;
-  code: SignUpFailure;
+  code: SignUpFailure | "rate_limited";
   message: string;
   fieldErrors?: Record<string, string>;
 };
@@ -29,6 +31,14 @@ export async function signUpAction(input: SignUpInput): Promise<SignUpActionResu
   const { env } = await getCloudflareContext({ async: true });
   const authEnv = { DB: env.DB, AUTH_SECRET: env.AUTH_SECRET, BETTER_AUTH_URL: env.BETTER_AUTH_URL };
 
+  const requestHeaders = await headers();
+  const invite = await findActiveInvite(getDb(env.DB), input?.invite);
+  const limited = await limitSignUp(env.DB, env.AUTH_SECRET, {
+    ip: clientIp(requestHeaders),
+    inviteLinkId: invite?.id ?? "none",
+  });
+  if (!limited.ok) return { ok: false, code: "rate_limited", message: tooManyMessage(limited.retryAfterSeconds) };
+
   const result = await signUpWithInvite(authEnv, input);
   if (!result.ok) return result;
 
@@ -38,7 +48,7 @@ export async function signUpAction(input: SignUpInput): Promise<SignUpActionResu
     createNextAuth(authEnv),
     getDb(env.DB),
     { email: result.email, password: input.password },
-    await headers(),
+    requestHeaders,
   );
   // The account exists either way; if the automatic sign-in hiccups, the sign-in page works.
   redirect(signedIn.ok ? "/" : "/sign-in");
