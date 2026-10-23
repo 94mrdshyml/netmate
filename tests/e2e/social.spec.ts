@@ -101,6 +101,7 @@ test("a new member sees an empty Following feed, follows the admin, and then see
   // Not following anyone yet.
   await member.goto("/?feed=following");
   await expect(member.getByText(/Your feed is empty/)).toBeVisible();
+  await expect(member.getByRole("link", { name: "Find people" })).toHaveAttribute("href", "/search");
   await expect(member.getByRole("article").filter({ hasText: adminPost })).toHaveCount(0);
 
   // The admin's profile offers Follow; following is a toggle that survives a reload.

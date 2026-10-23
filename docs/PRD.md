@@ -225,7 +225,7 @@ The username field checks availability as you type (after a short pause). Reserv
 
 **Share.** Opens the phone's share sheet with the post's link, or copies the link.
 
-**Delete.** You can delete your own posts. Deletion hides the post everywhere (kept in the database, marked deleted, removed from the search index).
+**Delete.** You can delete your own posts, from the "..." menu on the post (it asks first). Deletion hides the post everywhere (kept in the database, marked deleted, removed from the search index).
 
 **Post page** (`/[username]/status/[id]`): the post, its action row, the reply box and replies. **Time** is relative ("5h", "2d").
 
@@ -421,9 +421,10 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 ### 8.13 Design and experience
 
 - **Theme.** Follows the phone by default (or the instance default). A sun and moon button in the Home top bar flips light and dark, and Settings has a "Dark or light theme" row with the same button. Both save the choice in a cookie that the server reads, so the right theme is painted on the first frame. Both themes are designed and checked, including with extreme brand colours.
-- **Layout.** Home has a top bar (your picture, which opens Settings; the instance mark; the theme button). Search and Alerts show your picture in the same corner. Every other screen has a sticky header with a back arrow and its title. Bottom tabs: Home, Search, Alerts, Profile; round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected.
+- **Layout.** Home has a top bar (your picture, which opens Settings; the instance mark; the theme button). Search and Alerts show your picture in the same corner. Every other screen has a sticky header with a back arrow and its title. Bottom tabs: Home, Search, Alerts, Profile; round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected. On a screen wider than the column, the page around it is a shade apart and a hairline marks each edge of it.
 - **Settings screen.** Opened from your picture (Home, Search, Alerts). A full screen with a back arrow, the title in the middle and one plain list: each row has an icon, a title, a short line under it and a chevron. Today: Edit profile, Invite people, Admin panel (admin only), the Dark or light theme row, and a Log out button. Bookmarks, Analytics, Privacy and Account rows arrive with their features (8.12). Your own profile is only in the bottom bar (Profile tab), not repeated in Settings.
 - **Interactions.** Controls answer a pointer or finger with the icon turning the brand colour on hover and press (no background appears), a press (scale to 90 to 97%) and a visible state change: hearts pop once when liked, "Following" reads "Unfollow" under a mouse pointer, the bottom bar's current screen is brand-coloured. Short (120 to 200 ms), flat, and off under reduced motion. See `DESIGN.md`.
+- **Empty and loading.** An empty list shows an icon, a plain line, a hint and, where it helps, one button. After a tap on a link, a thin brand line along the top shows until the new screen arrives. Icons share one line thickness.
 - **Type.** The instance font, 15px body; headings and names semibold at most, buttons, tabs and rows medium, the rest regular. No emoji or em dashes in interface text.
 - **Icons.** Feather.
 - **No** shadows, gradients, glows or cards in the feed.

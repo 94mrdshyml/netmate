@@ -90,6 +90,25 @@ a {
   padding: 24px var(--gx) 32px;
 }
 
+/* On a screen wider than the phone column, the page around it is a shade apart from the column and a
+   hairline marks each edge. The body itself is the column's width, so the lines are always exactly on
+   its edges, even beside a scrollbar. Phones and the wide admin pages have no column edge to mark. */
+@media (min-width: 481px) {
+  html:has(.column) {
+    background: color-mix(in srgb, var(--fg) 5%, var(--bg));
+  }
+
+  body:has(.column) {
+    max-width: 480px;
+    margin-inline: auto;
+    border-inline: 1px solid var(--line);
+  }
+
+  .bottom-nav {
+    border-inline: 1px solid var(--line);
+  }
+}
+
 h1,
 h2,
 h3,
@@ -740,8 +759,9 @@ a.alert-link:focus-visible {
   object-fit: cover;
 }
 
+/* The cover before a picture is chosen: a clear wash of the brand colour in light and in dark. */
 .banner-flat {
-  background: var(--brand-soft);
+  background: color-mix(in srgb, var(--brand) 32%, var(--bg));
 }
 
 /* ---- Posts ---- */
@@ -848,6 +868,94 @@ a.alert-link:focus-visible {
   gap: 8px;
 }
 
+/* The "..." on your own posts and the small menu it opens. Flat: a hairline, no shadow. */
+.post-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.post-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 26;
+  min-width: 200px;
+  padding: 4px;
+  background: var(--bg);
+  border: 1px solid var(--line-input);
+  border-radius: var(--radius);
+}
+
+.post-menu-panel.up {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.post-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  font: inherit;
+  color: var(--fg);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: color 0.15s var(--ease);
+}
+
+.post-menu-item svg {
+  color: inherit;
+}
+
+.post-menu-item:hover,
+.post-menu-item:active {
+  color: var(--brand-text);
+}
+
+.post-menu-confirm {
+  padding: 8px;
+}
+
+.post-menu-confirm p {
+  margin: 0 0 10px;
+  font-weight: 500;
+}
+
+/* ---- The loading line along the top while a tapped screen is on its way ---- */
+
+.nav-progress {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  z-index: 60;
+  width: 100%;
+  max-width: 480px;
+  height: 2px;
+  background: var(--brand);
+  opacity: 0;
+  transform: translateX(-50%) scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.nav-progress[data-phase="loading"] {
+  opacity: 1;
+  transform: translateX(-50%) scaleX(0.85);
+  transition: transform 9s cubic-bezier(0.1, 0.6, 0.2, 1);
+}
+
+.nav-progress[data-phase="done"] {
+  opacity: 0;
+  transform: translateX(-50%) scaleX(1);
+  transition:
+    transform 0.2s var(--ease),
+    opacity 0.3s var(--ease) 0.1s;
+}
+
 .more {
   display: flex;
   margin-top: 16px;
@@ -864,6 +972,44 @@ a.alert-link:focus-visible {
 
 .empty {
   padding-top: 48px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 56px 24px 24px;
+  text-align: center;
+}
+
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 6px;
+  color: var(--muted);
+  background: var(--surface);
+  border-radius: 50%;
+}
+
+.empty-title {
+  margin: 0;
+  font-weight: 500;
+  text-wrap: balance;
+}
+
+.empty-text {
+  max-width: 30ch;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+  text-wrap: balance;
+}
+
+.empty-state .btn {
+  margin-top: 14px;
 }
 
 .end {

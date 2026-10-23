@@ -92,10 +92,36 @@ test("deleting my own post asks first and removes it everywhere", async ({ page 
   await writePost(page, text);
   const card = page.getByRole("article").filter({ hasText: text });
 
+  // Deleting lives in the "..." menu on my own post, and it asks first. The old bin icon is gone from the row.
+  const more = card.getByRole("button", { name: "More options" });
+  const moreBox = (await more.boundingBox())!;
+  expect(moreBox.width).toBeGreaterThanOrEqual(44);
+  expect(moreBox.height).toBeGreaterThanOrEqual(44);
+  await expect(card.getByRole("button", { name: "Delete post" })).toHaveCount(0);
+
+  // The menu opens inside the phone, and closes with Escape or a tap anywhere outside it.
+  await more.click();
+  await expect(more).toHaveAttribute("aria-expanded", "true");
+  const item = card.getByRole("button", { name: "Delete post" });
+  const itemBox = (await item.boundingBox())!;
+  expect(itemBox.height).toBeGreaterThanOrEqual(44);
+  expect(itemBox.x).toBeGreaterThanOrEqual(0);
+  expect(itemBox.x + itemBox.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  await page.keyboard.press("Escape");
+  await expect(item).toHaveCount(0);
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+  await more.click();
+  await expect(item).toBeVisible();
+  await page.mouse.click(200, 10);
+  await expect(item).toHaveCount(0);
+
+  await more.click();
   await card.getByRole("button", { name: "Delete post" }).click();
   await card.getByRole("button", { name: "Keep" }).click();
   await expect(card).toBeVisible();
+  await expect(card.getByRole("button", { name: "Delete post" })).toHaveCount(0);
 
+  await card.getByRole("button", { name: "More options" }).click();
   await card.getByRole("button", { name: "Delete post" }).click();
   await card.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(page.getByRole("article").filter({ hasText: text })).toHaveCount(0);
@@ -109,6 +135,8 @@ test("another member sees my post, and cannot delete it", async ({ browser, page
   await other.page.goto("/");
   const card = other.page.getByRole("article").filter({ hasText: text });
   await expect(card).toBeVisible();
+  // Not even the "..." menu: there is nothing in it for someone else's post.
+  await expect(card.getByRole("button", { name: "More options" })).toHaveCount(0);
   await expect(card.getByRole("button", { name: "Delete post" })).toHaveCount(0);
   await other.context.close();
 });

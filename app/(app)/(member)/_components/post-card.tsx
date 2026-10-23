@@ -3,7 +3,7 @@ import { relativeTime } from "@/lib/time";
 import type { PostView } from "@/server/posts";
 import { Avatar } from "./avatar";
 import { Icon } from "./icon";
-import { DeleteButton, LikeButton } from "./post-actions";
+import { LikeButton, PostMenu } from "./post-actions";
 
 /** One post in a list. The text is always rendered as text, never as markup. */
 export function PostCard({
@@ -51,7 +51,7 @@ export function PostCard({
             </span>
           )}
           <LikeButton postId={post.id} liked={post.likedByMe} count={post.likeCount} />
-          {post.author.userId === viewerId ? <DeleteButton postId={post.id} goHomeAfter={!linkToPost} /> : null}
+          {post.author.userId === viewerId ? <PostMenu postId={post.id} goHomeAfter={!linkToPost} /> : null}
         </footer>
       </div>
     </article>

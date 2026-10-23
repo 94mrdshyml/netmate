@@ -34,7 +34,7 @@ export default async function SettingsPage() {
           <li key={row.href}>
             <Link href={row.href} className="srow">
               <span className="srow-icon">
-                <Icon name={row.icon} size={22} strokeWidth={1.5} />
+                <Icon name={row.icon} size={22} />
               </span>
               <span className="srow-text">
                 <span className="srow-title">{row.title}</span>

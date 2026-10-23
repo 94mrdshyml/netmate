@@ -6,6 +6,7 @@ import { getDb } from "@/db";
 import { currentTime } from "@/lib/time";
 import { getPost, listReplies } from "@/server/posts";
 import { Composer } from "../../../_components/composer";
+import { EmptyState } from "../../../_components/empty-state";
 import { PageHeader } from "../../../_components/page-header";
 import { Avatar } from "../../../_components/avatar";
 import { PostCard } from "../../../_components/post-card";
@@ -52,7 +53,7 @@ export default async function PostPage({
         {replies.items.map((reply) => (
           <PostCard key={reply.id} post={reply} viewerId={member.userId} now={now} />
         ))}
-        {replies.items.length === 0 ? <p className="empty">No replies yet.</p> : null}
+        {replies.items.length === 0 ? <EmptyState icon="message-circle" title="No replies yet.">Be the first to answer.</EmptyState> : null}
         {replies.nextCursor ? (
           <Link className="btn btn-ghost more" href={`/${username}/status/${id}?cursor=${replies.nextCursor}`}>
             More replies

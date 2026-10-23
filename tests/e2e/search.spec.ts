@@ -92,6 +92,7 @@ test("Enter works, a deleted post disappears from results, and a missing word sa
   const article = page.getByRole("article").filter({ hasText: mine });
   await expect(article).toBeVisible();
 
+  await article.getByRole("button", { name: "More options" }).click();
   await article.getByRole("button", { name: "Delete post" }).click();
   await article.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(article).toHaveCount(0);

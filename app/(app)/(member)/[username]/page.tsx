@@ -9,6 +9,7 @@ import { currentTime } from "@/lib/time";
 import { getProfile } from "@/server/profiles";
 import { listByAuthor } from "@/server/posts";
 import { Avatar } from "../_components/avatar";
+import { EmptyState } from "../_components/empty-state";
 import { FollowButton } from "../_components/follow-button";
 import { Icon } from "../_components/icon";
 import { PostCard } from "../_components/post-card";
@@ -128,7 +129,15 @@ export default async function ProfilePage({
           <PostCard key={post.id} post={post} viewerId={viewer.userId} now={now} />
         ))}
         {page.items.length === 0 ? (
-          <p className="empty">{showReplies ? "No replies yet." : "No posts yet."}</p>
+          showReplies ? (
+            <EmptyState icon="message-circle" title="No replies yet." />
+          ) : profile.isMe ? (
+            <EmptyState icon="feather" title="No posts yet." action={{ href: "/compose", label: "Write a post" }}>
+              Say hello. Your posts show up here.
+            </EmptyState>
+          ) : (
+            <EmptyState icon="feather" title="No posts yet." />
+          )
         ) : null}
         {page.nextCursor ? (
           <Link className="btn btn-ghost more" href={`${base}?${showReplies ? "tab=replies&" : ""}cursor=${page.nextCursor}`}>

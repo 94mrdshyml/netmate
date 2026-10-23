@@ -122,3 +122,107 @@ test("Edit profile has a close button, Save in the header, counters on every fie
   await header.getByRole("link", { name: /^Close/ }).click();
   await expect(page).toHaveURL(new RegExp(`/${E2E.admin.username}$`));
 });
+
+test("on a wide screen the page around the phone column is a shade apart and a hairline marks each edge; a phone and the admin panel have none", async ({ page }) => {
+  const frame = () =>
+    page.evaluate(() => {
+      const body = getComputedStyle(document.body);
+      const box = document.body.getBoundingClientRect();
+      const column = document.querySelector("main.column")?.getBoundingClientRect();
+      const nav = document.querySelector(".bottom-nav");
+      return {
+        maxWidth: body.maxWidth,
+        left: body.borderLeftWidth,
+        right: body.borderRightWidth,
+        around: getComputedStyle(document.documentElement).backgroundColor,
+        inside: body.backgroundColor,
+        bodyWidth: box.width,
+        bodyLeft: box.left,
+        columnLeft: column?.left ?? -1,
+        navEdge: nav ? getComputedStyle(nav).borderLeftWidth : "none",
+        overflow: document.documentElement.scrollWidth - window.innerWidth,
+      };
+    });
+
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await page.goto("/");
+  const wide = await frame();
+  expect(wide.left).toBe("1px");
+  expect(wide.right).toBe("1px");
+  expect(wide.bodyWidth).toBe(480);
+  expect(wide.around).not.toBe(wide.inside);
+  // The lines are the body's own edges, so they sit exactly on the column, and the bottom bar has them too.
+  expect(Math.abs(wide.columnLeft - (wide.bodyLeft + 1))).toBeLessThan(1);
+  expect(wide.navEdge).toBe("1px");
+  expect(wide.overflow).toBeLessThanOrEqual(0);
+
+  // A screen as wide as the column or narrower: nothing around it, nothing drawn.
+  await page.setViewportSize({ width: 412, height: 800 });
+  const phone = await frame();
+  expect(phone.left).toBe("0px");
+  expect(phone.around).toBe(phone.inside);
+
+  // The admin panel is the one wide layout and has no phone column to frame.
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await page.goto("/hq");
+  const hq = await page.evaluate(() => ({ left: getComputedStyle(document.body).borderLeftWidth, maxWidth: getComputedStyle(document.body).maxWidth }));
+  expect(hq).toEqual({ left: "0px", maxWidth: "none" });
+});
+
+test("every icon has the same line thickness", async ({ page }) => {
+  for (const path of ["/settings", "/", "/search"]) {
+    await page.goto(path);
+    const widths = await page.evaluate(() =>
+      [...document.querySelectorAll("svg[focusable='false']")].map((svg) => svg.getAttribute("stroke-width")),
+    );
+    expect(widths.length, path).toBeGreaterThan(4);
+    expect(new Set(widths), path).toEqual(new Set(["1.75"]));
+  }
+});
+
+test("empty lists show an icon, a plain line, a hint and, where it helps, a button", async ({ page }) => {
+  await page.goto(`/search?q=${encodeURIComponent("qqqqzzzznothinghere")}`);
+  const posts = page.locator(".empty-state");
+  await expect(posts.locator(".empty-icon")).toBeVisible();
+  await expect(posts.getByText(/No posts found/)).toBeVisible();
+  await expect(posts.getByText("Try another word.")).toBeVisible();
+
+  await page.goto(`/search?tab=people&q=${encodeURIComponent("qqqqzzzznothinghere")}`);
+  await expect(page.locator(".empty-state").getByText(/No one found/)).toBeVisible();
+
+  // The title is plain text a person would say, and the whole thing fits the phone.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+});
+
+test("the default cover is a clear wash of the brand colour in dark mode, not a black gap", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto(`/${E2E.admin.username}`);
+  const cover = page.locator(".banner-flat").first();
+  await expect(cover).toBeVisible();
+  const [r, g, b] = (await cover.evaluate((el) => getComputedStyle(el).backgroundColor)).match(/\d+/g)!.map(Number);
+  expect(Math.max(r!, g!, b!)).toBeGreaterThanOrEqual(25);
+});
+
+test("tapping a link starts a thin loading line along the top that finishes when the screen arrives", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => {
+    const bar = document.querySelector(".nav-progress")!;
+    const seen: string[] = [];
+    (window as unknown as { __phases: string[] }).__phases = seen;
+    new MutationObserver(() => seen.push(bar.getAttribute("data-phase") ?? "")).observe(bar, { attributes: true, attributeFilter: ["data-phase"] });
+  });
+  await expect(page.locator(".nav-progress")).toHaveAttribute("data-phase", "idle");
+
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Search" }).click();
+  await expect(page).toHaveURL(/\/search$/);
+  await expect(page.locator(".nav-progress")).toHaveAttribute("data-phase", "idle");
+  const phases = await page.evaluate(() => (window as unknown as { __phases: string[] }).__phases);
+  expect(phases).toContain("loading");
+  expect(phases).toContain("done");
+  expect(phases.indexOf("loading")).toBeLessThan(phases.indexOf("done"));
+
+  // It is a thin line, and invisible to the screen reader and to taps.
+  const bar = page.locator(".nav-progress");
+  await expect(bar).toHaveAttribute("aria-hidden", "true");
+  expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(3);
+});
