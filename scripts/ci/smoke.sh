@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Reads the deployed URL from the deploy log and checks the live site.
-# A fresh instance sends "/" to /setup; a configured one shows the home page. Both prove the
-# Worker renders and can read D1 (the redirect itself is a database read).
+# A fresh instance sends "/" to /setup; a configured one sends a signed-out visitor to /sign-in.
+# Both prove the Worker renders and can read D1 (the redirect itself is a database read).
 set -euo pipefail
 
 log="${1:?usage: smoke.sh <deploy-log>}"
@@ -14,8 +14,8 @@ echo "Smoke testing $url"
 
 for attempt in 1 2 3 4 5 6; do
   body="$(curl -fsSL --max-time 20 "$url/" || true)"
-  if echo "$body" | grep -qE 'D1 binding: (<!-- -->)?ok' && echo "$body" | grep -qE 'R2 binding: (<!-- -->)?ok'; then
-    echo "Configured instance: home page reaches D1 and R2."
+  if echo "$body" | grep -qE 'Welcome back to'; then
+    echo "Configured instance: signed-out visitors reach the sign-in page."
     exit 0
   fi
   if echo "$body" | grep -qE 'Prove it is you|Setup is not ready'; then
@@ -26,5 +26,5 @@ for attempt in 1 2 3 4 5 6; do
   sleep 10
 done
 
-echo "::error::Live site did not render the home page or the setup page"
+echo "::error::Live site did not render the sign-in page or the setup page"
 exit 1
