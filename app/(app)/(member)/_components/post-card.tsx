@@ -22,8 +22,9 @@ export function PostCard({
   return (
     <article className="post" aria-label={`Post by ${name}`}>
       <header className="post-head">
-        <strong>{name}</strong>
-        <span className="muted">@{post.author.username}</span>
+        <Link href={`/${post.author.username}`} className="author">
+          <strong>{name}</strong> <span className="muted">@{post.author.username}</span>
+        </Link>
         <span className="muted" aria-hidden="true">
           ·
         </span>

@@ -30,8 +30,8 @@ async function visitor(browser: Browser, link: string) {
 
 let memberLink = "";
 
-test("the admin has an invite link on Home, and it works", async ({ page, browser }) => {
-  await page.goto("/");
+test("the admin has an invite link in Settings, and it works", async ({ page, browser }) => {
+  await page.goto("/invite");
   const adminLink = await page.getByLabel("Your invite link").inputValue();
   expect(adminLink).toMatch(/\/sign-up\?invite=[0-9A-Za-z]{32}$/);
 
@@ -42,7 +42,8 @@ test("the admin has an invite link on Home, and it works", async ({ page, browse
 
   // Auto-approved: signed in and on Home, with their own link.
   await expect(guest).toHaveURL(/\/$/);
-  await expect(guest.getByText(/Signed in as @join_1_/)).toBeVisible();
+  await expect(guest.getByRole("link", { name: "Profile" })).toHaveAttribute("href", /^\/join_1_/);
+  await guest.goto("/invite");
   memberLink = await guest.getByLabel("Your invite link").inputValue();
   expect(memberLink).not.toBe(adminLink);
   await context.close();

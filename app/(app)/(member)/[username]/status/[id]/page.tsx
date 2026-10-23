@@ -1,6 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
 import { currentTime } from "@/lib/time";
@@ -21,7 +21,7 @@ export default async function PostPage({
   searchParams: Promise<{ cursor?: string }>;
 }) {
   const member = await getMember();
-  if (!member) redirect("/sign-in");
+  if (!member) return null; // The member layout has already sent signed-out visitors to sign in.
 
   const { username, id } = await params;
   const { cursor } = await searchParams;

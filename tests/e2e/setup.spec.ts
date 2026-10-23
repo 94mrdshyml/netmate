@@ -122,7 +122,7 @@ test("the full flow creates the instance, signs the admin in and locks /setup fo
   // Lands on the home page of the new instance, already signed in, with the chosen name.
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("heading", { name: E2E.instance.name })).toBeVisible();
-  await expect(page.getByText(`Signed in as @${E2E.admin.username}`)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Profile" })).toHaveAttribute("href", `/${E2E.admin.username}`);
 
   const cookies = await page.context().cookies();
   expect(cookies.some((c) => c.name.includes("session_token"))).toBe(true);

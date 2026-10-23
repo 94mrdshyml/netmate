@@ -2,9 +2,9 @@
 // they never write SQL. Who may see what is always `visiblePosts`. A counter on a post changes
 // in the same db.batch() as the row that causes it.
 
-import { and, desc, eq, isNull, lt, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import type { Db } from "@/db";
-import { likes, posts, profiles } from "@/db/schema";
+import { follows, likes, posts, profiles } from "@/db/schema";
 import { isId, newId } from "@/lib/ids";
 import { checkPostText } from "@/lib/post-text";
 import { visiblePosts } from "@/server/visibility";
@@ -90,18 +90,53 @@ function toPage(rows: Row[], limit: number): Page {
   return { items, nextCursor: rows.length > limit && last ? encodeCursor(last.createdAt, last.id) : null };
 }
 
-/** The home feed: top-level posts, newest first. */
+/**
+ * The home feed: top-level posts, newest first. `following` shows your own posts and those of
+ * people you follow; `all` is every visible post (the ranked For you feed replaces it later).
+ */
 export async function listFeed(
   db: Db,
   viewerId: string,
-  opts: { cursor?: unknown; limit?: number } = {},
+  opts: { cursor?: unknown; limit?: number; scope?: "all" | "following" } = {},
+): Promise<Page> {
+  const limit = opts.limit ?? PAGE_SIZE;
+  const fromFollowed =
+    opts.scope === "following"
+      ? or(
+          eq(posts.authorId, viewerId),
+          sql`${posts.authorId} in (select ${follows.followeeId} from ${follows} where ${follows.followerId} = ${viewerId})`,
+        )
+      : undefined;
+  const rows = await db
+    .select(columns(viewerId))
+    .from(posts)
+    .innerJoin(profiles, eq(profiles.userId, posts.authorId))
+    .where(and(visiblePosts(viewerId), isNull(posts.parentId), fromFollowed, olderThan(decodeCursor(opts.cursor))))
+    .orderBy(desc(posts.createdAt), desc(posts.id))
+    .limit(limit + 1);
+  return toPage(rows, limit);
+}
+
+/** One person's posts (or, with `replies`, their replies), newest first. */
+export async function listByAuthor(
+  db: Db,
+  viewerId: string,
+  authorId: string,
+  opts: { replies?: boolean; cursor?: unknown; limit?: number } = {},
 ): Promise<Page> {
   const limit = opts.limit ?? PAGE_SIZE;
   const rows = await db
     .select(columns(viewerId))
     .from(posts)
     .innerJoin(profiles, eq(profiles.userId, posts.authorId))
-    .where(and(visiblePosts(viewerId), isNull(posts.parentId), olderThan(decodeCursor(opts.cursor))))
+    .where(
+      and(
+        visiblePosts(viewerId),
+        eq(posts.authorId, authorId),
+        opts.replies ? isNotNull(posts.parentId) : isNull(posts.parentId),
+        olderThan(decodeCursor(opts.cursor)),
+      ),
+    )
     .orderBy(desc(posts.createdAt), desc(posts.id))
     .limit(limit + 1);
   return toPage(rows, limit);
