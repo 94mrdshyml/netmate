@@ -29,6 +29,7 @@ export default defineConfig({
                 AUTH_SECRET: "test-secret-test-secret-test-secret-0123",
                 SETUP_TOKEN: "test-setup-token-0123456789-abcdefghij",
                 SETTINGS_ENCRYPTION_KEY: "test-encryption-key-0123456789-abcdefgh",
+                ENV: "test",
               },
             },
           }),

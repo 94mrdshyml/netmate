@@ -8,6 +8,8 @@ const vars = [
   `SETUP_TOKEN:${E2E.setupToken}`,
   `AUTH_SECRET:${E2E.authSecret}`,
   `SETTINGS_ENCRYPTION_KEY:${E2E.encryptionKey}`,
+  // Email goes to an in-memory outbox and Resend is never called (src/email/transport.ts).
+  "ENV:test",
   `BETTER_AUTH_URL:http://localhost:${E2E.port}`,
 ]
   .map((v) => `--var ${v}`)

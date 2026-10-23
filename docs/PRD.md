@@ -170,11 +170,11 @@ Provider: **Resend**. Templates: **React Email**, rendered on the server. Every 
 Rules:
 
 - With no Resend key, email features degrade and say so: verification is skipped, "forgot password" is hidden, invite links are shared by hand, and `/hq` shows a banner "Email is not set up".
-- `/hq` has a "send test email" button and shows the last send error.
+- `/hq/email` is where the admin saves the Resend key and sender address, sees whether email is set up, sends a test email to their own address (5 an hour) and sees the time of the last send and Resend's last error (scrubbed of addresses and keys, at most 300 characters). "Remove" forgets the key and sender. Saving a blank key keeps the saved one, so the sender can change alone. Every `/hq` page shows a banner while email is not set up.
 - The Resend key is stored encrypted, never shown again after saving (the form shows "key saved" and allows replacing it), and never logged.
 - The sender address must be on a domain verified in Resend. Setup explains this and shows Resend's own error if not.
 - Email logos are served from the public media domain as PNG.
-- Tests never call Resend; a fake outbox runs only when `ENV=test`.
+- Tests never call Resend; a fake outbox runs only when `ENV=test`. The fake accepts keys starting `re_test_` and refuses a sender on a `.invalid` domain like an unverified domain; any other value of `ENV`, or none, is the real Resend. Mail is sent with Resend's HTTP API directly (no package). The first templates are plain branded HTML with a text copy (`src/email/template.ts`); React Email arrives with the first real templates and needs a package decision.
 
 ## 8. Features
 
@@ -387,6 +387,7 @@ Limits are counted per person, or per IP address for sign-up and sign-in. IPs ar
 | Password checks (change, delete) | 5 per 10 minutes |
 | Any request to the auth service | 60 per 10 minutes per IP |
 | Email sends (verify, reset) | 5 per hour per address |
+| Test email from `/hq/email` | 5 per hour per admin |
 
 Reads, search, mutes and blocks are not limited. Exact low-volume limits live in a D1 table; high-volume ones (likes, saves, analytics) use the Workers Rate Limiting binding. Admins who want more protection can add Cloudflare WAF and Turnstile (optional setting after v1).
 
@@ -437,7 +438,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/hq/branding` | Name, logo, favicon, colour, radius, font (downloaded and kept on our storage), avatar style, live preview | **wide** |
 | `/hq/approvals` | Pending sign-ups | **wide** |
 | `/hq/invites` | Admin link, quota, member links with usage, replace a link | **wide** |
-| `/hq/email` | Resend key, sender, test email, status | **wide** |
+| `/hq/email` | Resend key (saved encrypted, never shown again), sender, test email, last send and last error | **wide** |
 | `/api/auth/*`, `/api/me`, `/api/upload` | Auth, session probe, upload | n/a |
 | `/avatar/[userId]`, `/media/[...key]` | The drawn default picture; stored files from R2 (avatars, banners, posts, the instance logo and favicon, hosted fonts; each only as the type it was stored with; random names, cached for ever). The media subdomain replaces `/media` later | n/a |
 
@@ -465,6 +466,7 @@ More prefixes are added as their tables are created (posts, invites, notificatio
 |---|---|
 | Auth tables (Better Auth) | users, accounts (password hash), sessions, verifications |
 | `instance` | one row, **present only once setup has finished** (no row means not configured; the fixed primary key `singleton` makes setup one-time): name, logo key, favicon key, primary colour, radius, font family, avatar style, theme default, invite quota, sign-up policy, feature flags (GIFs, places, link previews), created and updated time. The database itself checks the name length, hex colour, radius, theme default and quota |
+| `email_state` | one row: time of the last email sent, the last send error (scrubbed, up to 300 characters) and its time |
 | `instance_secrets` | encrypted Resend key, Resend sender address and Klipy key, one row per name, stored as `v1:<nonce>:<ciphertext>` (AES-256-GCM, key derived from `SETTINGS_ENCRYPTION_KEY`, the name bound into the ciphertext). Separate from `instance` so theme code never reads them |
 | `fonts` | hosted font files: family, weight, style, script subset, unicode range, storage key (a variable font may share one file between rows) |
 | `profiles` | one per user: username (unique, lower case), first and last name, bio, link, location, private flag, avatar and banner keys, `role` (admin or member), `status` (active or pending), `invited_by`, `email_verified_at`, created time |. The database enforces the username rules (3 to 15 characters of a-z, 0-9, underscore), name and bio lengths, role and status values, and **exactly one admin** (a partial unique index). If the inviter is deleted, `invited_by` becomes empty

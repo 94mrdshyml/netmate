@@ -1,0 +1,16 @@
+# 23. /hq/email (2026-10-23)
+- Branch / PR: feat/hq-email
+- Before this: #39 (logo, favicon, fonts) and #40 (impeccable off) are merged and live. #41 (CI Playwright cache) was still open when this started; this branch does not depend on it.
+- Done:
+  - `/hq/email` (admin only, 404 for everyone else): sender address, Resend key (password box, "Key saved" placeholder, never sent back), Save, "Send test email" to the admin's own address, "Remove email settings" (asks first), and a "Last results" block with the last send time and Resend's last error.
+  - Every `/hq` page shows the banner "Email is not set up, ..." until both secrets exist. Nav gains Email.
+  - `src/server/email.ts`: `saveEmailSettings` (zod, a new key is checked with a real Resend call, blank key keeps the saved one, key and sender stored encrypted in `instance_secrets` in one batch), `readEmailConfig` (missing or unreadable, never a crash when the encryption key changed), `sendEmail` (the one place that sends and records), `sendTestEmail`, `removeEmailSettings`, `emailPanel`.
+  - `src/email/transport.ts`: real transport over `fetch` to Resend (no package), and a fake used only when `ENV` is exactly `test`. `scrubError` strips addresses and keys from Resend's text before it is stored or shown. `src/email/template.ts`: branded HTML plus text copy (name, PNG logo only, brand colour, corner style, font stack, escaped, only http(s) buttons).
+  - Migration `0006_email_state.sql`: one-row `email_state` table (last sent, last error, error time; error up to 300 characters). Plain CREATE TABLE.
+  - Test email limit: 5 an hour per admin (`limitTestEmail`).
+  - `ENV=test` is passed to the e2e preview (`playwright.config.ts`) and to the integration Workers (`vitest.config.mts`).
+- Bug found by an e2e test and fixed: when the sender was invalid, the key was ignored, so the page said "Enter your Resend key" instead of "A Resend key starts with re_". Both problems are now reported together (integration tests added).
+- Tests: 24 unit, 31 integration (`tests/integration/email.test.ts`: encrypted at rest, blank key, replace, every refusal, Resend unreachable, wrong encryption key, a value copied between rows does not decrypt, scrubbing, error cleared by a good send, table rules, rate limit), 8 e2e (`tests/e2e/hq-email.spec.ts`: banner, bad answers, save and key never shown again, test email, error kept and cleared, remove with confirm, 404 for a visitor, phone width). Full local run: 798 unit, 270 integration, 75 e2e at one worker.
+- Decisions to confirm: no new package. CLAUDE.md names React Email for templates, but it is not installed; the first templates are plain branded HTML. Adding React Email needs the owner's approval, and is best done with the first real templates (verify, reset).
+- Open: nothing sends real mail yet except the test email. Verification, reset, welcome, pending and approved/rejected emails are not built, and sign-up does not yet depend on email. An SVG-only logo has no email version (name shows as text). The impeccable design hook still ran on this branch after PR #40 (the plugin setting may need a restart to apply).
+- Next: wire the real emails (pending sign-up to the admin, approved and rejected to the invitee) through `sendEmail`, then verification and reset.
