@@ -226,3 +226,44 @@ test("tapping a link starts a thin loading line along the top that finishes when
   await expect(bar).toHaveAttribute("aria-hidden", "true");
   expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(3);
 });
+
+test("moving to another screen fades it in and keeps the bottom bar still; typing on the same screen does not", async ({ page }) => {
+  // Count how often the page asks the browser for a view transition.
+  await page.addInitScript(() => {
+    const w = window as unknown as { __moves: number; __played: string[] };
+    w.__moves = 0;
+    w.__played = [];
+    const original = document.startViewTransition?.bind(document);
+    if (original) {
+      document.startViewTransition = ((arg: unknown) => {
+        w.__moves += 1;
+        const transition = original(arg as never);
+        // Once the browser has set the move up, note which of our animations are running.
+        void transition.ready.then(() => {
+          w.__played.push(...document.getAnimations().map((a) => (a as CSSAnimation).animationName ?? ""));
+        });
+        return transition;
+      }) as typeof document.startViewTransition;
+    }
+  });
+  const moves = () => page.evaluate(() => (window as unknown as { __moves: number }).__moves);
+
+  await page.goto("/");
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Search" }).click();
+  await expect(page).toHaveURL(/\/search$/);
+  await expect.poll(moves).toBeGreaterThan(0);
+  // The new screen really fades and rises (the names match the styles in globals.css).
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __played: string[] }).__played))
+    .toEqual(expect.arrayContaining(["screen-fade", "screen-rise"]));
+
+  // The bottom bar has a name of its own, so it is lifted out and does not fade with the screen.
+  expect(await page.locator(".bottom-nav").evaluate((el) => getComputedStyle(el).viewTransitionName)).toBe("bottom-nav");
+
+  // Typing in the box changes the address but stays on the same screen: no movement.
+  const before = await moves();
+  await page.getByRole("searchbox", { name: "Search posts and people" }).fill("zephyr");
+  await expect(page).toHaveURL(/q=zephyr/);
+  await page.waitForTimeout(400);
+  expect(await moves()).toBe(before);
+});

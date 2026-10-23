@@ -66,7 +66,7 @@ Hover, press and colour changes take 120 to 200ms with `cubic-bezier(0.2, 0.7, 0
 - Post actions turn the brand colour on hover; a heart also pops once (a short scale up and back) when you like.
 - Bottom bar icons lift 1px on hover and turn the brand colour.
 - A "Following" button reads "Unfollow" under a mouse pointer (the button's name does not change).
-- Nothing slides, bounces or loops.
+- Moving to another screen: the old one fades out (120ms) as the new one fades in and settles up 8px (200ms). The bottom bar stays still. It is a template (`template.tsx`) around the member screens, so only a real change of screen plays it, not typing in the search box. Nothing else slides, bounces or loops.
 - With reduced motion on, all of it is off.
 
 ## Checking a change
