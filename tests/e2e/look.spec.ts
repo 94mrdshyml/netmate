@@ -267,3 +267,48 @@ test("moving to another screen fades it in and keeps the bottom bar still; typin
   await page.waitForTimeout(400);
   expect(await moves()).toBe(before);
 });
+
+test("the admin panel has a side menu with icons, breadcrumbs and flat cards, and folds into a strip on a phone", async ({ page }) => {
+  const pages = ["Overview", "Approvals", "Invites", "Branding", "Email"];
+  const menu = page.getByRole("navigation", { name: "Admin" });
+  const crumbs = page.getByRole("navigation", { name: "Breadcrumb" });
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/hq");
+  // Every page is in the menu with an icon, easy to hit, and the current one is marked.
+  for (const name of pages) {
+    const link = menu.getByRole("link", { name: new RegExp(name) });
+    await expect(link.locator("svg")).toHaveCount(1);
+    expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+  await expect(menu.getByRole("link", { name: /Overview/ })).toHaveAttribute("aria-current", "page");
+  // On a wide screen the menu stands on the left, beside the page.
+  const side = (await menu.boundingBox())!;
+  const heading = (await page.getByRole("heading", { name: "Overview" }).boundingBox())!;
+  expect(side.x).toBeLessThan(heading.x);
+  expect(side.y).toBeLessThan(heading.y + 200);
+  expect(heading.x).toBeGreaterThan(side.x + side.width);
+
+  // Breadcrumbs say where you are, and "Admin" goes back to the Overview.
+  await expect(crumbs).toContainText("Admin");
+  await menu.getByRole("link", { name: /Branding/ }).click();
+  await expect(page).toHaveURL(/\/hq\/branding$/);
+  await expect(crumbs.getByRole("listitem").last()).toHaveText("Branding");
+  await crumbs.getByRole("link", { name: "Admin" }).click();
+  await expect(page).toHaveURL(/\/hq$/);
+
+  // The Overview is made of panels, and they are flat: an edge, no shadow.
+  const cards = page.locator(".hq-card");
+  expect(await cards.count()).toBeGreaterThanOrEqual(5);
+  expect(await cards.first().evaluate((el) => getComputedStyle(el).boxShadow)).toBe("none");
+
+  // On a phone the same menu lies along the top, and no page scrolls sideways.
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const path of ["/hq", "/hq/approvals", "/hq/invites", "/hq/branding", "/hq/email"]) {
+    await page.goto(path);
+    const strip = (await menu.boundingBox())!;
+    expect(strip.width, path).toBeLessThanOrEqual(390);
+    expect(strip.y, path).toBeLessThan(200);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), path).toBeLessThanOrEqual(0);
+  }
+});
