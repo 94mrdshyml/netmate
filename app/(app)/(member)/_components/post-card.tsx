@@ -54,9 +54,9 @@ export function PostCard({
             <PostBody text={post.body} tags={post.tags} mentions={post.mentions} />
           </p>
         ) : null}
-        {post.quote ? <QuoteCard quote={post.quote} now={now} /> : null}
         <PostPhotos keys={post.photos} name={name} />
         {post.gif ? <PostGif gif={post.gif} /> : null}
+        {post.quote ? <QuoteCard quote={post.quote} now={now} /> : null}
         {post.place ? (
           <p className="post-place">
             <Icon name="map-pin" size={14} />

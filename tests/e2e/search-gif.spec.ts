@@ -184,6 +184,30 @@ test("a GIF can be a whole post with no words, and Escape closes the search", as
   await expect(page.locator(".post-gif img[alt='Trending dance']").first()).toBeVisible();
 });
 
+test("a GIF can go on a quote, and a quote card shows the original's GIF", async ({ page }) => {
+  await stubKlipy(page);
+  await page.goto("/");
+  // Quote the first post that has a GIF.
+  const withGif = page.getByRole("article").filter({ has: page.locator(".post-gif img") }).first();
+  const href = await withGif.getByRole("link", { name: /^Reply/ }).getAttribute("href");
+  const quotedId = href!.split("/").pop();
+  await page.goto(`/compose?quote=${quotedId}`);
+  const quoting = page.getByRole("group", { name: /^Quoting a post by/ });
+  await expect(quoting.locator(".quote-media-gif img")).toBeVisible();
+
+  await page.getByRole("button", { name: "Add a GIF" }).click();
+  await page.getByRole("button", { name: "Use GIF: Trending dance" }).click();
+  await expect(page.locator(".composer-gif img")).toHaveAttribute("alt", "Trending dance");
+  const text = unique();
+  await page.getByLabel("Your post").fill(text);
+  await sendPost(page);
+
+  const mine = card(page, text);
+  await expect(mine.locator(".post-gif img")).toHaveAttribute("alt", "Trending dance");
+  await expect(mine.getByRole("link", { name: /^Quoted post by/ }).locator(".quote-media-gif img")).toHaveAttribute("src", /^https:\/\/static\.klipy\.com\//);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+});
+
 test("when Klipy cannot be reached the member is told, and the post box still works", async ({ page }) => {
   await page.route("https://api.klipy.com/**", (route) => route.abort());
   await page.goto("/compose");

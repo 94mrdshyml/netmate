@@ -23,9 +23,9 @@ export type QuotedView =
       id: string;
       body: string;
       createdAt: number;
-      /** How many pictures it has, so the card can say so without loading them. */
-      photoCount: number;
-      hasGif: boolean;
+      /** Its pictures (storage keys, in order) and its GIF, shown small in the card. */
+      photos: string[];
+      gif: PostGif | null;
       author: { userId: string; username: string; firstName: string; lastName: string; avatarKey: string | null };
     }
   | { available: false };
@@ -167,6 +167,8 @@ async function hydrate(db: Db, viewerId: string, rows: Row[], by: (RepostedBy | 
   if (items.length === 0) return items;
   const ids = [...new Set(items.map((p) => p.id))];
   const quotedIds = [...new Set(rows.flatMap((r) => (r.quotedPostId ? [r.quotedPostId] : [])))];
+  // The pictures and GIFs of the posts and of the posts they quote, in the same two queries (a page holds at most 20 of each).
+  const mediaIds = [...new Set([...ids, ...quotedIds])];
   // Tags and mentions can only be in text that has a # or an @, so other posts need no query.
   const withHash = [...new Set(items.filter((p) => p.body.includes("#")).map((p) => p.id))];
   const withAt = [...new Set(items.filter((p) => p.body.includes("@")).map((p) => p.id))];
@@ -174,12 +176,12 @@ async function hydrate(db: Db, viewerId: string, rows: Row[], by: (RepostedBy | 
     db
       .select({ postId: postMedia.postId, key: postMedia.key })
       .from(postMedia)
-      .where(inArray(postMedia.postId, ids))
+      .where(inArray(postMedia.postId, mediaIds))
       .orderBy(asc(postMedia.postId), asc(postMedia.position)),
     db
       .select({ postId: postGifs.postId, url: postGifs.url, width: postGifs.width, height: postGifs.height, title: postGifs.title })
       .from(postGifs)
-      .where(inArray(postGifs.postId, ids)),
+      .where(inArray(postGifs.postId, mediaIds)),
     quotedIds.length === 0
       ? Promise.resolve([])
       : db
@@ -187,8 +189,6 @@ async function hydrate(db: Db, viewerId: string, rows: Row[], by: (RepostedBy | 
             id: posts.id,
             body: posts.body,
             createdAt: posts.createdAt,
-            photoCount: sql<number>`(select count(*) from ${postMedia} where ${postMedia.postId} = ${posts.id})`,
-            hasGif: sql<number>`exists (select 1 from ${postGifs} where ${postGifs.postId} = ${posts.id})`,
             userId: profiles.userId,
             username: profiles.username,
             firstName: profiles.firstName,
@@ -224,8 +224,8 @@ async function hydrate(db: Db, viewerId: string, rows: Row[], by: (RepostedBy | 
       id: q.id,
       body: q.body.trim(),
       createdAt: q.createdAt.getTime(),
-      photoCount: q.photoCount,
-      hasGif: Boolean(q.hasGif),
+      photos: byPost.get(q.id) ?? [],
+      gif: gifOf.get(q.id) ?? null,
       author: { userId: q.userId, username: q.username, firstName: q.firstName, lastName: q.lastName, avatarKey: q.avatarKey },
     });
   }
@@ -431,7 +431,7 @@ export async function listReplies(
 
 export type CreatePostResult =
   | { ok: true; id: string }
-  | { ok: false; code: "empty" | "too_long" | "bad_characters" | "parent_not_found" | "bad_photos" | "bad_gif" | "gif_with_photos" | "quote_and_reply" | "quote_with_media" | "quote_not_found" | "quote_private" | "place_too_long" | "place_bad_characters" };
+  | { ok: false; code: "empty" | "too_long" | "bad_characters" | "parent_not_found" | "bad_photos" | "bad_gif" | "gif_with_photos" | "quote_and_reply" | "quote_not_found" | "quote_private" | "place_too_long" | "place_bad_characters" };
 
 const replyCountOf = (parentId: string) =>
   sql`(select count(*) from ${posts} as r where r.parent_id = ${parentId} and r.deleted_at is null)`;
@@ -462,10 +462,9 @@ export async function createPost(
   if (!checkedGif.ok) return { ok: false, code: "bad_gif" };
   const gif = checkedGif.gif;
   if (gif && photoKeys.length > 0) return { ok: false, code: "gif_with_photos" };
-  // A post is a reply or a quote, and a quote carries the original instead of pictures or a GIF (PRD 8.2).
+  // A post is a reply or a quote, never both. A quote may carry its own pictures or GIF (owner decision, session 39).
   const quoting = quotedId !== undefined;
   if (quoting && parentId !== undefined) return { ok: false, code: "quote_and_reply" };
-  if (quoting && (photoKeys.length > 0 || gif)) return { ok: false, code: "quote_with_media" };
   let quotedAuthorId: string | null = null;
   if (quoting) {
     const target = await shareTarget(db, authorId, quotedId);

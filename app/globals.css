@@ -2404,10 +2404,6 @@ a.quote-card:hover {
   line-height: 1.4;
 }
 
-.quote-extra {
-  font-size: 0.8125rem;
-}
-
 .composer-quote {
   position: relative;
   margin-top: 8px;
@@ -3248,4 +3244,37 @@ a.quote-card:hover {
 .entity:hover,
 .entity:focus-visible {
   text-decoration: underline;
+}
+
+.quote-media {
+  position: relative;
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  border-radius: calc(var(--radius) - 2px);
+}
+
+.quote-media img {
+  display: block;
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  background: var(--surface);
+}
+
+.quote-media-gif img {
+  object-fit: contain;
+}
+
+.quote-media-more {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 2px 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
 }

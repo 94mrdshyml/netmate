@@ -26,7 +26,6 @@ const MESSAGES = {
   gif_with_photos: "A post can have pictures or a GIF, not both.",
   gif_off: "GIFs are turned off here.",
   quote_and_reply: "A post can be a reply or a quote, not both.",
-  quote_with_media: "A quote cannot also have pictures or a GIF.",
   quote_not_found: "That post is not available any more.",
   quote_private: "Posts from a private account cannot be quoted.",
 } as const;

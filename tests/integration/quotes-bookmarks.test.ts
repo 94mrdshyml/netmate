@@ -24,6 +24,7 @@ async function member(opts: { isPrivate?: boolean } = {}) {
 const tick = () => new Promise((r) => setTimeout(r, 4));
 const count = async (sql: string, ...binds: unknown[]) => (await env.DB.prepare(sql).bind(...binds).first<{ n: number }>())?.n;
 const postBy = async (authorId: string, text = "a post worth reading") => ((await createPost(db(), authorId, text)) as { id: string }).id;
+const alerts = async (userId: string) => (await listAlerts(db(), userId)).items;
 const idOf = (r: Awaited<ReturnType<typeof createPost>>) => (r as { id: string }).id;
 const quote = (authorId: string, text: string, quotedId: string) => createPost(db(), authorId, text, undefined, [], undefined, undefined, quotedId);
 
@@ -41,8 +42,8 @@ describe("a quote post", () => {
       available: true,
       id: original,
       body: "the original words",
-      photoCount: 0,
-      hasGif: false,
+      photos: [],
+      gif: null,
       author: { username: author.username },
     });
     // An ordinary post has no card.
@@ -110,15 +111,13 @@ describe("a quote post", () => {
     expect((await getPost(db(), reader.id, made))?.body).toBe("look at this");
   });
 
-  it("is refused for a private account's post, a missing post, a reply, pictures, a GIF, and writes nothing", async () => {
+  it("is refused for a private account's post, a missing post, a reply, and writes nothing", async () => {
     const priv = await member({ isPrivate: true });
     const author = await member();
     const quoter = await member();
     const privPost = await postBy(priv.id);
     const parent = await postBy(author.id);
     const original = await postBy(author.id);
-    const photo = `posts/${quoter.id}/${randomId(24)}.png`;
-    const gif = { url: "https://static.klipy.com/a/b.webp", width: 10, height: 10 };
     await env.DB.prepare("insert into follows (follower_id, followee_id) values (?, ?)").bind(quoter.id, priv.id).run();
 
     expect(await quote(quoter.id, "x", privPost)).toEqual({ ok: false, code: "quote_private" });
@@ -126,9 +125,53 @@ describe("a quote post", () => {
     expect(await quote(quoter.id, "x", newId("post"))).toEqual({ ok: false, code: "quote_not_found" });
     expect(await quote(quoter.id, "x", "nonsense")).toEqual({ ok: false, code: "quote_not_found" });
     expect(await createPost(db(), quoter.id, "x", parent, [], undefined, undefined, original)).toEqual({ ok: false, code: "quote_and_reply" });
-    expect(await createPost(db(), quoter.id, "x", undefined, [photo], undefined, undefined, original)).toEqual({ ok: false, code: "quote_with_media" });
-    expect(await createPost(db(), quoter.id, "x", undefined, [], undefined, gif, original)).toEqual({ ok: false, code: "quote_with_media" });
     expect(await count("select count(*) as n from posts where author_id = ?", quoter.id)).toBe(0);
+  });
+
+  it("may carry its own pictures or GIF, with or without words, but not both together", async () => {
+    const author = await member();
+    const quoter = await member();
+    const original = await postBy(author.id, "the original");
+    const photos = [`posts/${quoter.id}/${randomId(24)}.png`, `posts/${quoter.id}/${randomId(24)}.jpg`];
+    const gif = { url: "https://static.klipy.com/a/b.webp", width: 10, height: 10, title: "wave" };
+
+    const withPhotos = idOf(await createPost(db(), quoter.id, "look", undefined, photos, undefined, undefined, original));
+    const a = await getPost(db(), author.id, withPhotos);
+    expect(a?.photos).toEqual(photos);
+    expect(a?.quote).toMatchObject({ available: true, id: original });
+
+    const photoOnly = idOf(await createPost(db(), quoter.id, "", undefined, [photos[0]!], undefined, undefined, original));
+    expect((await getPost(db(), author.id, photoOnly))?.body).toBe("");
+    expect((await getPost(db(), author.id, photoOnly))?.photos).toEqual([photos[0]]);
+
+    const withGif = idOf(await createPost(db(), quoter.id, "", undefined, [], undefined, gif, original));
+    const g = await getPost(db(), author.id, withGif);
+    expect(g?.gif).toEqual(gif);
+    expect(g?.quote).toMatchObject({ available: true, id: original });
+
+    // A GIF and pictures never go together, quote or not.
+    expect(await createPost(db(), quoter.id, "x", undefined, photos, undefined, gif, original)).toEqual({ ok: false, code: "gif_with_photos" });
+    // The author of the original is still told once.
+    expect((await alerts(author.id)).filter((a) => a.type === "quote")).toHaveLength(3);
+  });
+
+  it("shows the original's pictures and GIF in its card, only to a reader who may see the original", async () => {
+    const author = await member();
+    const quoter = await member();
+    const reader = await member();
+    const photos = [`posts/${author.id}/${randomId(24)}.png`, `posts/${author.id}/${randomId(24)}.png`, `posts/${author.id}/${randomId(24)}.webp`];
+    const gif = { url: "https://static.klipy.com/c/d.gif", width: 20, height: 10, title: null };
+    const withPhotos = idOf(await createPost(db(), author.id, "my pictures", undefined, photos));
+    const withGif = idOf(await createPost(db(), author.id, "my gif", undefined, [], undefined, gif));
+    const q1 = idOf(await quote(quoter.id, "one", withPhotos));
+    const q2 = idOf(await quote(quoter.id, "two", withGif));
+
+    expect((await getPost(db(), reader.id, q1))?.quote).toMatchObject({ available: true, photos, gif: null });
+    expect((await getPost(db(), reader.id, q2))?.quote).toMatchObject({ available: true, photos: [], gif });
+    // A reader who cannot see the original gets no card and no hint of its media.
+    await setBlock(db(), author.id, reader.id, true);
+    expect((await getPost(db(), reader.id, q1))?.quote).toEqual({ available: false });
+    expect((await getPost(db(), reader.id, q2))?.quote).toEqual({ available: false });
   });
 
   it("may carry a place", async () => {

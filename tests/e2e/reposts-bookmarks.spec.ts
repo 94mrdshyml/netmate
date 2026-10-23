@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { sendPost } from "./helpers";
+import { solidPng } from "./png";
 
 // Serial: each test uses the state the one before left. Named so it runs after posts.spec (which sends
 // exactly 10 admin posts a minute in a burst). Only two admin posts are made and nobody is signed up
@@ -9,6 +10,8 @@ test.describe.configure({ mode: "serial" });
 const unique = () => `share ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const card = (page: Page, text: string) => page.getByRole("article").filter({ hasText: text });
 
+const pic = (name: string, shade: number) => ({ name, mimeType: "image/png", buffer: solidPng(48, 32, [shade, 110, 79]) });
+
 let original = "";
 let quoteText = "";
 
@@ -16,6 +19,9 @@ test("a post can be reposted and the repost taken back, and the feed says 'You r
   original = unique();
   await page.goto("/compose");
   await page.getByLabel("Your post").fill(original);
+  // The original has a picture, so the quote card of it later shows one.
+  await page.locator('input[type="file"]').setInputFiles(pic("original.png", 30));
+  await expect(page.getByRole("img", { name: "Picture 1" })).toBeVisible();
   await sendPost(page);
 
   const mine = card(page, original).first();
@@ -59,21 +65,29 @@ test("Quote opens the composer with the original under it, and the quote shows i
   await expect(page).toHaveURL(/\/compose\?quote=post_/);
   await expect(page.getByRole("heading", { name: "Quote post" })).toBeVisible();
 
-  // The original sits under the text, not as a link, and there are no picture or GIF buttons.
+  // The original sits under the text, not as a link, with its picture. A quote can have pictures of its own.
   const quoted = page.getByRole("group", { name: /^Quoting a post by/ });
   await expect(quoted).toContainText(original);
-  await expect(page.getByRole("button", { name: /Add pictures/ })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /GIF/ })).toHaveCount(0);
+  await expect(quoted.getByRole("img", { name: "Picture" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add pictures" })).toBeEnabled();
 
   // A quote does not need words of its own: the Post button is ready now.
   await expect(page.getByRole("button", { name: "Post", exact: true })).toBeEnabled();
   quoteText = unique();
   await page.getByLabel("Your post").fill(quoteText);
+  await page.locator('input[type="file"]').setInputFiles(pic("mine.png", 90));
+  await expect(page.getByRole("img", { name: "Picture 1", exact: true })).toBeVisible();
   await sendPost(page);
 
   const mine = card(page, quoteText);
+  // Its own picture is in the post, and the original's picture is small inside the card.
+  await expect(mine.locator(".post-photos img")).toHaveCount(1);
   const cardLink = mine.getByRole("link", { name: /^Quoted post by/ });
   await expect(cardLink).toContainText(original);
+  const thumb = cardLink.locator(".quote-media img");
+  await expect(thumb).toHaveCount(1);
+  expect(await thumb.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
   await cardLink.click();
   await expect(page).toHaveURL(/\/status\/post_/);
   await expect(card(page, original).first()).toBeVisible();
