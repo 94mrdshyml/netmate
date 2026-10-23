@@ -32,6 +32,14 @@ export default async function SettingsPage() {
             <Icon name="chevron-right" />
           </Link>
         </li>
+        {member.role === "admin" ? (
+          <li>
+            <Link href="/hq">
+              <span>Admin panel</span>
+              <Icon name="chevron-right" />
+            </Link>
+          </li>
+        ) : null}
       </ul>
 
       <form action={signOutAction}>

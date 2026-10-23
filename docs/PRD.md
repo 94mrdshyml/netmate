@@ -142,12 +142,12 @@ Sign-up works only through an invite link `/sign-up?invite=<code>`.
 **Approvals (admin, in `/hq`)**
 
 - A queue of Pending sign-ups showing name, username, email, time, and which member's link they came through.
-- Approve: the account becomes a member. Reject: the account is deleted and the email can be used again.
+- Approve: the account becomes a member. Reject (asks to confirm first): the account is deleted and the email can be used again, but the link's count is not given back. Only a Pending person can be approved or rejected from here; an active member is never deleted by this screen.
 - The admin is told by a badge in `/hq` and, if email is set up, an email. The invitee is told of approval or rejection by email.
 
 **Controls**
 
-- The admin can revoke or regenerate any member's link (for a leaked link). Existing accounts are unaffected.
+- The admin can replace any member's link with a new code (for a leaked link). The old code stops working at once, existing accounts are unaffected, and the count of sign-ups carries over to the new link, so replacing a link never hands out a new quota. There is no separate revoke: a member without a link would simply get a fresh one when they next open their Invite screen.
 - Sign-ups per link and per IP are rate-limited.
 - When email is set up, sign-up requires email verification. Pending approval is a separate gate after it.
 - The invite page shows a clear message for an invalid or revoked code.
@@ -432,10 +432,10 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/notifications`, `/bookmarks` | Alerts, saved posts | mobile |
 | `/analytics` (`?range=28`) | Your analytics | mobile |
 | `/settings` and `/profile`, `/account`, `/invite`, `/privacy`, `/privacy/requests`, `/privacy/blocked`, `/privacy/muted` | Settings | mobile |
-| `/hq` | Admin overview | **wide** |
+| `/hq` | Admin overview (members, waiting for approval). Reached from Settings, admin only | **wide** |
 | `/hq/branding` | Name, logo, favicon, colour, radius, font, avatar style, live preview | **wide** |
 | `/hq/approvals` | Pending sign-ups | **wide** |
-| `/hq/invites` | Admin link, quota, member links with usage, revoke and regenerate | **wide** |
+| `/hq/invites` | Admin link, quota, member links with usage, replace a link | **wide** |
 | `/hq/email` | Resend key, sender, test email, status | **wide** |
 | `/api/auth/*`, `/api/me`, `/api/upload` | Auth, session probe, upload | n/a |
 | `/avatar/[userId]`, `/media/[...key]` | The drawn default picture; stored pictures from R2 (avatars, banners, posts only; random names, cached for ever). The media subdomain replaces `/media` later | n/a |
