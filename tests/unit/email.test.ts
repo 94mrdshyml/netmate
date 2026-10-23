@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { brandedEmail, escapeHtml, pngLogoUrl, type EmailBrand } from "@/email/template";
+import { isWebUrl, pngLogoUrl } from "@/email/template";
 import { fakeTransport, outbox, realTransport, scrubError, transportFor } from "@/email/transport";
 
 const mail = { from: "hello@example.org", to: "ada@example.org", subject: "Hi", html: "<p>Hi</p>", text: "Hi" };
@@ -89,8 +89,6 @@ describe("realTransport", () => {
   });
 });
 
-const brand: EmailBrand = { name: "Green Valley", primary: "#0B6E4F", radius: "lg", fontFamily: "DM Sans", logoUrl: null };
-
 describe("pngLogoUrl", () => {
   it("builds an address only for a PNG under instance/", () => {
     expect(pngLogoUrl("https://club.example.org", "instance/abcdefghijklmnopqrstuvwx.png")).toBe("https://club.example.org/media/instance/abcdefghijklmnopqrstuvwx.png");
@@ -107,50 +105,12 @@ describe("pngLogoUrl", () => {
   });
 });
 
-describe("brandedEmail", () => {
-  it("uses the instance name, brand colour, corner style and font, and a plain-text copy", () => {
-    const { html, text } = brandedEmail(brand, { heading: "Email is working", paragraphs: ["Hello there."], button: { label: "Open", url: "https://club.example.org/" } });
-    expect(html).toContain("Green Valley");
-    expect(html).toMatch(/background:#[0-9a-f]{6};color:#[0-9a-f]{6};border-radius:16px/i);
-    expect(html).toContain("'DM Sans'");
-    expect(html).toContain('href="https://club.example.org/"');
-    expect(text).toContain("Email is working");
-    expect(text).toContain("Open: https://club.example.org/");
-    expect(text).not.toContain("<");
-  });
-
-  it("shows the name as text with no logo, and the picture when there is a PNG", () => {
-    expect(brandedEmail(brand, { heading: "h", paragraphs: [] }).html).not.toContain("<img");
-    const withLogo = brandedEmail({ ...brand, logoUrl: "https://club.example.org/media/instance/abcdefghijklmnopqrstuvwx.png" }, { heading: "h", paragraphs: [] }).html;
-    expect(withLogo).toContain('<img src="https://club.example.org/media/instance/abcdefghijklmnopqrstuvwx.png"');
-  });
-
-  it("escapes everything that came from a person, so a name cannot add markup", () => {
-    const evil = { ...brand, name: '<script>alert(1)</script> & "Co"' };
-    const { html } = brandedEmail(evil, { heading: "<b>x</b>", paragraphs: ["a < b & c"] });
-    expect(html).not.toContain("<script>");
-    expect(html).not.toContain("<b>x</b>");
-    expect(html).toContain("&#60;script&#62;");
-    expect(html).toContain("a &#60; b &#38; c");
-  });
-
-  it("leaves out a button whose address is not http or https", () => {
-    for (const url of ["javascript:alert(1)", "data:text/html,hi", 'https://x.test/"onclick="x', "ftp://x.test"]) {
-      const { html, text } = brandedEmail(brand, { heading: "h", paragraphs: [], button: { label: "Go", url } });
-      expect(html).not.toContain("<a ");
-      expect(text).not.toContain("Go:");
+describe("isWebUrl", () => {
+  it("accepts http and https addresses only", () => {
+    expect(isWebUrl("https://club.example.org/open?x=1")).toBe(true);
+    expect(isWebUrl("http://club.example.org")).toBe(true);
+    for (const bad of ["javascript:alert(1)", "data:text/html,hi", "ftp://x.test", 'https://x.test/"onclick="x', "https://x.test/a b", ""]) {
+      expect(isWebUrl(bad)).toBe(false);
     }
-  });
-
-  it("keeps odd characters out of the font stack", () => {
-    const { html } = brandedEmail({ ...brand, fontFamily: "Inter';}body{display:none" }, { heading: "h", paragraphs: [] });
-    expect(html).not.toContain("display:none");
-    expect(html).toContain("'Interbodydisplaynone'");
-  });
-});
-
-describe("escapeHtml", () => {
-  it("escapes the five characters that matter", () => {
-    expect(escapeHtml(`<>&"'`)).toBe("&#60;&#62;&#38;&#34;&#39;");
   });
 });

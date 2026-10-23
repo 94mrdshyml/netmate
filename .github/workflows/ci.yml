@@ -42,6 +42,7 @@ jobs:
       - run: bun run lint
       - run: bun run test
       - run: bun run test:int
+      - run: bun run test:email
 
   build:
     name: Build for Workers

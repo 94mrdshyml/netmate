@@ -174,7 +174,7 @@ Rules:
 - The Resend key is stored encrypted, never shown again after saving (the form shows "key saved" and allows replacing it), and never logged.
 - The sender address must be on a domain verified in Resend. Setup explains this and shows Resend's own error if not.
 - Email logos are served from the public media domain as PNG.
-- Tests never call Resend; a fake outbox runs only when `ENV=test`. The fake accepts keys starting `re_test_` and refuses a sender on a `.invalid` domain like an unverified domain; any other value of `ENV`, or none, is the real Resend. Mail is sent with Resend's HTTP API directly (no package). The first templates are plain branded HTML with a text copy (`src/email/template.ts`); React Email arrives with the first real templates and needs a package decision.
+- Tests never call Resend; a fake outbox runs only when `ENV=test`. The fake accepts keys starting `re_test_` and refuses a sender on a `.invalid` domain like an unverified domain; any other value of `ENV`, or none, is the real Resend. Mail is sent with Resend's HTTP API directly (no package). Templates are React Email components (`@react-email/components`, pinned): one shared branded layout (`src/email/layout.tsx`) rendered to HTML and a plain-text copy (`src/email/render.tsx`) on the server, with no request made. `bun run test:email` renders them with a sample brand, every corner style and extreme colours, and runs in CI.
 
 ## 8. Features
 
