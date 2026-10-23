@@ -1,0 +1,11 @@
+# 23. Search (2026-10-23)
+- Branch / PR: feat/search (first of three PRs the owner asked for, in this order: Search, Alerts, then the look changes: avatar menu, Twitter-style edit profile, better icons, hover and press effects, bottom bar Home / Search / Alerts / Profile)
+- Before this: PR #36 (UI refresh) and #37 to #39 (/hq branding, avatar seed, logo and fonts) are merged. No other PR was open when this branch was cut from main.
+- Done:
+  - Migration `0006_search.sql` (hand-written through `drizzle-kit generate --custom`): FTS5 tables `posts_fts` and `profiles_fts`, triggers that keep them in step, and a backfill for existing rows. The SQL has the rebuild steps in its header comment. Deleting from the index goes by the stored id (a scan of the index), not by row number, because a row number of a table without an integer key can change.
+  - `src/lib/search-query.ts` turns typed text into a safe MATCH string. `src/server/search.ts`: `searchPosts` (visible posts only, newest first, paged), `searchPeople` (exact username first, then username starts with, then best match, 20 at most) and `suggestPeople`.
+  - `/search` page with a live search box (250 ms pause), Posts and People tabs, suggestions when empty. `PersonRow` was pulled out of the followers page so both lists share it. A Search tab was added to the bottom bar so the page can be reached.
+  - Exported `postColumns`, `olderThan` and `toPage` from `posts.ts` (renamed `columns` to `postColumns`) so search reuses the post list code.
+- Tests: 8 unit for the query builder (including attack strings), 17 integration for the indexes and triggers (accents, phrases, delete, author removed, not-active author hidden, paging, odd input, name change, ranking, suggestions), 5 e2e in `search.spec.ts`.
+- Open: `#tag` searches the plain word until hashtags and `post_tags` exist. Mates line on results and the inviter step in suggestions are not built. Blocked and private-account rules join `visiblePosts` later and search will pick them up.
+- Next: Alerts (notifications), then the look changes.

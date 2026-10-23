@@ -294,12 +294,13 @@ One search screen (`/search?q=`) with two tabs, Posts and People. Search uses a 
 - Kept in step with the data by database triggers: a new post is indexed; a deleted post leaves the index; a profile name change updates it.
 - The index is rebuildable from the normal tables at any time (also needed because D1 export does not carry virtual tables; see R9).
 - Tokenisation is case- and accent-insensitive (`unicode61` with accent removal). Whether the `trigram` tokenizer is available on D1, which would give true "contains" matching and scripts without spaces, is decided in spike 3. Until then queries match **word starts** (prefix matching).
+- Built (session 23): migration `0006_search.sql`, a custom migration because drizzle-kit cannot describe virtual tables. `posts_fts(body, post_id)` and `profiles_fts(username, first_name, last_name, user_id)`, tokenizer `unicode61 remove_diacritics 2`, filled for existing rows when the migration runs. Triggers: a new post is indexed, a deleted post (or one removed with its author) leaves, a profile is indexed when made, re-indexed when a name changes and removed with it. People who are not active are indexed but never returned.
 
 **Query rules**
 
 - Terms are split on spaces; every term must match (AND). The last term is matched as a prefix, so results appear while typing. "Quoted phrases" match as phrases. Minimum 2 characters.
-- Special characters are escaped; a user can never inject search syntax.
-- `#tag` queries match the exact hashtag through the `post_tags` table, not full text.
+- Special characters are escaped; a user can never inject search syntax. Each term is sent in double quotes (`src/lib/search-query.ts`); the only operator we add is the `*` on the last word. At most 8 terms, 50 characters each and 100 in all.
+- `#tag` queries match the exact hashtag through the `post_tags` table, not full text. Until hashtags and `post_tags` exist, `#tag` searches the word.
 
 **Posts tab**
 
@@ -311,7 +312,9 @@ One search screen (`/search?q=`) with two tabs, Posts and People. Search uses a 
 
 - Matches the start of a username, first name, last name or full name; a leading `@` is allowed. Order: exact username, then username prefix, then best text match. Capped at 20, not paged. Blocked people skipped. Each result shows the Mates line.
 
-With nothing typed, the screen shows suggestions (no separate Explore page).
+With nothing typed, the screen shows suggestions (no separate Explore page). Suggestions (8) are people followed by people you follow, most shared first, then the newest members; never you or someone you already follow. The inviter-and-invitees step and the Mates line on each result come later.
+
+**The screen.** The search box sits in a sticky header. Results appear while typing, after a 250 ms pause, with no button; Enter also works with no script. A query starting with `@` opens People. Under 2 characters the screen asks for more. Posts page with a "More posts" link; People are not paged.
 
 No typo tolerance, no trending tags in v1.
 
@@ -407,7 +410,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 ### 8.13 Design and experience
 
 - **Theme.** Follows the phone by default (or the instance default). A sun and moon button in the Home top bar flips light and dark, and Settings has a three-way Appearance choice (Match phone, Light, Dark). Both save the choice in a cookie that the server reads, so the right theme is painted on the first frame. Both themes are designed and checked, including with extreme brand colours.
-- **Layout.** Home has a top bar (your picture, which opens Settings; the instance mark; the theme button). Every other screen has a sticky header with a back arrow and its title. Bottom tabs (Home, Search, Alerts, Profile), round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected. Until Search and Alerts exist, the bottom tabs are Home, Profile and Settings.
+- **Layout.** Home has a top bar (your picture, which opens Settings; the instance mark; the theme button). Every other screen has a sticky header with a back arrow and its title. Bottom tabs (Home, Search, Alerts, Profile), round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected. Until Alerts exists, the bottom tabs are Home, Search, Profile and Settings.
 - **Type.** The instance font. No emoji or em dashes in interface text.
 - **Icons.** Feather.
 - **No** shadows, gradients, glows or cards in the feed.

@@ -37,7 +37,7 @@ export function decodeCursor(raw: unknown): { createdAt: number; id: string } | 
   return { createdAt: Number(match[1]), id: match[2] as string };
 }
 
-function olderThan(cursor: { createdAt: number; id: string } | null): SQL | undefined {
+export function olderThan(cursor: { createdAt: number; id: string } | null): SQL | undefined {
   if (!cursor) return undefined;
   const at = new Date(cursor.createdAt);
   return or(lt(posts.createdAt, at), and(eq(posts.createdAt, at), lt(posts.id, cursor.id)));
@@ -45,7 +45,7 @@ function olderThan(cursor: { createdAt: number; id: string } | null): SQL | unde
 
 // ---- reading ----
 
-const columns = (viewerId: string) => ({
+export const postColumns = (viewerId: string) => ({
   id: posts.id,
   body: posts.body,
   createdAt: posts.createdAt,
@@ -86,7 +86,7 @@ const toView = (r: Row): PostView => ({
   author: { userId: r.userId, username: r.username, firstName: r.firstName, lastName: r.lastName, avatarKey: r.avatarKey },
 });
 
-function toPage(rows: Row[], limit: number): Page {
+export function toPage(rows: Row[], limit: number): Page {
   const items = rows.slice(0, limit).map(toView);
   const last = items[items.length - 1];
   return { items, nextCursor: rows.length > limit && last ? encodeCursor(last.createdAt, last.id) : null };
@@ -110,7 +110,7 @@ export async function listFeed(
         )
       : undefined;
   const rows = await db
-    .select(columns(viewerId))
+    .select(postColumns(viewerId))
     .from(posts)
     .innerJoin(profiles, eq(profiles.userId, posts.authorId))
     .where(and(visiblePosts(viewerId), isNull(posts.parentId), fromFollowed, olderThan(decodeCursor(opts.cursor))))
@@ -128,7 +128,7 @@ export async function listByAuthor(
 ): Promise<Page> {
   const limit = opts.limit ?? PAGE_SIZE;
   const rows = await db
-    .select(columns(viewerId))
+    .select(postColumns(viewerId))
     .from(posts)
     .innerJoin(profiles, eq(profiles.userId, posts.authorId))
     .where(
@@ -148,7 +148,7 @@ export async function listByAuthor(
 export async function getPost(db: Db, viewerId: string, postId: string): Promise<PostView | null> {
   if (!isId("post", postId)) return null;
   const row = await db
-    .select(columns(viewerId))
+    .select(postColumns(viewerId))
     .from(posts)
     .innerJoin(profiles, eq(profiles.userId, posts.authorId))
     .where(and(visiblePosts(viewerId), eq(posts.id, postId)))
@@ -165,7 +165,7 @@ export async function listReplies(
 ): Promise<Page> {
   const limit = opts.limit ?? PAGE_SIZE;
   const rows = await db
-    .select(columns(viewerId))
+    .select(postColumns(viewerId))
     .from(posts)
     .innerJoin(profiles, eq(profiles.userId, posts.authorId))
     .where(and(visiblePosts(viewerId), eq(posts.parentId, postId), olderThan(decodeCursor(opts.cursor))))
