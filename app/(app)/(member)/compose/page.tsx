@@ -51,8 +51,8 @@ export default async function ComposePage({ searchParams }: { searchParams: Prom
                 id: quoted.id,
                 body: quoted.body,
                 createdAt: quoted.createdAt,
-                photoCount: quoted.photos.length,
-                hasGif: quoted.gif !== null,
+                photos: quoted.photos,
+                gif: quoted.gif,
                 author: quoted.author,
               }}
               now={currentTime()}

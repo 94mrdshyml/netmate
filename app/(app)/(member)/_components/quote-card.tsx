@@ -5,8 +5,9 @@ import { Avatar } from "./avatar";
 
 /**
  * The original under a quote post. It is a link to that post. If this reader may not see the original
- * (deleted, from a private account, or blocked) it says so and shows nothing of it. Text only, as text.
- * `plain` draws it without the link, for the composer, where a tap must not leave the draft.
+ * (deleted, from a private account, or blocked) it says so and shows nothing of it. The words are text.
+ * A small picture or GIF of the original shows in the card: the first picture (with "+2" when there are
+ * more), or the GIF. `plain` draws it without the link, for the composer, where a tap must not leave the draft.
  */
 export function QuoteCard({ quote, now, plain = false }: { quote: QuotedView; now: number; plain?: boolean }) {
   if (!quote.available) {
@@ -17,7 +18,7 @@ export function QuoteCard({ quote, now, plain = false }: { quote: QuotedView; no
     );
   }
   const name = `${quote.author.firstName} ${quote.author.lastName}`;
-  const extras = [quote.photoCount > 0 ? (quote.photoCount === 1 ? "1 picture" : `${quote.photoCount} pictures`) : null, quote.hasGif ? "a GIF" : null].filter(Boolean);
+  const firstPhoto = quote.photos[0];
   const content = (
     <>
       <span className="quote-head">
@@ -32,7 +33,26 @@ export function QuoteCard({ quote, now, plain = false }: { quote: QuotedView; no
         </time>
       </span>
       {quote.body ? <span className="quote-body">{quote.body}</span> : null}
-      {extras.length > 0 ? <span className="quote-extra muted">With {extras.join(" and ")}</span> : null}
+      {firstPhoto ? (
+        <span className="quote-media">
+          {/* eslint-disable-next-line @next/next/no-img-element -- stored pictures are served by our own /media route */}
+          <img src={`/media/${firstPhoto}`} alt={quote.photos.length > 1 ? `Picture 1 of ${quote.photos.length}` : "Picture"} loading="lazy" decoding="async" />
+          {quote.photos.length > 1 ? <span className="quote-media-more">+{quote.photos.length - 1}</span> : null}
+        </span>
+      ) : quote.gif ? (
+        <span className="quote-media quote-media-gif">
+          {/* eslint-disable-next-line @next/next/no-img-element -- a picture straight from Klipy, which its rules require */}
+          <img
+            src={quote.gif.url}
+            alt={quote.gif.title ?? "GIF"}
+            width={quote.gif.width}
+            height={quote.gif.height}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+          />
+        </span>
+      ) : null}
     </>
   );
   return plain ? (

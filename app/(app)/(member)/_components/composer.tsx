@@ -60,7 +60,7 @@ export function Composer({
   places?: boolean;
   /** Klipy's key, given only while the admin has GIF search on. Without it there is no GIF button. */
   gifKey?: string | null;
-  /** Quoting this post: its card sits under the text, and pictures and a GIF are not offered (PRD 8.2). */
+  /** Quoting this post: its card sits under the text. A quote may carry its own pictures or GIF like any post. */
   quoteId?: string;
   quoteCard?: ReactNode;
 }) {
@@ -189,7 +189,6 @@ export function Composer({
               ))}
             </ul>
           ) : null}
-          {quoteCard ? <div className="composer-quote">{quoteCard}</div> : null}
           {gif ? (
             <div className="composer-gif" style={{ width: `min(100%, ${gif.width}px)` }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- a picture straight from Klipy, which its rules require */}
@@ -199,6 +198,7 @@ export function Composer({
               </button>
             </div>
           ) : null}
+          {quoteCard ? <div className="composer-quote">{quoteCard}</div> : null}
           {place ? (
             <p className="composer-place">
               <Icon name="map-pin" size={16} />
@@ -244,7 +244,6 @@ export function Composer({
               event.target.value = "";
             }}
           />
-          {quoteId ? null : (
           <button
             type="button"
             className="icon-btn"
@@ -254,8 +253,7 @@ export function Composer({
           >
             <Icon name="image" />
           </button>
-          )}
-          {gifKey && !quoteId ? (
+          {gifKey ? (
             <button
               type="button"
               className="icon-btn gif-btn"
