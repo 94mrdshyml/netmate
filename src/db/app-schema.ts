@@ -255,6 +255,44 @@ export const likes = sqliteTable(
   (t) => [primaryKey({ columns: [t.userId, t.postId] }), index("likes_post_idx").on(t.postId)],
 );
 
+/**
+ * The hashtags of a post, one row per distinct tag (docs/PRD.md section 8.2): lower-cased, 1 to 50
+ * characters, at most 10 a post (the server keeps to that). `created_at` is the post's own time, so a
+ * tag's posts can be listed newest first from this index.
+ */
+export const postTags = sqliteTable(
+  "post_tags",
+  {
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    tag: text("tag").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.postId, t.tag] }),
+    check("post_tags_length", sql`length(${t.tag}) between 1 and 50`),
+    index("post_tags_tag_idx").on(t.tag, t.createdAt, t.postId),
+  ],
+);
+
+/**
+ * The people a post mentions that exist, are active and have not blocked or been blocked by the
+ * author. A mention is drawn as a link only when it is in this table. One row per person per post.
+ */
+export const postMentions = sqliteTable(
+  "post_mentions",
+  {
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.postId, t.userId] }), index("post_mentions_user_idx").on(t.userId)],
+);
+
 /** One row per person per post. Reposting twice leaves one row. The counter on the post changes in the same batch. */
 export const reposts = sqliteTable(
   "reposts",

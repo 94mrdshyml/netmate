@@ -4,6 +4,7 @@ import type { PostView } from "@/server/posts";
 import { Avatar } from "./avatar";
 import { Icon } from "./icon";
 import { BookmarkButton, LikeButton, PostMenu, RepostButton } from "./post-actions";
+import { PostBody } from "./post-body";
 import { PostGif } from "./post-gif";
 import { PostPhotos } from "./post-photos";
 import { QuoteCard } from "./quote-card";
@@ -48,7 +49,11 @@ export function PostCard({
             {relativeTime(post.createdAt, now)}
           </time>
         </header>
-        {post.body ? <p className="post-body">{post.body}</p> : null}
+        {post.body ? (
+          <p className="post-body">
+            <PostBody text={post.body} tags={post.tags} mentions={post.mentions} />
+          </p>
+        ) : null}
         {post.quote ? <QuoteCard quote={post.quote} now={now} /> : null}
         <PostPhotos keys={post.photos} name={name} />
         {post.gif ? <PostGif gif={post.gif} /> : null}

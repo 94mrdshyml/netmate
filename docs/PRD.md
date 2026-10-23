@@ -220,9 +220,9 @@ The username field checks availability as you type (after a short pause). Reserv
 
 **Link previews** (on by default only if the safe fetcher passes spike 6; otherwise off). If the text contains a link and the post has no photos, GIF or quote, the server fetches the page once when the post is made and saves a small card (title, description, picture, site name). Slow, broken or unsafe pages produce no card. The fetcher refuses private and internal addresses, re-checks every redirect, allows only ports 80 and 443, waits at most 3 seconds, reads at most 512 KB, accepts only HTML. Card text is plain text; the picture loads in the reader's browser with no referrer (that site sees the reader's IP; the trade-off is stated in `/hq` next to the setting).
 
-**Hashtags.** `#tag` becomes a tappable link to a search for that tag. Lower-cased, stored per post, up to 10 distinct tags per post, each up to 50 letters, numbers or underscores.
+**Hashtags.** **Built.** `#tag` becomes a tappable link to a search for that tag (`/search?q=%23tag`, Posts tab). Lower-cased, stored per post (`post_tags`), up to 10 distinct tags per post, each 1 to 50 letters, numbers or underscores (at least one letter or number, any script). Found by parsing the text (`src/lib/post-entities.ts`), never by building markup: the page draws a link only for a tag the server kept for that post, so an 11th tag stays plain text. A `#` or `@` counts only at the start of a word, so "C#", "me@example.com" and "a#b" are plain, and a web address (`https://...` or `www....`) is left alone as a whole. A tag ends at the first character that is not a letter, number or underscore ("#well-known" is the tag "well").
 
-**Mentions.** `@username` links to that profile and sends that person a "mention" alert (once per post).
+**Mentions.** **Built.** `@username` links to that profile and sends that person a "mention" alert (once per post, written in the same `db.batch()` as the post). The name must have the shape of a username (3 to 15 letters, numbers or underscores). It counts only if the person exists, is an active member and has no block either way with the author (`post_mentions`); a name that does not count stays plain text. At most 10 distinct people per post; the rest stay plain text. Nobody is alerted twice for one post: the author of the post a reply answers has the reply alert, and the author of a quoted post has the quote alert (that replaces the mention alert, as 8.7 says). You are never alerted about your own post, though your own name still links. The alert is shown only if the reader may see the post (the usual rule), so a private account cannot make a stranger's alerts appear.
 
 **Reply.** From a post's page. Replies are posts with a parent. They show under the post (newest first), on the replier's Replies tab, and raise the parent's reply count. They never appear in the home feed.
 
@@ -310,13 +310,13 @@ One search screen (`/search?q=`) with two tabs, Posts and People. Search uses a 
 
 - Terms are split on spaces; every term must match (AND). The last term is matched as a prefix, so results appear while typing. "Quoted phrases" match as phrases. Minimum 2 characters.
 - Special characters are escaped; a user can never inject search syntax. Each term is sent in double quotes (`src/lib/search-query.ts`); the only operator we add is the `*` on the last word. At most 8 terms, 50 characters each and 100 in all.
-- `#tag` queries match the exact hashtag through the `post_tags` table, not full text. Until hashtags and `post_tags` exist, `#tag` searches the word.
+- A lone `#tag` query (one hashtag and nothing else) matches the exact hashtag through the `post_tags` table, not full text: no prefix match, no plain word, either case, replies included, newest first. It may be one character long. `#tag more words`, or a hash anywhere else, is an ordinary text search with the `#` dropped. (Built, session 37.)
 
 **Posts tab**
 
 - Matches post text, replies included. Newest first, paged by `(time, id)`.
 - Results are filtered by `visibleTo` after matching, so private, blocked and deleted content never appears.
-- A hashtag in a post opens `/search?q=%23tag` on the Posts tab.
+- A hashtag in a post opens `/search?q=%23tag` on the Posts tab (built).
 
 **People tab**
 
@@ -332,7 +332,7 @@ No typo tolerance, no trending tags in v1.
 
 `/notifications` (bell in the bottom bar, with unread badge). Types: **like, repost, follow, follow request, reply, quote, mention, invite used** (your link was used) and, for the admin only, **pending approval**. Never for your own actions. Newest first, paged (30). Likes and reposts of the same post within a page collapse ("Meera and 2 others liked your post"). Each row shows a snippet (up to 140 characters). Alerts from people you blocked, were blocked by, or muted are hidden. Opening the screen marks all read. A quote alert replaces a mention alert for the same person.
 
-**Built so far (sessions 24, 33 and 36).** The kinds that exist in the app today: **like, repost, follow, follow request, reply, quote, invite used and pending approval**. Mention is allowed by the database already and arrives with hashtags and mentions. How it works:
+**Built so far (sessions 24, 33, 36 and 37).** The kinds that exist in the app today: **like, repost, follow, follow request, reply, quote, mention, invite used and pending approval**. How it works:
 - An alert is written in the same `db.batch()` as the like, follow, reply or sign-up that causes it, and taken back in the batch that undoes it (unlike, unfollow). Approving a sign-up removes the admin's "pending approval" alert for that person; rejecting deletes the account, which removes it with it. A reply tells the author of the post it answers (not yourself). Invite used goes to the link's owner (the admin's link too); pending approval goes to the admin when a sign-up lands over the quota.
 - The database refuses an alert about your own action, an unknown kind, a post alert with no post (or a person alert with one), and the same alert twice (one partial unique index for alerts about a post, one for alerts about a person). Sending a like twice leaves one alert, and an old read alert does not come back as new.
 - Reading goes through `visiblePosts`: an alert about a deleted post is not shown or counted.
@@ -517,7 +517,8 @@ More prefixes are added as their tables are created (posts, invites, notificatio
 | `post_media` | up to 4 per post: position (0 to 3), key (storage key under `posts/`; checked by the database). Built for pictures |
 | `post_gifs` | one per post at most (post id is the key): Klipy address, width, height, title. The database accepts only https addresses on Klipy's three media hosts, sizes 1 to 4096 and a title of 140 characters or fewer. Removed with the post |
 | `post_links` | one link card per post: url, title, description, image, site |
-| `post_tags` | one row per distinct hashtag per post (indexed by tag and time) |
+| `post_tags` | one row per distinct hashtag per post: post, lower-cased tag (1 to 50 characters, checked by the database) and the post's own time; indexed by tag and time. Removed with the post |
+| `post_mentions` | one row per person a post mentions (only people who exist, are active and have no block with the author): post and person. Decides which `@names` are drawn as links. Removed with the post or the person |
 | `posts_fts`, `profiles_fts` | FTS5 search indexes (rebuildable from the tables above) |
 | `follows`, `follow_requests` | follower/followee (no self-follow); pending asks for private accounts |
 | `blocks`, `mutes` | who blocked or muted whom |
@@ -545,6 +546,7 @@ Counters on a post (replies, likes, reposts) change in the same `db.batch()` as 
 | Username | 3 to 15 characters |
 | Password | 8 to 128 characters |
 | Hashtags per post | 10 |
+| Mentions per post | 10 |
 | Page size | 20 posts, 30 alerts |
 | For you pool | last 7 days |
 | For you halving time | 12 hours |

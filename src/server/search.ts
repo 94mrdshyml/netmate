@@ -5,7 +5,8 @@
 
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { posts, profiles } from "@/db/schema";
+import { posts, postTags, profiles } from "@/db/schema";
+import { parseTagQuery } from "@/lib/post-entities";
 import { buildSearchQuery } from "@/lib/search-query";
 import type { PersonView } from "@/server/follows";
 import { decodeCursor, olderThan, PAGE_SIZE, postColumns, toPage, type Page } from "@/server/posts";
@@ -21,8 +22,10 @@ export async function searchPosts(
   rawQuery: unknown,
   opts: { cursor?: unknown; limit?: number } = {},
 ): Promise<Page> {
-  const query = buildSearchQuery(rawQuery);
-  if (!query) return { items: [], nextCursor: null };
+  // "#tag" alone is the exact hashtag, through the tags table; anything else is a text search.
+  const tag = parseTagQuery(rawQuery);
+  const query = tag ? null : buildSearchQuery(rawQuery);
+  if (!tag && !query) return { items: [], nextCursor: null };
   const limit = opts.limit ?? PAGE_SIZE;
   const rows = await db
     .select(postColumns(viewerId))
@@ -31,7 +34,9 @@ export async function searchPosts(
     .where(
       and(
         visiblePosts(viewerId),
-        sql`${posts.id} in (select post_id from posts_fts where posts_fts match ${query.match})`,
+        tag
+          ? sql`${posts.id} in (select ${postTags.postId} from ${postTags} where ${postTags.tag} = ${tag})`
+          : sql`${posts.id} in (select post_id from posts_fts where posts_fts match ${query!.match})`,
         olderThan(decodeCursor(opts.cursor)),
       ),
     )

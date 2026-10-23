@@ -65,6 +65,17 @@ export function alertOnQuote(db: Db, actorId: string, quotedId: string, quoteId:
     .onConflictDoNothing();
 }
 
+/** `postId` mentions `recipientId`. One alert per person per post (the table allows no second one). Never for yourself. */
+export function alertOnMention(db: Db, actorId: string, recipientId: string, postId: string) {
+  return db
+    .insert(notifications)
+    .select(
+      sql`select ${newId("notification")}, ${recipientId}, ${actorId}, 'mention', ${postId}, ${Date.now()}, null
+          where ${recipientId} <> ${actorId}`,
+    )
+    .onConflictDoNothing();
+}
+
 /** Someone followed `targetId`. */
 export function alertOnFollow(db: Db, actorId: string, targetId: string) {
   return db

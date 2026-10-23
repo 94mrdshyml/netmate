@@ -23,7 +23,7 @@ const ICONS: Record<AlertItem["type"], { icon: IconName; filled?: boolean }> = {
   follow_request: { icon: "user-plus" },
   reply: { icon: "message-circle" },
   quote: { icon: "edit-2" },
-  mention: { icon: "message-circle" },
+  mention: { icon: "at-sign" },
   invite_used: { icon: "user-plus" },
   pending_approval: { icon: "user-check" },
 };

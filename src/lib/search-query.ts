@@ -32,8 +32,8 @@ function tokenize(text: string): { text: string; phrase: boolean }[] {
 
 /**
  * Builds the match string, or null when the query is too short or has nothing searchable in it.
- * A leading `@` (people) or `#` (tags) is ignored. Hashtag storage does not exist yet, so `#tag`
- * searches the word until the tags table does.
+ * A leading `@` (people) or `#` is ignored. A lone `#tag` never gets here when searching posts: it
+ * is the exact hashtag and goes through the tags table (`parseTagQuery`, `searchPosts`).
  */
 export function buildSearchQuery(raw: unknown): SearchQuery | null {
   if (typeof raw !== "string") return null;
