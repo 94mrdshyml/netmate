@@ -12,7 +12,7 @@ import { getInstanceState } from "@/instance/request";
 import { saveBrandingForm, type BrandingResult } from "@/instance/branding";
 import { clearInstanceCache } from "@/instance/settings";
 import { isId } from "@/lib/ids";
-import { approvePending, regenerateInvite, rejectPending, setInviteQuota } from "@/server/admin";
+import { approvePending, regenerateInvite, rejectPending, setInviteQuota, setPlacesEnabled } from "@/server/admin";
 import { emailApproved, emailRejected, pendingContact } from "@/server/status-emails";
 import { mailContext } from "@/server/mail-context";
 
@@ -127,5 +127,20 @@ export async function sendTestEmailAction(): Promise<TestEmailResult> {
     admin.email,
   );
   revalidatePath("/hq/email");
+  return result;
+}
+
+export type ServicesResult = { ok: true; enabled: boolean } | { ok: false; message: string };
+
+/** Turns place suggestions on or off. Clears the settings cache so the composer follows at once. */
+export async function savePlacesAction(wanted: unknown): Promise<ServicesResult> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await setPlacesEnabled(getDb(env.DB), wanted);
+  if (result.ok) {
+    clearInstanceCache();
+    revalidatePath("/hq/services");
+    revalidatePath("/compose");
+  }
   return result;
 }

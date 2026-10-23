@@ -40,6 +40,12 @@ export function PostCard({
         </header>
         {post.body ? <p className="post-body">{post.body}</p> : null}
         <PostPhotos keys={post.photos} name={name} />
+        {post.place ? (
+          <p className="post-place">
+            <Icon name="map-pin" size={14} />
+            <span>{post.place}</span>
+          </p>
+        ) : null}
         <footer className="post-actions">
           {linkToPost ? (
             <Link className="action" href={href} aria-label={`Reply, ${post.replyCount} replies`}>

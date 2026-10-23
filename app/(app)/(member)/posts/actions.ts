@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
+import { readInstance } from "@/instance/settings";
 import { createPost, deletePost, setLike } from "@/server/posts";
 import { limitLike, limitPost, tooManyMessage } from "@/server/rate-limit";
 import { isAttachable } from "@/storage/upload";
@@ -17,12 +18,15 @@ const MESSAGES = {
   bad_characters: "That text has characters we cannot post.",
   parent_not_found: "That post is not available any more.",
   bad_photos: "One of the pictures could not be used. Remove it and try again.",
+  place_too_long: "That place name is over 60 characters.",
+  place_bad_characters: "That place name has characters we cannot use.",
+  place_off: "Adding a place is turned off here.",
 } as const;
 
 export type CreatePostActionResult = { ok: true } | { ok: false; message: string };
 
 /** Posts (then goes Home), or replies when `parentId` is given (then stays, so the page can show the reply). */
-export async function createPostAction(input: { body: string; parentId?: string; photos?: string[] }): Promise<CreatePostActionResult> {
+export async function createPostAction(input: { body: string; parentId?: string; photos?: string[]; place?: string }): Promise<CreatePostActionResult> {
   const member = await getMember();
   if (!member) redirect("/sign-in");
   const { env } = await getCloudflareContext({ async: true });
@@ -35,7 +39,11 @@ export async function createPostAction(input: { body: string; parentId?: string;
   const attachable = await Promise.all(photos.map((key) => isAttachable(env.MEDIA, member.userId, "post", key)));
   if (!attachable.every(Boolean)) return { ok: false, message: MESSAGES.bad_photos };
 
-  const result = await createPost(getDb(env.DB), member.userId, input?.body, input?.parentId, photos);
+  // A place is only taken while the admin has place suggestions on; with it off the button is hidden too.
+  const wantsPlace = typeof input?.place === "string" && input.place.trim() !== "";
+  if (wantsPlace && !(await readInstance(getDb(env.DB))).settings.placesEnabled) return { ok: false, message: MESSAGES.place_off };
+
+  const result = await createPost(getDb(env.DB), member.userId, input?.body, input?.parentId, photos, input?.place);
   if (!result.ok) return { ok: false, message: MESSAGES[result.code] };
 
   revalidatePath("/");

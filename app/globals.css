@@ -2059,6 +2059,152 @@ a.srow:hover > svg {
   justify-content: center;
 }
 
+/* ---- Place on a post: the pin in the composer, the box that opens, the tag it leaves, and the line on a post ---- */
+
+.place-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.place-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.place-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--line-input);
+  border-radius: var(--radius);
+}
+
+.place-field:focus-within {
+  border-color: var(--brand-text);
+}
+
+.place-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0;
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
+.place-note {
+  margin: 0;
+}
+
+.place-options {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.place-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  cursor: pointer;
+  color: var(--fg);
+}
+
+.place-option + .place-option {
+  border-top: 1px solid var(--line);
+}
+
+.place-option svg {
+  flex: none;
+  color: var(--muted);
+}
+
+.place-option:hover,
+.place-option-active {
+  background: var(--surface);
+}
+
+.place-option:hover svg,
+.place-option-active svg {
+  color: var(--brand-text);
+}
+
+.composer-place {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  margin: 12px 0 0;
+  padding: 0 4px 0 10px;
+  min-height: 36px;
+  font-size: 0.875rem;
+  color: var(--fg);
+  background: var(--surface);
+  border-radius: 999px;
+}
+
+.composer-place span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-place > svg {
+  flex: none;
+  color: var(--brand-text);
+}
+
+.composer-place-remove {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.composer-place-remove:hover {
+  color: var(--brand-text);
+}
+
+.post-place {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.post-place svg {
+  flex: none;
+}
+
+.post-place span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 /* ---- /hq: the only wide layout (CLAUDE.md architecture invariants) ----
    A side menu and a content area on a wide screen, a strip along the top on a phone. The content
    sits on the quiet page shade (--surface) and every panel is flat, with a hairline edge and no
@@ -2791,6 +2937,32 @@ a.srow:hover > svg {
     clip-path: inset(50%);
     white-space: nowrap;
   }
+}
+
+/* A switch with its name, and a line under it for what just happened. */
+.hq-switch-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+
+.hq-switch-text {
+  font-weight: 500;
+}
+
+.hq-switch-row .switch {
+  margin-right: 0;
+}
+
+.hq-switch-row > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.hq-switch-row > p:empty {
+  display: none;
 }
 
 /* ---- /hq/branding ---- */

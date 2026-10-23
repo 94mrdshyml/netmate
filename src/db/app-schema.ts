@@ -162,6 +162,12 @@ export const posts = sqliteTable(
     /** The post this one replies to. Null for a top-level post. */
     parentId: text("parent_id").references((): AnySQLiteColumn => posts.id, { onDelete: "cascade" }),
     body: text("body").notNull(),
+    /**
+     * Where the post was made, as plain text such as "Berlin, Germany" (never coordinates). 1 to 60
+     * characters; the database checks it too (a CHECK added by hand in migration 0011, because
+     * drizzle would rebuild the whole table to add one, and a rebuild risks cascade deletes on D1).
+     */
+    place: text("place"),
     replyCount: integer("reply_count").notNull().default(0),
     likeCount: integer("like_count").notNull().default(0),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
