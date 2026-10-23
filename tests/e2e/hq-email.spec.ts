@@ -142,6 +142,42 @@ test("removing asks first, then email is not set up again", async ({ page }) => 
   await expect(page.getByRole("button", { name: "Send test email" })).toHaveCount(0);
 });
 
+test("the Invite screen offers invites by email only while email is set up", async ({ page }) => {
+  try {
+    await forget(page);
+    await page.goto("/invite");
+    await expect(page.getByText("Email is not set up, so share your link by hand.")).toBeVisible();
+    await expect(page.getByLabel("Their email address")).toHaveCount(0);
+    // The admin is pointed to where it is set up.
+    await page.getByRole("link", { name: "Set up email" }).click();
+    await expect(page).toHaveURL(/\/hq\/email$/);
+
+    await save(page, "hello@example.org", KEY);
+    await expect(page.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
+
+    await page.goto("/invite");
+    await expect(page.getByText("Email is not set up, so share your link by hand.")).toHaveCount(0);
+    await page.getByLabel("Their email address").fill("not an address");
+    await page.getByRole("button", { name: "Send invite" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email address" })).toBeVisible();
+
+    // A made-up address of its own each run, since one address can be mailed only twice a day.
+    await page.getByLabel("Their email address").fill(`friend-${Date.now().toString(36)}@example.org`);
+    await page.getByRole("button", { name: "Send invite" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Invite sent." })).toBeVisible();
+    await expect(page.getByLabel("Their email address")).toHaveValue("");
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(overflow).toBe(false);
+
+    await page.goto("/hq/email");
+    await expect(page.getByText(/Last email sent .* UTC\./)).toBeVisible();
+    await expect(page.getByText("No errors.")).toBeVisible();
+  } finally {
+    await forget(page);
+  }
+});
+
 test("a signed-out visitor gets a plain not found on the email page", async ({ browser }) => {
   const anonymous = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const page = await anonymous.newPage();

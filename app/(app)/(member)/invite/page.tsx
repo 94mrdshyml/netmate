@@ -5,8 +5,11 @@ import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
 import { inviteLinks } from "@/db/schema";
 import { getInstanceState } from "@/instance/request";
+import { isEmailSetUp } from "@/server/email";
 import { ensureInviteLink, inviteUrl } from "@/server/invites";
+import { siteOrigin } from "@/server/origin";
 import { CopyLink } from "../copy-link";
+import { InviteByEmail } from "./invite-by-email";
 import { PageHeader } from "../_components/page-header";
 
 export const dynamic = "force-dynamic";
@@ -24,8 +27,7 @@ export default async function InvitePage() {
   const joined =
     (await db.select({ uses: inviteLinks.usesCount }).from(inviteLinks).where(eq(inviteLinks.id, invite.id)).get())?.uses ?? 0;
 
-  const host = (await headers()).get("host") ?? "localhost";
-  const origin = env.BETTER_AUTH_URL ?? `${host.startsWith("localhost") ? "http" : "https"}://${host}`;
+  const origin = siteOrigin(env, await headers());
 
   return (
     <main className="column">
@@ -41,6 +43,7 @@ export default async function InvitePage() {
           <strong>{joined}</strong>
           <span>{joined === 1 ? "person has" : "people have"} joined with your link.</span>
         </p>
+        <InviteByEmail emailReady={await isEmailSetUp(db)} isAdmin={member.role === "admin"} />
       </div>
     </main>
   );

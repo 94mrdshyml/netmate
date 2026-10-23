@@ -151,6 +151,7 @@ Sign-up works only through an invite link `/sign-up?invite=<code>`.
 - Sign-ups per link and per IP are rate-limited.
 - When email is set up, sign-up requires email verification. Pending approval is a separate gate after it.
 - The invite page shows a clear message for an invalid or revoked code.
+- **Invite by email.** On the Invite screen a member types an address and the person gets an email, in the instance's brand, saying who invited them with a "Join {instance}" button to that member's own link (so the quota rules are the same as for a shared link). It needs email to be set up: without it the screen says "Email is not set up, so share your link by hand" and the admin is pointed to `/hq/email`. Limits: 10 an hour per member and 2 a day to any one address (the address is kept only as a salted hash in the limit table). The address is never stored or logged. Your own address is refused. A person who already has an account is not emailed and is not told apart from anyone else, so this cannot be used to find out who is a member. A refused send tells the member to try again or share the link by hand; Resend's own reason goes to `/hq/email` for the admin.
 - **Welcome screen.** A valid invite link first opens a welcome, not the form: the instance's name and logo, "{inviter's name} invited you to join {instance name}", up to four overlapping faces (the inviter first, then the members who joined earliest), one friendly line ("Ana, Ben, Cleo and 12 others are already here, saving you a seat.") and a "Join {instance name}" button that opens the form on the same link (`join=1`). Only first names and pictures of active, non-private members are used (the inviter is always shown, since their full name is on the screen anyway); nothing else about anyone is given to a visitor who has no account yet.
 
 **Later:** email-domain rules, closed or open sign-up modes, more admins, per-person quota overrides. Sign-up policy is stored as a setting so these can be added without redesign.
@@ -165,6 +166,7 @@ Provider: **Resend**. Templates: **React Email**, rendered on the server. Every 
 | Welcome | new member | after verification (and approval) |
 | Reset password | member | "forgot password" |
 | Confirm new email | member | change email |
+| Invitation | a person a member invites | a member types their address on the Invite screen |
 | Pending sign-up | admin | a Pending account is created |
 | Approved / Rejected | invitee | admin decides |
 
@@ -401,6 +403,7 @@ Limits are counted per person, or per IP address for sign-up and sign-in. IPs ar
 | Password checks (change, delete) | 5 per 10 minutes |
 | Any request to the auth service | 60 per 10 minutes per IP |
 | Email sends (verify, reset) | 5 per hour per address |
+| Invitations by email | 10 an hour per member, and 2 a day to any one address |
 | Test email from `/hq/email` | 5 per hour per admin |
 
 Reads, search, mutes and blocks are not limited. Exact low-volume limits live in a D1 table; high-volume ones (likes, saves, analytics) use the Workers Rate Limiting binding. Admins who want more protection can add Cloudflare WAF and Turnstile (optional setting after v1).
@@ -409,7 +412,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 
 | Row | Goes to |
 |---|---|
-| Invite people | your personal invite link, with copy and share, and how many have joined through it |
+| Invite people | your personal invite link, with copy and share, how many have joined through it, and "Invite by email" (type an address, we email them your link) |
 | Bookmarks | saved posts |
 | Analytics | your analytics |
 | Edit profile | name, bio, city, link, photos |

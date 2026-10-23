@@ -28,6 +28,17 @@ export function pendingForAdmin(
   };
 }
 
+export function inviteByEmail(instanceName: string, inviterName: string, joinUrl: string): Message {
+  return {
+    subject: oneLine(`${inviterName} invited you to join ${instanceName}`),
+    content: {
+      heading: "You are invited",
+      paragraphs: [`${inviterName} invited you to join ${instanceName}.`, "Open the invitation to see who is already here and to create your account."],
+      button: { label: oneLine(`Join ${instanceName}`), url: joinUrl },
+    },
+  };
+}
+
 export function approvedForInvitee(instanceName: string, firstName: string, signInUrl: string | null): Message {
   return {
     subject: oneLine(`You're in: welcome to ${instanceName}`),
