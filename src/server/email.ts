@@ -7,7 +7,8 @@ import { z } from "zod";
 import type { Db } from "@/db";
 import { emailState, instanceSecrets } from "@/db/schema";
 import { scrubError, type OutgoingEmail, type SendResult, type Transport } from "@/email/transport";
-import { brandedEmail, type EmailBrand } from "@/email/template";
+import { renderEmail } from "@/email/render";
+import type { EmailBrand } from "@/email/template";
 import { decryptSecret, encryptSecret } from "@/lib/secrets";
 
 const KEY = "resend_api_key";
@@ -161,8 +162,8 @@ export async function sendEmail(
 }
 
 /** The test message, branded like every real email, sent to the admin's own address. */
-export function sendTestEmail(db: Db, transport: Transport, encryptionKey: string | undefined, brand: EmailBrand, to: string): Promise<SendResult> {
-  const { html, text } = brandedEmail(brand, {
+export async function sendTestEmail(db: Db, transport: Transport, encryptionKey: string | undefined, brand: EmailBrand, to: string): Promise<SendResult> {
+  const { html, text } = await renderEmail(brand, {
     heading: "Email is working",
     paragraphs: [`This is a test email from ${brand.name}. If you can read it, sign-up and password emails will reach people.`],
   });

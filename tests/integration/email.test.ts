@@ -199,7 +199,7 @@ describe("sendEmail and sendTestEmail", () => {
     await sendTestEmail(db(), fakeTransport, ENC, brand, "admin@example.org");
     expect(outbox[0]!.subject).toBe("Test email from Green Valley");
     expect(outbox[0]!.html).toContain("Green Valley");
-    expect(outbox[0]!.text).toContain("Email is working");
+    expect(outbox[0]!.text.toLowerCase()).toContain("email is working");
   });
 
   it("is told, not given, the fake: this Worker runs with ENV=test, and only then", () => {

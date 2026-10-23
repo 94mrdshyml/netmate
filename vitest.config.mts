@@ -17,6 +17,13 @@ export default defineConfig({
       },
       {
         resolve: { alias },
+        test: {
+          name: "email",
+          include: ["tests/email/**/*.test.tsx"],
+        },
+      },
+      {
+        resolve: { alias },
         plugins: [
           cloudflareTest({
             miniflare: {
