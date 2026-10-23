@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useTransition, type ReactNode } from "reac
 import { POST_MAX, countCharacters } from "@/lib/post-text";
 import { createPostAction } from "../posts/actions";
 import { Icon } from "./icon";
+import { PlacePicker } from "./place-picker";
 
 const PHOTO_MAX = 4;
 
@@ -42,6 +43,7 @@ export function Composer({
   submitLabel = "Post",
   autoFocus = false,
   leading,
+  places = false,
 }: {
   parentId?: string;
   placeholder?: string;
@@ -49,12 +51,16 @@ export function Composer({
   autoFocus?: boolean;
   /** Your picture, shown beside the box. */
   leading?: ReactNode;
+  /** Offer "Add a place" (the admin has place suggestions on, and this is a post, not a reply). */
+  places?: boolean;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [place, setPlace] = useState<string | null>(null);
+  const [choosingPlace, setChoosingPlace] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
   const photosRef = useRef(photos);
@@ -110,12 +116,18 @@ export function Composer({
         if (blocked) return;
         setError(null);
         start(async () => {
-          const result = await createPostAction({ body: text, parentId, photos: photos.flatMap((p) => (p.key ? [p.key] : [])) });
+          const result = await createPostAction({
+            body: text,
+            parentId,
+            photos: photos.flatMap((p) => (p.key ? [p.key] : [])),
+            place: place ?? undefined,
+          });
           if (result.ok) {
             // A reply stays on the page: clear the box and show it. (A new post goes Home instead.)
             setText("");
             photos.forEach((p) => URL.revokeObjectURL(p.preview));
             setPhotos([]);
+            setPlace(null);
             router.refresh();
           } else {
             setError(result.message);
@@ -162,6 +174,24 @@ export function Composer({
               ))}
             </ul>
           ) : null}
+          {place ? (
+            <p className="composer-place">
+              <Icon name="map-pin" size={16} />
+              <span>{place}</span>
+              <button type="button" className="composer-place-remove" aria-label={`Remove place ${place}`} onClick={() => setPlace(null)}>
+                <Icon name="x" size={16} />
+              </button>
+            </p>
+          ) : null}
+          {choosingPlace ? (
+            <PlacePicker
+              onPick={(chosen) => {
+                setPlace(chosen);
+                setChoosingPlace(false);
+              }}
+              onClose={() => setChoosingPlace(false)}
+            />
+          ) : null}
         </div>
       </div>
       <div className="composer-bar">
@@ -188,6 +218,18 @@ export function Composer({
           >
             <Icon name="image" />
           </button>
+          {places ? (
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label={place ? "Change place" : "Add a place"}
+              aria-expanded={choosingPlace}
+              disabled={pending}
+              onClick={() => setChoosingPlace((open) => !open)}
+            >
+              <Icon name="map-pin" />
+            </button>
+          ) : null}
         </div>
         <div className="composer-send">
           <Ring used={used} />

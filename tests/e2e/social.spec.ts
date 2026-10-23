@@ -1,33 +1,16 @@
 import { expect, test, type Page } from "@playwright/test";
 import { E2E } from "./constants";
-import { signUpMember } from "./helpers";
+import { sendPost, signUpMember } from "./helpers";
 
 // Serial: later tests use the members and posts made by earlier ones.
 test.describe.configure({ mode: "serial" });
 
 const unique = () => `soc ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
-// Posting is limited to 10 a minute per person, and earlier specs post as the admin too (posts.spec
-// alone sends 10 in a burst). If the limit answers, this waits out the minute once and sends again,
-// so a slow or fast machine cannot fail the test on timing alone. The checks are the same.
 async function post(page: Page, text: string) {
   await page.goto("/compose");
   await page.getByLabel("Your post").fill(text);
-  const send = page.getByRole("button", { name: "Post", exact: true });
-  await send.click();
-
-  const sent = page.waitForURL(/\/$/).then(() => "sent" as const, () => "waiting" as const);
-  const refused = page
-    .getByRole("alert")
-    .filter({ hasText: "Too many attempts" })
-    .waitFor()
-    .then(() => "refused" as const, () => "waiting" as const);
-  if ((await Promise.race([sent, refused])) === "refused") {
-    test.setTimeout(120_000);
-    await page.waitForTimeout(61_000);
-    await send.click();
-  }
-  await expect(page).toHaveURL(/\/$/);
+  await sendPost(page);
 }
 
 const adminName = `${E2E.admin.firstName} ${E2E.admin.lastName}`;

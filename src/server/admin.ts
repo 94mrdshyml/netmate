@@ -175,3 +175,10 @@ export async function setInviteQuota(db: Db, raw: unknown): Promise<{ ok: true; 
   await db.update(instance).set({ inviteQuota: n, updatedAt: new Date() }).where(eq(instance.id, "singleton"));
   return { ok: true, quota: n };
 }
+
+/** Turns place suggestions on or off for the whole instance. Sending the wanted state twice changes nothing. */
+export async function setPlacesEnabled(db: Db, wanted: unknown): Promise<{ ok: true; enabled: boolean } | { ok: false; message: string }> {
+  if (typeof wanted !== "boolean") return { ok: false, message: "Choose on or off." };
+  await db.update(instance).set({ placesEnabled: wanted, updatedAt: new Date() }).where(eq(instance.id, "singleton"));
+  return { ok: true, enabled: wanted };
+}

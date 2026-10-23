@@ -6,6 +6,7 @@ import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, or, sql, type SQL }
 import type { Db } from "@/db";
 import { follows, likes, POST_PHOTO_MAX, postMedia, posts, profiles } from "@/db/schema";
 import { isId, newId } from "@/lib/ids";
+import { checkPlace } from "@/lib/place";
 import { checkPostText } from "@/lib/post-text";
 import { alertOnLike, alertOnReply, removeLikeAlert } from "@/server/notifications";
 import { notMutedBy, visiblePosts } from "@/server/visibility";
@@ -22,6 +23,8 @@ export type PostView = {
   parentId: string | null;
   /** Storage keys of the photos, in the order shown. Empty for a text-only post. */
   photos: string[];
+  /** Where it was posted from, as plain text such as "Berlin, Germany", or null. */
+  place: string | null;
   author: { userId: string; username: string; firstName: string; lastName: string; avatarKey: string | null };
 };
 
@@ -51,6 +54,7 @@ export function olderThan(cursor: { createdAt: number; id: string } | null): SQL
 export const postColumns = (viewerId: string) => ({
   id: posts.id,
   body: posts.body,
+  place: posts.place,
   createdAt: posts.createdAt,
   replyCount: posts.replyCount,
   likeCount: posts.likeCount,
@@ -66,6 +70,7 @@ export const postColumns = (viewerId: string) => ({
 type Row = {
   id: string;
   body: string;
+  place: string | null;
   createdAt: Date;
   replyCount: number;
   likeCount: number;
@@ -89,6 +94,7 @@ const toView = (r: Row): PostView => ({
   likedByMe: Boolean(r.liked),
   parentId: r.parentId,
   photos: [],
+  place: r.place,
   author: { userId: r.userId, username: r.username, firstName: r.firstName, lastName: r.lastName, avatarKey: r.avatarKey },
 });
 
@@ -199,7 +205,7 @@ export async function listReplies(
 
 export type CreatePostResult =
   | { ok: true; id: string }
-  | { ok: false; code: "empty" | "too_long" | "bad_characters" | "parent_not_found" | "bad_photos" };
+  | { ok: false; code: "empty" | "too_long" | "bad_characters" | "parent_not_found" | "bad_photos" | "place_too_long" | "place_bad_characters" };
 
 const replyCountOf = (parentId: string) =>
   sql`(select count(*) from ${posts} as r where r.parent_id = ${parentId} and r.deleted_at is null)`;
@@ -221,8 +227,11 @@ export async function createPost(
   rawBody: unknown,
   parentId?: string,
   photoKeys: string[] = [],
+  rawPlace?: unknown,
 ): Promise<CreatePostResult> {
   if (!photoKeysAreValid(authorId, photoKeys)) return { ok: false, code: "bad_photos" };
+  const place = checkPlace(rawPlace);
+  if (!place.ok) return { ok: false, code: place.reason === "too_long" ? "place_too_long" : "place_bad_characters" };
   // Photos can stand in for words; the text is then one space (see toView).
   const wordless = photoKeys.length > 0 && typeof rawBody === "string" && rawBody.trim() === "";
   const text = wordless ? ({ ok: true, text: " ", length: 1 } as const) : checkPostText(rawBody);
@@ -233,7 +242,7 @@ export async function createPost(
   }
 
   const id = newId("post");
-  const insert = db.insert(posts).values({ id, authorId, parentId: parentId ?? null, body: text.text });
+  const insert = db.insert(posts).values({ id, authorId, parentId: parentId ?? null, body: text.text, place: place.place });
   const photos = photoKeys.map((key, position) => ({ postId: id, position, key }));
   if (parentId === undefined && photos.length === 0) {
     await insert;
