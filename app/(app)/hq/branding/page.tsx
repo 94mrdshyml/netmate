@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Branding" };
 
 // One drawn sample per style, made here so the browser never contacts anyone to show them.
-const SAMPLE = { userId: "usr_sample0000000000000000", name: "Sam Sample" } as const;
+const SAMPLE = { username: "sam_sample", name: "Sam Sample" } as const;
 
 export default async function BrandingPage() {
   await requireAdmin();

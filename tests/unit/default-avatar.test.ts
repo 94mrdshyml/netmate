@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { defaultAvatarSvg, isAvatarStyle } from "@/avatars/default";
 import { AVATAR_STYLES } from "@/instance/options";
 
-const person = { userId: "usr_3kT9xQ0mYb7LpA2vNc8RzEd1", name: "Riya Sen" };
+const person = { username: "riya_sen", name: "Riya Sen" };
 
 describe("defaultAvatarSvg", () => {
   it.each(AVATAR_STYLES)("draws a real SVG in the %s style", (style) => {
@@ -16,17 +16,25 @@ describe("defaultAvatarSvg", () => {
     expect(defaultAvatarSvg("shapes", person)).toBe(defaultAvatarSvg("shapes", person));
   });
 
-  it("gives different people different pictures (seeded by the account id)", () => {
-    const other = { ...person, userId: "usr_ZZZZZZZZZZZZZZZZZZZZZZZZ" };
+  it("gives different people different pictures (seeded by the username)", () => {
+    const other = { ...person, username: "riya_sen2" };
     for (const style of ["shapes", "thumbs", "rings", "glass", "identicon"] as const) {
       expect(defaultAvatarSvg(style, person)).not.toBe(defaultAvatarSvg(style, other));
+    }
+  });
+
+  it("tells two people with the same name apart, in every style including initials", () => {
+    const twin = { username: "sam_lee_2", name: "Sam Lee" };
+    const first = { username: "sam_lee", name: "Sam Lee" };
+    for (const style of AVATAR_STYLES) {
+      expect(defaultAvatarSvg(style, first)).not.toBe(defaultAvatarSvg(style, twin));
     }
   });
 
   it("keeps a picture when only the name changes, except for the initials style which draws the name", () => {
     const renamed = { ...person, name: "Riya Sen-Gupta" };
     expect(defaultAvatarSvg("shapes", person)).toBe(defaultAvatarSvg("shapes", renamed));
-    expect(defaultAvatarSvg("initials", { userId: person.userId, name: "Ada Lovelace" })).toContain(">AL<");
+    expect(defaultAvatarSvg("initials", { username: person.username, name: "Ada Lovelace" })).toContain(">AL<");
   });
 
   it("falls back to the default style for a style it does not know, instead of failing", () => {
