@@ -23,7 +23,10 @@ test("the bottom bar opens Search, which suggests people while the box is empty"
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
 });
 
-test("posts appear while I type, with no button pressed, and the clear button empties the box", async ({ page }) => {
+// These tests post as members of their own: posting is limited to 10 a minute per person, and the
+// admin's allowance is shared with every other spec.
+test("posts appear while I type, with no button pressed, and the clear button empties the box", async ({ browser }) => {
+  const { page, context } = await signUpMember(browser, "198.18.40.2");
   const mine = word();
   const other = word();
   await page.goto("/compose");
@@ -63,9 +66,11 @@ test("posts appear while I type, with no button pressed, and the clear button em
   await expect(field).toHaveValue("");
   await expect(page.getByRole("heading", { name: "Suggested for you" })).toBeVisible();
   await expect(page).toHaveURL(/\/search$/);
+  await context.close();
 });
 
-test("Enter works, a deleted post disappears from results, and a missing word says so", async ({ page }) => {
+test("Enter works, a deleted post disappears from results, and a missing word says so", async ({ browser }) => {
+  const { page, context } = await signUpMember(browser, "198.18.40.3");
   const mine = word();
   await page.goto("/compose");
   await page.getByLabel("Your post").fill(`Delete me ${mine}`);
@@ -83,6 +88,7 @@ test("Enter works, a deleted post disappears from results, and a missing word sa
   await expect(article).toHaveCount(0);
   await page.goto(`/search?q=${mine}`);
   await expect(page.getByText(/No posts found/)).toBeVisible();
+  await context.close();
 });
 
 test("People finds a member by name or @username, ranks them, and Follow works from the results", async ({ browser, page }) => {
