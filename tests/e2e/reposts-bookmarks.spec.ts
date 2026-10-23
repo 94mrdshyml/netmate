@@ -29,9 +29,12 @@ test("a post can be reposted and the repost taken back, and the feed says 'You r
   await expect(mine.getByRole("button", { name: /^Repost, 1 time/ })).toHaveAttribute("aria-pressed", "true");
 
   // Doing it again from a fresh page still says "reposted": the server kept it.
-  await page.goto("/?feed=following");
   const reposted = page.locator("article").filter({ has: page.getByText("You reposted") }).filter({ hasText: original });
-  await expect(reposted).toHaveCount(1);
+  // The button changes at once and the server finishes a moment later, so look again until it has.
+  await expect(async () => {
+    await page.goto("/?feed=following");
+    await expect(reposted).toHaveCount(1, { timeout: 2000 });
+  }).toPass();
   await expect(reposted.getByRole("button", { name: /^Repost, 1 time/ })).toHaveAttribute("aria-pressed", "true");
   // The same post is also there as itself, so it appears twice.
   await expect(card(page, original)).toHaveCount(2);
@@ -96,13 +99,20 @@ test("saving a post is private: no count, a Saved posts list, and removing it em
   await expect(page.getByRole("heading", { name: "Saved posts" })).toBeVisible();
   await expect(page.getByText("Only you can see this list.")).toBeVisible();
   const saved = card(page, quoteText);
-  await expect(saved).toHaveCount(1);
+  // The save may still be on its way to the server, so look again until it is listed.
+  await expect(async () => {
+    await page.reload();
+    await expect(saved).toHaveCount(1, { timeout: 2000 });
+  }).toPass();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
 
   await saved.getByRole("button", { name: "Remove from saved" }).click();
   await expect(saved.getByRole("button", { name: "Save post" })).toBeVisible();
-  await page.reload();
-  await expect(page.getByText("Nothing saved yet.")).toBeVisible();
+  // The button changes at once and the server finishes a moment later, so look again until it has.
+  await expect(async () => {
+    await page.reload();
+    await expect(page.getByText("Nothing saved yet.")).toBeVisible({ timeout: 2000 });
+  }).toPass();
 });
 
 test("a private account's posts have no repost button, even for its owner", async ({ page }) => {
@@ -110,6 +120,8 @@ test("a private account's posts have no repost button, even for its owner", asyn
   const toggle = page.getByRole("switch", { name: "Private account" });
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-checked", "true");
+  // The switch moves at once; this line appears when the server has saved it.
+  await expect(page.getByRole("status").filter({ hasText: "Your account is private." })).toBeVisible();
   try {
     await page.goto("/");
     const mine = card(page, original).first();
@@ -125,7 +137,10 @@ test("a private account's posts have no repost button, even for its owner", asyn
   } finally {
     await page.goto("/privacy");
     const back = page.getByRole("switch", { name: "Private account" });
-    if ((await back.getAttribute("aria-checked")) === "true") await back.click();
+    if ((await back.getAttribute("aria-checked")) === "true") {
+      await back.click();
+      await expect(page.getByRole("status").filter({ hasText: "Your account is public." })).toBeVisible();
+    }
     await expect(back).toHaveAttribute("aria-checked", "false");
   }
 });
