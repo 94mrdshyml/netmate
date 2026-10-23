@@ -433,7 +433,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/analytics` (`?range=28`) | Your analytics | mobile |
 | `/settings` and `/profile`, `/account`, `/invite`, `/privacy`, `/privacy/requests`, `/privacy/blocked`, `/privacy/muted` | Settings | mobile |
 | `/hq` | Admin overview (members, waiting for approval). Reached from Settings, admin only | **wide** |
-| `/hq/branding` | Name, logo, favicon, colour, radius, font, avatar style, live preview | **wide** |
+| `/hq/branding` | Name, colour, radius, font, avatar style, live preview (logo, favicon and font hosting come in a later change) | **wide** |
 | `/hq/approvals` | Pending sign-ups | **wide** |
 | `/hq/invites` | Admin link, quota, member links with usage, replace a link | **wide** |
 | `/hq/email` | Resend key, sender, test email, status | **wide** |

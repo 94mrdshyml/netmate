@@ -4,6 +4,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/auth/admin";
 import { getDb } from "@/db";
+import { saveBranding, type BrandingResult } from "@/instance/branding";
 import { clearInstanceCache } from "@/instance/settings";
 import { isId } from "@/lib/ids";
 import { approvePending, regenerateInvite, rejectPending, setInviteQuota } from "@/server/admin";
@@ -51,6 +52,18 @@ export async function saveQuotaAction(input: unknown): Promise<QuotaResult> {
   if (result.ok) {
     clearInstanceCache();
     revalidatePath("/hq/invites");
+  }
+  return result;
+}
+
+/** Saves the instance name and look. Clears the settings cache so every page picks it up. */
+export async function saveBrandingAction(input: unknown): Promise<BrandingResult> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await saveBranding(getDb(env.DB), input);
+  if (result.ok) {
+    clearInstanceCache();
+    revalidatePath("/", "layout");
   }
   return result;
 }
