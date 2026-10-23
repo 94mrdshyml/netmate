@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { isWebUrl, pngLogoUrl } from "@/email/template";
-import { fakeTransport, outbox, realTransport, scrubError, transportFor } from "@/email/transport";
+import { fakeTransport, outbox, readOutbox, realTransport, scrubError, transportFor } from "@/email/transport";
 
 const mail = { from: "hello@example.org", to: "ada@example.org", subject: "Hi", html: "<p>Hi</p>", text: "Hi" };
 
@@ -112,5 +112,24 @@ describe("isWebUrl", () => {
     for (const bad of ["javascript:alert(1)", "data:text/html,hi", "ftp://x.test", 'https://x.test/"onclick="x', "https://x.test/a b", ""]) {
       expect(isWebUrl(bad)).toBe(false);
     }
+  });
+});
+
+describe("readOutbox", () => {
+  const item = { from: "a@example.org", subject: "s", html: "h", text: "t" };
+
+  it("reads what the fake sent to one address when ENV is exactly test", async () => {
+    outbox.length = 0;
+    await fakeTransport.send("re_test_x", { ...item, to: "one@example.org" });
+    await fakeTransport.send("re_test_x", { ...item, to: "two@example.org" });
+    expect(readOutbox({ ENV: "test" }, " ONE@example.org ")?.map((i) => i.to)).toEqual(["one@example.org"]);
+    expect(readOutbox({ ENV: "test" }, "nobody@example.org")).toEqual([]);
+    outbox.length = 0;
+  });
+
+  it.each([[undefined], [""], ["production"], ["Test"], ["TEST"], [" test"]])("reads nothing when ENV is %j, so production cannot use it", (value) => {
+    outbox.push({ ...item, to: "one@example.org", at: 1 });
+    expect(readOutbox({ ENV: value }, "one@example.org")).toBeNull();
+    outbox.length = 0;
   });
 });
