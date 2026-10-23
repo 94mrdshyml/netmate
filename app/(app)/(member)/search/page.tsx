@@ -5,7 +5,7 @@ import { getDb } from "@/db";
 import { currentTime } from "@/lib/time";
 import { buildSearchQuery, SEARCH_MIN_CHARS } from "@/lib/search-query";
 import { searchPeople, searchPosts, suggestPeople } from "@/server/search";
-import { MemberMenu } from "../_components/member-menu";
+import { AccountLink } from "../_components/account-link";
 import { PersonRow } from "../_components/person-row";
 import { PostCard } from "../_components/post-card";
 import { SearchBox } from "./search-box";
@@ -40,7 +40,7 @@ export default async function SearchPage({
   const header = (
     <header className="page-header searchbar">
       <h1 className="sr-only">Search</h1>
-      <MemberMenu member={member} />
+      <AccountLink member={member} />
       <SearchBox q={q} tab={tab} />
     </header>
   );

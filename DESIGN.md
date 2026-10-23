@@ -34,40 +34,39 @@ Mixed in `globals.css` from those, so they follow light, dark and any brand colo
 
 ## Type
 
-The instance font, 16px body, 1.45 line height. Headings are tighter (`-0.02em`) and balanced. Numbers use tabular figures so counts do not jump. Names are bold, handles and times are `--muted`.
+The instance font, 15px body, 1.45 line height. Headings and names are semibold (600) at most; buttons, tabs, menu rows and the bottom bar are medium (500); everything else is regular. Headings are tighter (`-0.02em`) and balanced. Numbers use tabular figures so counts do not jump. Handles and times are `--muted`.
 
 ## Layout
 
 - `.column` is the page. Its gutter is `--gx`. Anything that should reach the screen edge (post rows, people rows, tabs, headers, the cover picture) uses a negative side margin of `--gx` and puts the gutter back as padding.
-- **Home** has the top bar: your picture (opens the account menu), the instance mark, the theme button. Under it, the For you and Following tabs, which stick. Search and Alerts show your picture in the same corner.
+- **Home** has the top bar: your picture (opens Settings), the instance mark, the theme button. Under it, the For you and Following tabs, which stick. Search and Alerts show your picture in the same corner.
 - **Every other screen** has a sticky page header: a back arrow where there is somewhere to go back to, then the title (and a quiet second line when useful). Both headers are 52px tall.
-- **Bottom bar:** Home, Search, Alerts, Profile. The current one is full-strength text and a heavier icon on a soft brand pill; the others are `--muted` and the pill tints on hover. Alerts carries the unread count. Settings is not in the bar: it lives in the account menu.
+- **Bottom bar:** Home, Search, Alerts, Profile. Icon and label are `--muted`; on hover, on press and for the current screen they turn the brand colour. No background, no bold. Alerts carries the unread count. Profile is only here: your picture opens Settings, not your profile.
 - **Compose button:** a round brand button, Feather "feather" icon, bottom right inside the column, above the bar.
 
 ## Components
 
-- **Account menu:** a sheet from the left edge of the column, opened from your picture. A native modal `<dialog>`: the page behind is inert, Escape or a tap on the dimmed page closes it, focus returns to the picture. Your picture, name and handle on top (opens your profile), then Profile, Invite people, Settings, Admin panel (admin only), and Log out at the bottom. Rows are 56px tall.
+- **Settings:** a full screen opened from your picture: a header with a back arrow and the title in the middle, then one plain list. Each row is an icon (muted, thin line), a title (medium) with a short quiet line under it, and a chevron; hairlines run edge to edge. Edit profile, Invite people, Admin panel (admin only), then a row with the "Dark or light theme" button where the chevron would be, then an outlined full-width Log out button. The bottom bar stays visible.
 - **Edit profile:** like the screens people know. Sticky header with a close button, the title and Save. The cover picture has a camera button (and a remove button once there is a cover); your picture overlaps its corner with its own camera button and a Remove button. Fields sit in bordered boxes with the label inside, a character counter (`12 / 160`) and a brand border when focused. Saving stays on the page with a "Saved." note; close goes back to your profile.
 - **Brand mark:** a round chip in the brand colour with the first letter of the instance name, then the name. An uploaded logo replaces the chip when logo upload exists.
 - **Post row:** picture, then name, handle and time on one line, text, then the action row (reply, like, and delete for your own). Rows are separated by a hairline. A liked heart is filled and brand-coloured. On the post's own page the text is larger.
 - **Tabs:** the current tab has full-strength text and a short brand bar under it. The others are `--muted`.
 - **Buttons:** primary (brand), ghost (hairline border), full width when alone on a row. Corners follow the instance radius. Pressing scales to 97%.
-- **Icon buttons:** 44px round, a quiet hover tint.
+- **Icon buttons:** 44px round. Hover and press turn the icon the brand colour; there is no background.
 - **Fields:** 48px tall, the instance radius, a visible border, a brand border and outline on focus.
-- **Settings rows:** one bordered group, icon tile, label, chevron.
-- **Appearance:** a three-way choice (Match phone, Light, Dark). The top bar button flips light and dark. Both save a cookie, which the server reads to paint the right theme on the first frame, so nothing flashes.
+- **Appearance:** the sun and moon button (top bar on Home, and the "Dark or light theme" row in Settings) flips light and dark. A person who has not chosen follows their phone. The choice is saved in a cookie, which the server reads to paint the right theme on the first frame, so nothing flashes.
 - **Loading:** no route-level `loading.tsx`. It makes Next send "200" before a page can say "not found", which breaks the 404 rule. Use buttons that show a pending word instead, and no spinners.
 - **Empty and end states:** centred, quiet, plain English. Zeros show as zeros.
 
 ## Motion
 
-Hover, press and colour changes take 120 to 200ms with `cubic-bezier(0.2, 0.7, 0.2, 1)`. Every control answers a finger or a pointer: a hover tint, a press that scales to 90 to 97%, and a state change you can see.
+Hover, press and colour changes take 120 to 200ms with `cubic-bezier(0.2, 0.7, 0.2, 1)`. Every control answers a finger or a pointer: on hover and press the icon turns the brand colour (no background appears), a press scales to 90 to 97%, and a state change you can see.
 
-- Buttons and round icon buttons tint on hover and shrink when pressed. The compose feather tilts. The theme button turns when pressed.
-- Post actions get a soft circle on hover; a heart gets a brand circle and pops once (a short scale up and back) when you like.
-- Bottom bar icons lift 1px on hover; the current screen's pill fades in.
+- Round icon buttons turn the brand colour on hover and shrink when pressed. Ghost buttons take the brand colour on hover; primary buttons darken. The compose feather tilts. The theme button turns when pressed.
+- Post actions turn the brand colour on hover; a heart also pops once (a short scale up and back) when you like.
+- Bottom bar icons lift 1px on hover and turn the brand colour.
 - A "Following" button reads "Unfollow" under a mouse pointer (the button's name does not change).
-- The account sheet slides in 24px from the left while fading, and the page dims. Nothing else slides, bounces or loops.
+- Nothing slides, bounces or loops.
 - With reduced motion on, all of it is off.
 
 ## Checking a change

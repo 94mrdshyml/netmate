@@ -40,6 +40,11 @@
   box-sizing: border-box;
 }
 
+/* One notch smaller than the browser default: 15px body text, so nothing shouts. */
+html {
+  font-size: 15px;
+}
+
 html,
 body {
   margin: 0;
@@ -52,7 +57,7 @@ body {
 
 body {
   font-size: 1rem;
-  line-height: 1.5;
+  line-height: 1.45;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
@@ -85,8 +90,17 @@ a {
   padding: 24px var(--gx) 32px;
 }
 
+h1,
+h2,
+h3,
+h4,
+strong,
+b {
+  font-weight: 600;
+}
+
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.375rem;
   line-height: 1.2;
   letter-spacing: -0.02em;
   text-wrap: balance;
@@ -94,7 +108,7 @@ h1 {
 }
 
 h2 {
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   letter-spacing: -0.01em;
   margin: 0 0 4px;
 }
@@ -135,7 +149,7 @@ p {
   align-items: center;
   gap: 8px;
   color: var(--fg);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 
@@ -196,12 +210,12 @@ p {
 .field > label,
 .field > legend,
 legend.label {
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.9375rem;
 }
 
 .hint {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--muted);
   margin: 0;
 }
@@ -241,7 +255,7 @@ legend.label {
 
 .error {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   margin: 0;
 }
 
@@ -261,7 +275,7 @@ legend.label {
   min-height: 44px;
   padding: 0 20px;
   font: inherit;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
   text-decoration: none;
   cursor: pointer;
@@ -297,7 +311,8 @@ legend.label {
 }
 
 .btn-ghost:hover {
-  background: var(--surface-hover);
+  color: var(--brand-text);
+  border-color: var(--brand-text);
 }
 
 .btn-block {
@@ -350,7 +365,7 @@ legend.label {
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  font-weight: 600;
+  font-weight: 500;
   border: 1px solid var(--line-input);
   border-radius: var(--radius);
   transition: border-color 0.15s var(--ease);
@@ -406,7 +421,7 @@ legend.label {
 
 .preview .preview-link {
   color: var(--brand-text);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.875rem;
 }
 
@@ -436,12 +451,13 @@ legend.label {
   border-radius: 50%;
   cursor: pointer;
   transition:
-    background-color 0.15s var(--ease),
+    color 0.15s var(--ease),
     transform 0.12s var(--ease);
 }
 
-.icon-btn:hover {
-  background: var(--surface-hover);
+.icon-btn:hover,
+.icon-btn:active {
+  color: var(--brand-text);
 }
 
 .icon-btn:active {
@@ -521,7 +537,7 @@ legend.label {
 
 .page-title h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.125rem;
 }
 
 .page-sub {
@@ -578,7 +594,7 @@ legend.label {
 
 .list-title {
   margin: 20px 0 4px;
-  font-size: 1.0625rem;
+  font-size: 1rem;
 }
 
 /* ---- Alerts ---- */
@@ -608,8 +624,8 @@ legend.label {
   transition: background-color 0.15s var(--ease);
 }
 
-a.alert-link:hover {
-  background: var(--surface);
+a.alert-link:hover .alert-icon {
+  color: var(--brand-text);
 }
 
 a.alert-link:focus-visible {
@@ -680,15 +696,13 @@ a.alert-link:focus-visible {
   justify-content: center;
   min-height: 48px;
   color: var(--muted);
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
-  transition:
-    color 0.15s var(--ease),
-    background-color 0.15s var(--ease);
+  transition: color 0.15s var(--ease);
 }
 
 .tabs a:hover {
-  background: var(--surface);
+  color: var(--fg);
 }
 
 .tabs a[aria-current="page"] {
@@ -756,7 +770,7 @@ a.alert-link:focus-visible {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0 6px;
-  font-size: 0.9375rem;
+  font-size: 1rem;
 }
 
 .author {
@@ -776,7 +790,7 @@ a.alert-link:focus-visible {
 }
 
 .post-focus .post-body {
-  font-size: 1.25rem;
+  font-size: 1.1875rem;
   line-height: 1.4;
 }
 
@@ -795,7 +809,7 @@ a.alert-link:focus-visible {
   min-height: 44px;
   padding: 0 10px;
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
   background: transparent;
@@ -809,8 +823,7 @@ a.alert-link:focus-visible {
 }
 
 .action:hover {
-  color: var(--fg);
-  background: var(--surface-hover);
+  color: var(--brand-text);
 }
 
 .action svg {
@@ -914,7 +927,7 @@ a.alert-link:focus-visible {
   min-height: 120px;
   padding: 8px 10px;
   font: inherit;
-  font-size: 1.1875rem;
+  font-size: 1.125rem;
   line-height: 1.4;
   color: var(--fg);
   background: transparent;
@@ -986,32 +999,24 @@ a.alert-link:focus-visible {
   justify-content: center;
   gap: 3px;
   min-height: 60px;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 500;
   color: var(--muted);
   text-decoration: none;
   transition: color 0.15s var(--ease);
 }
 
-/* The icon sits on a soft pill that fills in for the current screen and tints on hover. */
 .nav-icon {
   position: relative;
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 32px;
-  border-radius: 16px;
-  transition:
-    background-color 0.18s var(--ease),
-    transform 0.12s var(--ease);
+  width: 32px;
+  height: 28px;
+  transition: transform 0.12s var(--ease);
 }
 
 .nav-icon svg {
   transition: transform 0.18s var(--ease);
-}
-
-.bottom-nav a:hover .nav-icon {
-  background: var(--surface-hover);
 }
 
 .bottom-nav a:hover .nav-icon svg {
@@ -1022,10 +1027,6 @@ a.alert-link:focus-visible {
   transform: scale(0.92);
 }
 
-.bottom-nav a[aria-current="page"] .nav-icon {
-  background: var(--brand-soft);
-}
-
 /* The unread count on the Alerts tab. */
 .nav-badge {
   position: absolute;
@@ -1034,8 +1035,8 @@ a.alert-link:focus-visible {
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  font-size: 0.6875rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 600;
   line-height: 18px;
   text-align: center;
   color: var(--on-brand);
@@ -1043,18 +1044,15 @@ a.alert-link:focus-visible {
   border-radius: 9px;
 }
 
-.bottom-nav a:hover {
-  color: var(--fg);
-}
-
+.bottom-nav a:hover,
+.bottom-nav a:active,
 .bottom-nav a[aria-current="page"] {
-  color: var(--fg);
-  font-weight: 700;
+  color: var(--brand-text);
 }
 
 .bottom-nav a:focus-visible,
-.rows a:focus-visible,
-.person-info:focus-visible {
+.person-info:focus-visible,
+.srow:focus-visible {
   outline-offset: -2px;
 }
 
@@ -1095,7 +1093,7 @@ a.alert-link:focus-visible {
 
 .profile-title h1 {
   margin: 8px 0 0;
-  font-size: 1.375rem;
+  font-size: 1.25rem;
 }
 
 .profile-title p {
@@ -1149,7 +1147,7 @@ a.alert-link:focus-visible {
 
 .counts strong {
   color: var(--fg);
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1198,129 +1196,6 @@ a.alert-link:focus-visible {
   color: var(--muted);
 }
 
-.account {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding-bottom: 16px;
-}
-
-.account-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.rows {
-  list-style: none;
-  margin: 0 0 24px;
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-}
-
-.rows li + li {
-  border-top: 1px solid var(--line);
-}
-
-.rows a {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 56px;
-  padding: 0 14px;
-  color: var(--fg);
-  text-decoration: none;
-  transition: background-color 0.15s var(--ease);
-}
-
-.rows a:hover {
-  background: var(--surface);
-}
-
-.rows a > svg {
-  color: var(--muted);
-}
-
-.row-icon {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  background: var(--surface-hover);
-  border-radius: var(--radius);
-}
-
-.row-label {
-  flex: 1;
-  font-weight: 600;
-}
-
-.segmented {
-  margin: 0 0 24px;
-  padding: 0;
-  border: 0;
-}
-
-.segmented legend {
-  margin-bottom: 8px;
-  padding: 0;
-  font-weight: 600;
-  font-size: 0.9375rem;
-}
-
-.segmented-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  padding: 4px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-}
-
-.segment {
-  position: relative;
-}
-
-.segment input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.segment span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 44px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--muted);
-  border: 1px solid transparent;
-  border-radius: max(0px, calc(var(--radius) - 2px));
-  transition:
-    color 0.15s var(--ease),
-    background-color 0.15s var(--ease);
-}
-
-.segment input:checked + span {
-  color: var(--fg);
-  background: var(--bg);
-  border-color: var(--line-input);
-}
-
-.segment input:focus-visible + span {
-  outline: 2px solid var(--brand-text);
-  outline-offset: 2px;
-}
-
 .stat {
   display: flex;
   align-items: baseline;
@@ -1333,7 +1208,7 @@ a.alert-link:focus-visible {
 }
 
 .stat strong {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   line-height: 1;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -1367,7 +1242,7 @@ a.alert-link:focus-visible {
   margin-right: 12px;
   padding: 0 14px;
   font: inherit;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--fg);
   background: transparent;
   border: 1px solid var(--line-input);
@@ -1377,152 +1252,6 @@ a.alert-link:focus-visible {
 
 .file-input::file-selector-button:hover {
   background: var(--surface-hover);
-}
-
-/* ---- Account menu (a sheet from the left, on a native dialog) ---- */
-
-.menu-sheet {
-  position: fixed;
-  inset: 0 auto 0 max(0px, calc((100vw - 480px) / 2));
-  display: none;
-  flex-direction: column;
-  width: min(320px, 86vw);
-  max-width: none;
-  height: 100dvh;
-  max-height: none;
-  margin: 0;
-  padding: 0 0 env(safe-area-inset-bottom);
-  color: var(--fg);
-  background: var(--bg);
-  border: 0;
-  border-right: 1px solid var(--line);
-  overflow-y: auto;
-  transform: translateX(-24px);
-  opacity: 0;
-  transition:
-    transform 0.2s var(--ease),
-    opacity 0.2s var(--ease),
-    display 0.2s allow-discrete,
-    overlay 0.2s allow-discrete;
-}
-
-.menu-sheet[open] {
-  display: flex;
-  transform: none;
-  opacity: 1;
-}
-
-@starting-style {
-  .menu-sheet[open] {
-    transform: translateX(-24px);
-    opacity: 0;
-  }
-}
-
-.menu-sheet::backdrop {
-  background: color-mix(in srgb, var(--fg) 45%, transparent);
-  opacity: 0;
-  transition:
-    opacity 0.2s var(--ease),
-    display 0.2s allow-discrete,
-    overlay 0.2s allow-discrete;
-}
-
-.menu-sheet[open]::backdrop {
-  opacity: 1;
-}
-
-@starting-style {
-  .menu-sheet[open]::backdrop {
-    opacity: 0;
-  }
-}
-
-.menu-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 16px var(--gx) 12px;
-}
-
-.menu-who {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  color: var(--fg);
-  text-decoration: none;
-}
-
-.menu-who .avatar {
-  margin-bottom: 8px;
-}
-
-.menu-who strong {
-  font-size: 1.125rem;
-  overflow-wrap: anywhere;
-}
-
-.menu-close {
-  flex: none;
-  margin: -4px -8px 0 0;
-}
-
-.menu-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  width: 100%;
-  min-height: 56px;
-  padding: 0 var(--gx);
-  font: inherit;
-  font-size: 1.0625rem;
-  font-weight: 600;
-  color: var(--fg);
-  text-align: left;
-  text-decoration: none;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  transition: background-color 0.15s var(--ease);
-}
-
-.menu-item svg {
-  flex: none;
-  color: var(--muted);
-  transition:
-    color 0.15s var(--ease),
-    transform 0.18s var(--ease);
-}
-
-.menu-item:hover {
-  background: var(--surface);
-}
-
-.menu-item:hover svg {
-  color: var(--fg);
-  transform: translateX(2px);
-}
-
-.menu-item:active {
-  background: var(--surface-hover);
-}
-
-.menu-item:focus-visible,
-.menu-who:focus-visible {
-  outline-offset: -2px;
-}
-
-.menu-foot {
-  margin-top: auto;
-  border-top: 1px solid var(--line);
 }
 
 /* ---- Edit profile: header with Save, cover with camera buttons, boxed fields ---- */
@@ -1577,7 +1306,7 @@ a.alert-link:focus-visible {
 }
 
 .pic-btn:hover {
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  color: var(--brand-text);
 }
 
 .pic-btn:active {
@@ -1698,7 +1427,7 @@ a.alert-link:focus-visible {
 }
 
 .tfield-count.over {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--fg);
 }
 
@@ -1718,14 +1447,100 @@ textarea.tfield-input {
   min-height: 72px;
 }
 
-/* ---- Small interactions ---- */
+/* ---- Settings: a plain list, one row each, like the screen people know ---- */
 
-/* Hearts get a soft circle and a pop when you like; replies and delete get the quiet circle. */
-.action.like:hover {
-  color: var(--brand-text);
-  background: var(--brand-soft);
+.page-header-center {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  margin-bottom: 0;
+  padding-inline: calc(var(--gx) - 6px);
 }
 
+.page-header-center .back {
+  margin-left: 0;
+}
+
+.page-header-center .page-title {
+  text-align: center;
+}
+
+.settings-list {
+  list-style: none;
+  margin: 0 calc(-1 * var(--gx));
+  padding: 0;
+}
+
+.settings-list li {
+  border-bottom: 1px solid var(--line);
+}
+
+.srow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 66px;
+  padding: 12px var(--gx);
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.srow-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  color: var(--muted);
+  transition: color 0.15s var(--ease);
+}
+
+.srow-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.srow-title {
+  font-weight: 500;
+}
+
+.srow-sub {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+a.srow > svg {
+  flex: none;
+  color: var(--muted);
+  transition:
+    color 0.15s var(--ease),
+    transform 0.18s var(--ease);
+}
+
+a.srow:hover .srow-icon,
+a.srow:hover > svg,
+a.srow:active .srow-icon,
+a.srow:active > svg {
+  color: var(--brand-text);
+}
+
+a.srow:hover > svg {
+  transform: translateX(2px);
+}
+
+/* The theme row has a button where the others have an arrow, lined up with the arrows. */
+.srow-static .icon-btn {
+  margin-right: -10px;
+}
+
+.settings-logout {
+  margin-top: 24px;
+}
+
+/* ---- Small interactions ---- */
+
+/* A heart pops once when you like. */
 .action.like.pop svg {
   animation: pop 0.34s var(--ease);
 }
@@ -1780,7 +1595,7 @@ textarea.tfield-input {
 }
 
 .topbar-avatar:hover .avatar {
-  outline-color: var(--line-input);
+  outline-color: var(--brand-text);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2017,7 +1832,7 @@ textarea.tfield-input {
 
 .avatar-choice:has(input:checked) {
   border: 2px solid var(--brand-text);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .avatar-choice:has(input:focus-visible) {
