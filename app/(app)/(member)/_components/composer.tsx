@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { POST_MAX, countCharacters } from "@/lib/post-text";
 import { createPostAction } from "../posts/actions";
 
@@ -36,11 +36,14 @@ export function Composer({
   placeholder = "What is happening?",
   submitLabel = "Post",
   autoFocus = false,
+  leading,
 }: {
   parentId?: string;
   placeholder?: string;
   submitLabel?: string;
   autoFocus?: boolean;
+  /** Your picture, shown beside the box. */
+  leading?: ReactNode;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -51,7 +54,7 @@ export function Composer({
 
   return (
     <form
-      className="stack"
+      className="composer"
       onSubmit={(event) => {
         event.preventDefault();
         if (blocked) return;
@@ -73,18 +76,23 @@ export function Composer({
           {error}
         </p>
       ) : null}
-      <label className="sr-only" htmlFor={`composer-${parentId ?? "new"}`}>
-        {parentId ? "Your reply" : "Your post"}
-      </label>
-      <textarea
-        id={`composer-${parentId ?? "new"}`}
-        className="input textarea"
-        value={text}
-        onChange={(event) => setText(event.target.value)}
-        placeholder={placeholder}
-        rows={parentId ? 3 : 6}
-        autoFocus={autoFocus}
-      />
+      <div className="composer-row">
+        {leading}
+        <div className="composer-main">
+          <label className="sr-only" htmlFor={`composer-${parentId ?? "new"}`}>
+            {parentId ? "Your reply" : "Your post"}
+          </label>
+          <textarea
+            id={`composer-${parentId ?? "new"}`}
+            className="composer-text"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder={placeholder}
+            rows={parentId ? 2 : 6}
+            autoFocus={autoFocus}
+          />
+        </div>
+      </div>
       <div className="composer-bar">
         <Ring used={used} />
         <button type="submit" className="btn btn-primary" disabled={blocked}>

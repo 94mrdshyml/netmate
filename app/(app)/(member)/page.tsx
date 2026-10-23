@@ -7,6 +7,7 @@ import { currentTime } from "@/lib/time";
 import { listFeed } from "@/server/posts";
 import { Icon } from "./_components/icon";
 import { PostCard } from "./_components/post-card";
+import { TopBar } from "./_components/top-bar";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
 
   return (
     <main className="column">
-      <h1>{settings.name}</h1>
+      <TopBar instanceName={settings.name} username={member.username} userId={member.userId} avatarKey={member.avatarKey} />
+      <h1 className="sr-only">{settings.name}</h1>
 
       {/* "For you" is the latest posts from everyone until the ranked feed arrives. */}
       <nav className="tabs" aria-label="Feeds">
@@ -55,7 +57,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
       </section>
 
       <Link href="/compose" className="fab" aria-label="New post">
-        <Icon name="edit-2" size={24} />
+        <Icon name="feather" size={24} />
       </Link>
     </main>
   );

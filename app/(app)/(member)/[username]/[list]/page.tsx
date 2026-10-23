@@ -7,7 +7,7 @@ import { listPeople } from "@/server/follows";
 import { getProfile } from "@/server/profiles";
 import { Avatar } from "../../_components/avatar";
 import { FollowButton } from "../../_components/follow-button";
-import { Icon } from "../../_components/icon";
+import { PageHeader } from "../../_components/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -37,13 +37,11 @@ export default async function PeoplePage({
 
   return (
     <main className="column">
-      <Link className="back" href={base} aria-label={`Back to ${profile.firstName}'s profile`}>
-        <Icon name="arrow-left" />
-      </Link>
-      <h1>{list === "followers" ? "Followers" : "Following"}</h1>
-      <p className="muted">
-        {profile.firstName} {profile.lastName} (@{profile.username})
-      </p>
+      <PageHeader
+        title={list === "followers" ? "Followers" : "Following"}
+        sub={`${profile.firstName} ${profile.lastName} (@${profile.username})`}
+        back={{ href: base, label: `Back to ${profile.firstName}'s profile` }}
+      />
 
       <nav className="tabs" aria-label="People lists">
         <Link href={`${base}/followers`} aria-current={list === "followers" ? "page" : undefined}>
@@ -58,7 +56,7 @@ export default async function PeoplePage({
         {page.items.map((person) => (
           <li key={person.userId} className="person">
             <Link href={`/${person.username}`} className="person-info">
-              <Avatar userId={person.userId} avatarKey={person.avatarKey} size={40} />
+              <Avatar userId={person.userId} avatarKey={person.avatarKey} size={44} />
               <span className="person-text">
               <strong>
                 {person.firstName} {person.lastName}

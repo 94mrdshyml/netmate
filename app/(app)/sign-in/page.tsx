@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getMember } from "@/auth/session";
 import { getInstanceState } from "@/instance/request";
+import { BrandMark } from "../_components/brand-mark";
 import { SignInForm } from "./sign-in-form";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,8 @@ export default async function SignInPage() {
   const { settings } = await getInstanceState();
 
   return (
-    <main className="column stack">
+    <main className="column stack auth">
+      <BrandMark name={settings.name} size="lg" />
       <div>
         <h1>Sign in</h1>
         <p className="muted">Welcome back to {settings.name}.</p>

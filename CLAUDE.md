@@ -12,8 +12,8 @@ If a session prompt or another doc conflicts with this file, follow this file, p
 Read only what the task needs:
 - Product or feature scope → `docs/PRD.md` (the full spec; every feature rule and number lives there)
 - Data flow, bindings, schema, deploy → `docs/ARCHITECTURE.md`
-- Any UI work → `DESIGN.md` in the project root (not written yet; until it exists, UI follows the PRD's design rules in section 8.13)
-- Design skills: the app is **product UI**, so use the `impeccable` skill for app screens. The `design-taste-frontend` ("taste") skill is installed at user level and explicitly covers landing pages, portfolios and redesigns, not product UI; use it only for marketing pages, the README site or the demo landing page
+- Any UI work → `DESIGN.md` in the project root (tokens, layout, components, motion). Read it first
+- Design skill: use the `design-taste-frontend` ("taste") skill for all UI work, app screens included (owner decision, session 18; it replaces `impeccable`). Taste never overrides the product rules in this file and in `DESIGN.md`: flat, no shadows or gradients, one brand colour, Feather icons, 44px taps, no hard-coded brand
 - Why a v1 rule exists (feed scoring, `visibleTo`, analytics) → `docs/NETMATE-PRD.md` (old first-idea spec, **reference only**: nothing from `netmate.vercel.app`, no data, code, assets or brand, is reused)
 - Start of every session → the two highest-numbered files in `docs/sessions/` only (one file per session, so PRs never conflict)
 

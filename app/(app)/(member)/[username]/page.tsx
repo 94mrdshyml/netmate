@@ -10,6 +10,7 @@ import { getProfile } from "@/server/profiles";
 import { listByAuthor } from "@/server/posts";
 import { Avatar } from "../_components/avatar";
 import { FollowButton } from "../_components/follow-button";
+import { Icon } from "../_components/icon";
 import { PostCard } from "../_components/post-card";
 
 export const dynamic = "force-dynamic";
@@ -50,38 +51,51 @@ export default async function ProfilePage({
     <main className="column">
       <header className="profile-head">
         {profile.bannerKey ? (
-          <Image className="banner-img" src={`/media/${profile.bannerKey}`} alt="" width={480} height={160} unoptimized />
+          <Image className="banner-img" src={`/media/${profile.bannerKey}`} alt="" width={480} height={160} unoptimized priority />
         ) : (
           <div className="banner-img banner-flat" aria-hidden="true" />
         )}
-        <div className="profile-avatar">
-          <Avatar userId={profile.userId} avatarKey={profile.avatarKey} size={80} />
+        <div className="profile-top">
+          <div className="profile-avatar">
+            <Avatar userId={profile.userId} avatarKey={profile.avatarKey} size={88} />
+          </div>
+          <div className="profile-action">
+            {profile.isMe ? (
+              <Link href="/profile" className="btn btn-ghost">
+                Edit profile
+              </Link>
+            ) : (
+              <FollowButton userId={profile.userId} name={name} following={profile.iFollow} />
+            )}
+          </div>
         </div>
         <div className="profile-title">
-          <div>
-            <h1>{name}</h1>
-            <p className="muted">@{profile.username}</p>
-          </div>
-          {profile.isMe ? (
-            <Link href="/profile" className="btn btn-ghost">
-              Edit profile
-            </Link>
-          ) : (
-            <FollowButton userId={profile.userId} name={name} following={profile.iFollow} />
-          )}
+          <h1>{name}</h1>
+          <p className="muted">@{profile.username}</p>
         </div>
 
         {profile.bio ? <p className="bio">{profile.bio}</p> : null}
 
-        <p className="meta muted">
-          {profile.location ? <span>{profile.location}</span> : null}
-          {profile.link ? (
-            <a href={profile.link} target="_blank" rel="nofollow noopener noreferrer ugc">
-              {displayLink(profile.link)}
-            </a>
+        <ul className="meta muted">
+          {profile.location ? (
+            <li>
+              <Icon name="map-pin" size={16} />
+              <span>{profile.location}</span>
+            </li>
           ) : null}
-          <span>Joined {JOINED.format(profile.joinedAt)}</span>
-        </p>
+          {profile.link ? (
+            <li>
+              <Icon name="link" size={16} />
+              <a href={profile.link} target="_blank" rel="nofollow noopener noreferrer ugc">
+                {displayLink(profile.link)}
+              </a>
+            </li>
+          ) : null}
+          <li>
+            <Icon name="calendar" size={16} />
+            <span>Joined {JOINED.format(profile.joinedAt)}</span>
+          </li>
+        </ul>
 
         <p className="counts">
           <Link href={`${base}/following`}>
@@ -100,7 +114,7 @@ export default async function ProfilePage({
         ) : null}
       </header>
 
-      <nav className="tabs" aria-label="Profile sections">
+      <nav className="tabs tabs-top" aria-label="Profile sections">
         <Link href={base} aria-current={showReplies ? undefined : "page"}>
           Posts
         </Link>
