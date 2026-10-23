@@ -993,16 +993,44 @@ a.alert-link:focus-visible {
   transition: color 0.15s var(--ease);
 }
 
+/* The icon sits on a soft pill that fills in for the current screen and tints on hover. */
 .nav-icon {
   position: relative;
-  display: inline-grid;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 32px;
+  border-radius: 16px;
+  transition:
+    background-color 0.18s var(--ease),
+    transform 0.12s var(--ease);
+}
+
+.nav-icon svg {
+  transition: transform 0.18s var(--ease);
+}
+
+.bottom-nav a:hover .nav-icon {
+  background: var(--surface-hover);
+}
+
+.bottom-nav a:hover .nav-icon svg {
+  transform: translateY(-1px);
+}
+
+.bottom-nav a:active .nav-icon {
+  transform: scale(0.92);
+}
+
+.bottom-nav a[aria-current="page"] .nav-icon {
+  background: var(--brand-soft);
 }
 
 /* The unread count on the Alerts tab. */
 .nav-badge {
   position: absolute;
-  top: -6px;
-  left: 55%;
+  top: -4px;
+  left: 50%;
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
@@ -1349,6 +1377,406 @@ a.alert-link:focus-visible {
 
 .file-input::file-selector-button:hover {
   background: var(--surface-hover);
+}
+
+/* ---- Account menu (a sheet from the left, on a native dialog) ---- */
+
+.menu-sheet {
+  position: fixed;
+  inset: 0 auto 0 max(0px, calc((100vw - 480px) / 2));
+  display: none;
+  flex-direction: column;
+  width: min(320px, 86vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0 0 env(safe-area-inset-bottom);
+  color: var(--fg);
+  background: var(--bg);
+  border: 0;
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  transform: translateX(-24px);
+  opacity: 0;
+  transition:
+    transform 0.2s var(--ease),
+    opacity 0.2s var(--ease),
+    display 0.2s allow-discrete,
+    overlay 0.2s allow-discrete;
+}
+
+.menu-sheet[open] {
+  display: flex;
+  transform: none;
+  opacity: 1;
+}
+
+@starting-style {
+  .menu-sheet[open] {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+
+.menu-sheet::backdrop {
+  background: color-mix(in srgb, var(--fg) 45%, transparent);
+  opacity: 0;
+  transition:
+    opacity 0.2s var(--ease),
+    display 0.2s allow-discrete,
+    overlay 0.2s allow-discrete;
+}
+
+.menu-sheet[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  .menu-sheet[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+.menu-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 16px var(--gx) 12px;
+}
+
+.menu-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.menu-who .avatar {
+  margin-bottom: 8px;
+}
+
+.menu-who strong {
+  font-size: 1.125rem;
+  overflow-wrap: anywhere;
+}
+
+.menu-close {
+  flex: none;
+  margin: -4px -8px 0 0;
+}
+
+.menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 56px;
+  padding: 0 var(--gx);
+  font: inherit;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--fg);
+  text-align: left;
+  text-decoration: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background-color 0.15s var(--ease);
+}
+
+.menu-item svg {
+  flex: none;
+  color: var(--muted);
+  transition:
+    color 0.15s var(--ease),
+    transform 0.18s var(--ease);
+}
+
+.menu-item:hover {
+  background: var(--surface);
+}
+
+.menu-item:hover svg {
+  color: var(--fg);
+  transform: translateX(2px);
+}
+
+.menu-item:active {
+  background: var(--surface-hover);
+}
+
+.menu-item:focus-visible,
+.menu-who:focus-visible {
+  outline-offset: -2px;
+}
+
+.menu-foot {
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+}
+
+/* ---- Edit profile: header with Save, cover with camera buttons, boxed fields ---- */
+
+.edit {
+  display: block;
+}
+
+.edit-header {
+  margin-bottom: 0;
+}
+
+.edit-save {
+  flex: none;
+}
+
+.edit-status {
+  margin: 12px 0 0;
+}
+
+.edit-cover {
+  position: relative;
+  margin: 0 calc(-1 * var(--gx));
+}
+
+.edit-cover-actions {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  pointer-events: none;
+}
+
+/* A round button over a picture. It is tinted from the page colour, so it reads on any picture and in both themes. */
+.pic-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--fg);
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    background-color 0.15s var(--ease),
+    transform 0.12s var(--ease);
+}
+
+.pic-btn:hover {
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+}
+
+.pic-btn:active {
+  transform: scale(0.9);
+}
+
+.pic-btn:focus-within {
+  outline: 2px solid var(--brand-text);
+  outline-offset: 2px;
+}
+
+.edit-avatar-row {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: -44px;
+}
+
+.edit-avatar {
+  position: relative;
+}
+
+.edit-avatar .avatar {
+  display: block;
+  border: 4px solid var(--bg);
+  box-sizing: content-box;
+}
+
+.pic-btn-avatar {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pic-btn-avatar:active {
+  transform: translate(-50%, -50%) scale(0.9);
+}
+
+.edit-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.edit-names {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.tfield-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tfield-wrap > p {
+  min-height: 1.2em;
+  margin: 0;
+}
+
+.tfield {
+  padding: 8px 12px 6px;
+  background: var(--bg);
+  border: 1px solid var(--line-input);
+  border-radius: var(--radius);
+  transition: border-color 0.15s var(--ease);
+}
+
+.tfield:hover {
+  border-color: var(--fg);
+}
+
+.tfield:focus-within {
+  border-color: var(--brand-text);
+  outline: 1px solid var(--brand-text);
+  outline-offset: -1px;
+}
+
+.tfield:focus-within label {
+  color: var(--brand-text);
+}
+
+.tfield-error {
+  border-color: var(--brand-text);
+  outline: 1px solid var(--brand-text);
+  outline-offset: -1px;
+}
+
+.tfield-readonly {
+  background: var(--surface);
+}
+
+.tfield-readonly:hover {
+  border-color: var(--line-input);
+}
+
+.tfield-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  transition: color 0.15s var(--ease);
+}
+
+.tfield-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.tfield-count.over {
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.tfield-input {
+  width: 100%;
+  min-height: 28px;
+  padding: 2px 0 0;
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 0;
+  outline: none;
+  resize: none;
+}
+
+textarea.tfield-input {
+  min-height: 72px;
+}
+
+/* ---- Small interactions ---- */
+
+/* Hearts get a soft circle and a pop when you like; replies and delete get the quiet circle. */
+.action.like:hover {
+  color: var(--brand-text);
+  background: var(--brand-soft);
+}
+
+.action.like.pop svg {
+  animation: pop 0.34s var(--ease);
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.7);
+  }
+  55% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* A button that says Following shows what a tap will do. */
+.follow-label .follow-off {
+  display: none;
+}
+
+@media (hover: hover) {
+  .btn:hover .follow-label .follow-on,
+  .btn:focus-visible .follow-label .follow-on {
+    display: none;
+  }
+
+  .btn:hover .follow-label .follow-off,
+  .btn:focus-visible .follow-label .follow-off {
+    display: inline;
+  }
+}
+
+.fab svg,
+.theme-toggle svg {
+  transition: transform 0.2s var(--ease);
+}
+
+.fab:hover svg {
+  transform: rotate(-12deg);
+}
+
+.fab:active svg,
+.theme-toggle:active svg {
+  transform: rotate(24deg) scale(0.9);
+}
+
+.topbar-avatar .avatar {
+  transition: outline-color 0.15s var(--ease);
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+}
+
+.topbar-avatar:hover .avatar {
+  outline-color: var(--line-input);
 }
 
 @media (prefers-reduced-motion: reduce) {

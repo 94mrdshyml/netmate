@@ -32,7 +32,7 @@ export default async function SettingsPage() {
 
   return (
     <main className="column">
-      <PageHeader title="Settings" />
+      <PageHeader title="Settings" back={{ href: "/", label: "Back to Home" }} />
 
       <section className="account" aria-label="Your account">
         <Avatar userId={member.userId} avatarKey={member.avatarKey} size={56} />

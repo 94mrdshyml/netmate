@@ -7,6 +7,7 @@ import { currentTime, relativeTime } from "@/lib/time";
 import { listAlerts, type AlertItem } from "@/server/notifications";
 import { Avatar } from "../_components/avatar";
 import { Icon, type IconName } from "../_components/icon";
+import { MemberMenu } from "../_components/member-menu";
 import { PageHeader } from "../_components/page-header";
 import { MarkRead } from "./mark-read";
 
@@ -84,7 +85,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
 
   return (
     <main className="column">
-      <PageHeader title="Alerts" />
+      <PageHeader title="Alerts" lead={<MemberMenu member={member} />} />
       <MarkRead hasUnread={page.items.some((item) => item.unread)} />
 
       {page.items.length > 0 ? (
