@@ -28,7 +28,7 @@ export function QuotaForm({ initial }: { initial: number }) {
         });
       }}
     >
-      <div className="field">
+      <div className="field hq-inline-field">
         <label htmlFor="quota">Sign-ups approved per member link</label>
         <input
           id="quota"

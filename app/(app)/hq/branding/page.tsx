@@ -2,6 +2,7 @@ import { requireAdmin } from "@/auth/admin";
 import { defaultAvatarSvg } from "@/avatars/default";
 import { getInstanceState } from "@/instance/request";
 import { AVATAR_STYLES } from "@/instance/options";
+import { PageHeader } from "../hq-ui";
 import { BrandingForm } from "./branding-form";
 
 export const dynamic = "force-dynamic";
@@ -20,8 +21,7 @@ export default async function BrandingPage() {
 
   return (
     <>
-      <h1>Branding</h1>
-      <p className="hint">The name and look of your community. Changes show for everyone as soon as you save.</p>
+      <PageHeader title="Branding">The name and look of your community. Changes show for everyone as soon as you save.</PageHeader>
       <BrandingForm
         initial={{
           name: settings.name,

@@ -457,7 +457,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/notifications`, `/bookmarks` | Alerts, saved posts | mobile |
 | `/analytics` (`?range=28`) | Your analytics | mobile |
 | `/settings` and `/profile`, `/account`, `/invite`, `/privacy`, `/privacy/requests`, `/privacy/blocked`, `/privacy/muted` | Settings | mobile |
-| `/hq` | Admin overview (members, waiting for approval). Reached from Settings, admin only | **wide** |
+| `/hq` | Admin overview: members, waiting for approval and invite links as number panels, a "Needs you" list (sign-up requests, email) and a summary of the community's look. Reached from Settings, admin only | **wide** |
 | `/hq/branding` | Name, logo, favicon, colour, radius, font (downloaded and kept on our storage), avatar style, live preview | **wide** |
 | `/hq/approvals` | Pending sign-ups | **wide** |
 | `/hq/invites` | Admin link, quota, member links with usage, replace a link | **wide** |

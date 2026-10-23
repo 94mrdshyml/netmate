@@ -6,6 +6,7 @@ import { AVATAR_STYLES, FONT_OPTIONS, RADIUS_OPTIONS } from "@/instance/options"
 import { parseHex } from "@/lib/color";
 import { RADII, deriveTheme, type DerivedTheme } from "@/instance/theme";
 import { saveBrandingAction } from "../actions";
+import { Card } from "../hq-ui";
 
 type Values = { name: string; primary: string; radius: (typeof RADIUS_OPTIONS)[number]; fontFamily: string; avatarStyle: string; logoKey: string | null; faviconKey: string | null };
 
@@ -61,7 +62,7 @@ export function BrandingForm({
 
   return (
     <form
-      className="stack hq-form"
+      className="hq-split"
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
@@ -79,139 +80,151 @@ export function BrandingForm({
         });
       }}
     >
-      {note ? (
-        <p className="banner" role={note.kind === "error" ? "alert" : "status"}>
-          {note.text}
-        </p>
-      ) : null}
-
-      <div className="field">
-        <label htmlFor="name">Name</label>
-        <input
-          id="name"
-          className="input"
-          value={values.name}
-          maxLength={50}
-          aria-invalid={errors.name ? true : undefined}
-          aria-describedby="name-note"
-          onChange={(e) => set("name", e.target.value)}
-        />
-        <p id="name-note" className={errors.name ? "error" : "hint"}>
-          {errors.name ?? "Up to 30 characters. Shown on the sign-in page and in the tab title."}
-        </p>
-      </div>
-
-      <div className="field">
-        <label htmlFor="primary">Primary colour</label>
-        <div className="colour-row">
-          <input type="color" aria-label="Pick a colour" value={picker.toLowerCase()} onChange={(e) => set("primary", e.target.value.toUpperCase())} />
-          <input
-            id="primary"
-            className="input"
-            value={values.primary}
-            spellCheck={false}
-            autoCapitalize="characters"
-            aria-invalid={errors.primary ? true : undefined}
-            aria-describedby="primary-note"
-            onChange={(e) => set("primary", e.target.value)}
-          />
-        </div>
-        <p id="primary-note" className={errors.primary ? "error" : "hint"} role={adjusted && !errors.primary ? "status" : undefined}>
-          {errors.primary ??
-            (adjusted
-              ? `We adjust this colour slightly in ${theme.adjusted.light && theme.adjusted.dark ? "light and dark" : theme.adjusted.light ? "light" : "dark"} mode so text stays easy to read.`
-              : "Used for buttons and links.")}
-        </p>
-      </div>
-
-      {(Object.keys(FILE_KINDS) as FileKind[]).map((kind) => {
-        const { key, label, hint } = FILE_KINDS[kind];
-        const stored = values[key];
-        return (
-          <div className="field" key={kind}>
-            <label htmlFor={`${kind}-file`}>{label}</label>
-            <div className="picture-row">
-              {stored ? (
-                // eslint-disable-next-line @next/next/no-img-element -- our own stored file
-                <img className="brand-file-preview" src={`/media/${stored}`} alt="" />
-              ) : null}
+      <div className="hq-col">
+        <Card id="identity-heading" icon="feather" title="Identity" description="Your name, logo and the small picture in the browser tab.">
+          <div className="stack">
+            <div className="field">
+              <label htmlFor="name">Name</label>
               <input
-                id={`${kind}-file`}
-                className="file-input"
-                type="file"
-                accept="image/png,image/svg+xml"
-                disabled={uploading !== null}
-                aria-describedby={`${kind}-note`}
-                onChange={(e) => {
-                  void upload(kind, e.target.files?.[0]);
-                  e.target.value = "";
-                }}
+                id="name"
+                className="input"
+                value={values.name}
+                maxLength={50}
+                aria-invalid={errors.name ? true : undefined}
+                aria-describedby="name-note"
+                onChange={(e) => set("name", e.target.value)}
               />
-              {stored ? (
-                <button type="button" className="btn btn-ghost" onClick={() => set(key, null)}>
-                  Remove
-                </button>
-              ) : null}
+              <p id="name-note" className={errors.name ? "error" : "hint"}>
+                {errors.name ?? "Up to 30 characters. Shown on the sign-in page and in the tab title."}
+              </p>
             </div>
-            <p id={`${kind}-note`} className={errors[key] ? "error" : "hint"} role={errors[key] ? "alert" : undefined}>
-              {uploading === kind ? "Uploading" : errors[key] || `${hint} Applied when you save.`}
-            </p>
+
+            {(Object.keys(FILE_KINDS) as FileKind[]).map((kind) => {
+              const { key, label, hint } = FILE_KINDS[kind];
+              const stored = values[key];
+              return (
+                <div className="field" key={kind}>
+                  <label htmlFor={`${kind}-file`}>{label}</label>
+                  <div className="picture-row">
+                    {stored ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- our own stored file
+                      <img className="brand-file-preview" src={`/media/${stored}`} alt="" />
+                    ) : null}
+                    <input
+                      id={`${kind}-file`}
+                      className="file-input"
+                      type="file"
+                      accept="image/png,image/svg+xml"
+                      disabled={uploading !== null}
+                      aria-describedby={`${kind}-note`}
+                      onChange={(e) => {
+                        void upload(kind, e.target.files?.[0]);
+                        e.target.value = "";
+                      }}
+                    />
+                    {stored ? (
+                      <button type="button" className="btn btn-ghost" onClick={() => set(key, null)}>
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
+                  <p id={`${kind}-note`} className={errors[key] ? "error" : "hint"} role={errors[key] ? "alert" : undefined}>
+                    {uploading === kind ? "Uploading" : errors[key] || `${hint} Applied when you save.`}
+                  </p>
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
+        </Card>
 
-      <fieldset className="choices" aria-label="Corner style">
-        <legend className="label" style={{ gridColumn: "1 / -1" }}>
-          Corner style
-        </legend>
-        {RADIUS_OPTIONS.map((r) => (
-          <label className="choice" key={r}>
-            <input type="radio" name="radius" value={r} checked={values.radius === r} onChange={() => set("radius", r)} />
-            <span style={{ borderRadius: RADII[r] }}>{CORNER_LABELS[r]}</span>
-          </label>
-        ))}
-      </fieldset>
+        <Card id="look-heading" icon="droplet" title="Colour and shape" description="Colour, corners and font follow every screen, in light and dark.">
+          <div className="stack">
+            <div className="field">
+              <label htmlFor="primary">Primary colour</label>
+              <div className="colour-row">
+                <input type="color" aria-label="Pick a colour" value={picker.toLowerCase()} onChange={(e) => set("primary", e.target.value.toUpperCase())} />
+                <input
+                  id="primary"
+                  className="input"
+                  value={values.primary}
+                  spellCheck={false}
+                  autoCapitalize="characters"
+                  aria-invalid={errors.primary ? true : undefined}
+                  aria-describedby="primary-note"
+                  onChange={(e) => set("primary", e.target.value)}
+                />
+              </div>
+              <p id="primary-note" className={errors.primary ? "error" : "hint"} role={adjusted && !errors.primary ? "status" : undefined}>
+                {errors.primary ??
+                  (adjusted
+                    ? `We adjust this colour slightly in ${theme.adjusted.light && theme.adjusted.dark ? "light and dark" : theme.adjusted.light ? "light" : "dark"} mode so text stays easy to read.`
+                    : "Used for buttons and links.")}
+              </p>
+            </div>
 
-      <div className="field">
-        <label htmlFor="fontFamily">Font</label>
-        <select id="fontFamily" className="select" value={values.fontFamily} onChange={(e) => set("fontFamily", e.target.value)}>
-          {FONT_OPTIONS.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-        </select>
-        {errors.fontFamily ? (
-          <p className="error">{errors.fontFamily}</p>
-        ) : (
-          <p className="hint">
-            {fontHosted ? "Kept on your own storage, so readers never contact another site." : "Not downloaded yet. Saving downloads it once and keeps it on your own storage."}
-          </p>
-        )}
+            <fieldset className="choices" aria-label="Corner style">
+              <legend className="label" style={{ gridColumn: "1 / -1" }}>
+                Corner style
+              </legend>
+              {RADIUS_OPTIONS.map((r) => (
+                <label className="choice" key={r}>
+                  <input type="radio" name="radius" value={r} checked={values.radius === r} onChange={() => set("radius", r)} />
+                  <span style={{ borderRadius: RADII[r] }}>{CORNER_LABELS[r]}</span>
+                </label>
+              ))}
+            </fieldset>
+
+            <div className="field">
+              <label htmlFor="fontFamily">Font</label>
+              <select id="fontFamily" className="select" value={values.fontFamily} onChange={(e) => set("fontFamily", e.target.value)}>
+                {FONT_OPTIONS.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+              </select>
+              {errors.fontFamily ? (
+                <p className="error">{errors.fontFamily}</p>
+              ) : (
+                <p className="hint">
+                  {fontHosted ? "Kept on your own storage, so readers never contact another site." : "Not downloaded yet. Saving downloads it once and keeps it on your own storage."}
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        <Card id="avatars-heading" icon="smile" title="Default avatars" description="Drawn for members who have not uploaded a picture.">
+          <fieldset className="avatar-choices" aria-label="Default avatar style">
+            <legend className="sr-only">Default avatar style</legend>
+            <div className="avatar-grid">
+              {AVATAR_STYLES.map((style) => (
+                <label className="avatar-choice" key={style}>
+                  <input type="radio" name="avatarStyle" value={style} checked={values.avatarStyle === style} onChange={() => set("avatarStyle", style)} />
+                  {/* eslint-disable-next-line @next/next/no-img-element -- a data: picture drawn on our own server */}
+                  <img src={avatarSamples[style]} alt="" width={48} height={48} />
+                  <span>{style.replace(/-/g, " ")}</span>
+                </label>
+              ))}
+            </div>
+            {errors.avatarStyle ? <p className="error">{errors.avatarStyle}</p> : null}
+          </fieldset>
+        </Card>
       </div>
 
-      <fieldset className="avatar-choices" aria-label="Default avatar style">
-        <legend className="label">Default avatar style</legend>
-        <p className="hint">Drawn for members who have not uploaded a picture.</p>
-        <div className="avatar-grid">
-          {AVATAR_STYLES.map((style) => (
-            <label className="avatar-choice" key={style}>
-              <input type="radio" name="avatarStyle" value={style} checked={values.avatarStyle === style} onChange={() => set("avatarStyle", style)} />
-              {/* eslint-disable-next-line @next/next/no-img-element -- a data: picture drawn on our own server */}
-              <img src={avatarSamples[style]} alt="" width={48} height={48} />
-              <span>{style.replace(/-/g, " ")}</span>
-            </label>
-          ))}
-        </div>
-        {errors.avatarStyle ? <p className="error">{errors.avatarStyle}</p> : null}
-      </fieldset>
-
-      <div className="preview-grid" aria-label="Preview">
-        <Preview label="Light" mode={theme.light} radius={values.radius} name={values.name} />
-        <Preview label="Dark" mode={theme.dark} radius={values.radius} name={values.name} />
+      <div className="hq-aside">
+        <Card id="preview-heading" icon="eye" title="Preview" description="Updates as you type. Nothing changes for anyone until you save.">
+          <div className="preview-grid">
+            <Preview label="Light" mode={theme.light} radius={values.radius} name={values.name} />
+            <Preview label="Dark" mode={theme.dark} radius={values.radius} name={values.name} />
+          </div>
+        </Card>
       </div>
 
-      <div>
+      <div className="hq-savebar">
+        <p className={note?.kind === "error" ? "error" : "hint"} role={note ? (note.kind === "error" ? "alert" : "status") : undefined}>
+          {note?.text ?? ""}
+        </p>
         <button type="submit" className="btn btn-primary" disabled={pending}>
           {pending ? "Saving" : "Save"}
         </button>
