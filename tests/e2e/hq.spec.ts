@@ -41,7 +41,8 @@ test.beforeAll(async ({ browser }) => {
   memberLink = await memberPage.getByLabel("Your invite link").inputValue();
   for (const n of [1, 2, 3, 4, 5]) {
     const filler = await joinThrough(browser, memberLink, `Filler${n}`);
-    await expect(filler.page).toHaveURL(/\/$/);
+    // Password hashing is slow when several test files run at once, so allow more than the default 5 seconds.
+    await expect(filler.page).toHaveURL(/\/$/, { timeout: 20_000 });
     await filler.context.close();
   }
 });
