@@ -36,13 +36,14 @@ test("signing in lands on Home, and signing out ends the session", async ({ page
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByText(`Signed in as @${E2E.admin.username}`)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Profile" })).toHaveAttribute("href", `/${E2E.admin.username}`);
 
   // Already signed in: the sign-in page bounces back to Home.
   await page.goto("/sign-in");
   await expect(page).toHaveURL(/\/$/);
 
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "Log out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
 
   // The session is really gone, not just hidden.

@@ -29,10 +29,10 @@ test("the eleventh sign-in try for one email is refused with a plain wait time",
 
 test("the eleventh sign-up try from one address is refused", async ({ browser }) => {
   test.setTimeout(90_000);
-  // The admin's own link, read from Home with the stored login.
+  // The admin's own link, read from the invite page with the stored login.
   const admin = await browser.newContext({ storageState: "tests/e2e/.auth/admin.json" });
   const adminPage = await admin.newPage();
-  await adminPage.goto("/");
+  await adminPage.goto("/invite");
   const link = await adminPage.getByLabel("Your invite link").inputValue();
   await admin.close();
 

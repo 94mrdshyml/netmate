@@ -1,8 +1,12 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { E2E } from "./constants";
+import { signUpMember } from "./helpers";
 
 // Serial: later tests use the posts made by earlier ones.
 test.describe.configure({ mode: "serial" });
+
+/** This test's own post, found by its unique text (other tests post in parallel). */
+const mine = (page: Page, text: string) => page.getByRole("article").filter({ hasText: text });
 
 const unique = () => `e2e ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
@@ -17,7 +21,7 @@ test("writing a post puts it at the top of Home with my name and a short time", 
   const text = unique();
   await writePost(page, text);
 
-  const first = page.getByRole("article").first();
+  const first = mine(page, text);
   await expect(first).toContainText(text);
   await expect(first).toContainText(`${E2E.admin.firstName} ${E2E.admin.lastName}`);
   await expect(first).toContainText(`@${E2E.admin.username}`);
@@ -45,28 +49,30 @@ test("post text is shown as text, never run as markup", async ({ page }) => {
   const text = `${unique()} <b>bold</b> <img src=x onerror="window.__pwned=1">`;
   await writePost(page, text);
 
-  await expect(page.getByRole("article").first()).toContainText("<b>bold</b>");
+  await expect(mine(page, "<b>bold</b>").first()).toContainText("<b>bold</b>");
   expect(await page.evaluate(() => (window as unknown as { __pwned?: number }).__pwned)).toBeUndefined();
-  await expect(page.getByRole("article").first().locator("b")).toHaveCount(0);
+  await expect(mine(page, "<b>bold</b>").first().locator("b")).toHaveCount(0);
 });
 
 test("liking is a toggle that keeps its count after a reload", async ({ page }) => {
-  await writePost(page, unique());
-  const card = page.getByRole("article").first();
+  const text = unique();
+  await writePost(page, text);
+  const card = mine(page, text);
 
   await card.getByRole("button", { name: /^Like,/ }).click();
-  await expect(card.getByRole("button", { name: /^Unlike, 1 likes/ })).toBeVisible();
+  // The heart changes at once; the button is enabled again only when the server has answered.
+  await expect(card.getByRole("button", { name: /^Unlike, 1 likes/ })).toBeEnabled();
   await page.reload();
-  await expect(page.getByRole("article").first().getByRole("button", { name: /^Unlike, 1 likes/ })).toBeVisible();
+  await expect(mine(page, text).getByRole("button", { name: /^Unlike, 1 likes/ })).toBeVisible();
 
-  await page.getByRole("article").first().getByRole("button", { name: /^Unlike,/ }).click();
-  await expect(page.getByRole("article").first().getByRole("button", { name: /^Like, 0 likes/ })).toBeVisible();
+  await mine(page, text).getByRole("button", { name: /^Unlike,/ }).click();
+  await expect(mine(page, text).getByRole("button", { name: /^Like, 0 likes/ })).toBeEnabled();
 });
 
 test("replying from the post page shows the reply there and raises the count on Home", async ({ page }) => {
   const text = unique();
   await writePost(page, text);
-  await page.getByRole("article").first().getByRole("link", { name: /^Reply,/ }).click();
+  await mine(page, text).getByRole("link", { name: /^Reply,/ }).click();
   await expect(page).toHaveURL(new RegExp(`/${E2E.admin.username}/status/post_`));
 
   const reply = unique();
@@ -99,7 +105,7 @@ test("another member sees my post, and cannot delete it", async ({ browser, page
   const text = unique();
   await writePost(page, text);
 
-  const other = await signUpMember(browser);
+  const other = await signUpMember(browser, "198.18.9.9");
   await other.page.goto("/");
   const card = other.page.getByRole("article").filter({ hasText: text });
   await expect(card).toBeVisible();
@@ -111,8 +117,9 @@ test("a missing post and a wrong username are both a plain not found", async ({ 
   const missing = await page.goto(`/${E2E.admin.username}/status/post_${"a".repeat(24)}`);
   expect(missing?.status()).toBe(404);
 
-  await writePost(page, unique());
-  const href = await page.getByRole("article").first().getByRole("link", { name: /^Reply,/ }).getAttribute("href");
+  const text = unique();
+  await writePost(page, text);
+  const href = await mine(page, text).getByRole("link", { name: /^Reply,/ }).getAttribute("href");
   const wrong = await page.goto(href!.replace(E2E.admin.username, "someone_else"));
   expect(wrong?.status()).toBe(404);
 });
@@ -124,29 +131,3 @@ test("a signed-out visitor is sent to sign in from the compose page", async ({ b
   await expect(page).toHaveURL(/\/sign-in$/);
   await context.close();
 });
-
-/** A second member, joined through the admin's link from an address of their own. */
-async function signUpMember(browser: Browser) {
-  const adminContext = await browser.newContext({ storageState: E2E.authFile });
-  const adminPage = await adminContext.newPage();
-  await adminPage.goto("/");
-  const link = await adminPage.getByLabel("Your invite link").inputValue();
-  await adminContext.close();
-
-  const context = await browser.newContext({
-    viewport: { width: 412, height: 915 },
-    storageState: { cookies: [], origins: [] },
-    extraHTTPHeaders: { "cf-connecting-ip": "198.18.9.9" },
-  });
-  const page = await context.newPage();
-  await page.goto(link);
-  const stamp = Date.now().toString(36);
-  await page.getByLabel("First name").fill("Other");
-  await page.getByLabel("Last name").fill("Member");
-  await page.getByLabel("Email").fill(`other-${stamp}@example.com`);
-  await page.getByLabel("Username").fill(`oth_${stamp.slice(-8)}`);
-  await page.getByLabel("Password").fill("a-long-enough-pass");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/$/);
-  return { page, context };
-}

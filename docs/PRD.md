@@ -190,7 +190,7 @@ Rules:
 | Username | 3 to 15 characters, letters, numbers, underscores; unique ignoring case; stored lower case; shown as `@username`; **cannot be changed later** |
 | Password | 8 to 128 characters |
 
-The username field checks availability as you type (after a short pause). Reserved usernames: `admin`, `api`, `auth`, `settings`, `home`, `explore`, `notifications`, `messages`, `search`, `compose`, `bookmarks`, `analytics`, `sign-in`, `sign-up`, `login`, `logout`, `onboarding`, `status`, `hq`, `setup`, `waiting`, `invite`, `verify-email`, `forgot-password`, `reset-password`, `support`, `help`, `about`, `terms`, `privacy`, plus the instance name (lower-cased, letters and numbers only).
+The username field checks availability as you type (after a short pause). Reserved usernames: `admin`, `api`, `auth`, `settings`, `home`, `explore`, `notifications`, `messages`, `search`, `compose`, `bookmarks`, `analytics`, `sign-in`, `sign-up`, `login`, `logout`, `onboarding`, `status`, `hq`, `setup`, `waiting`, `invite`, `profile`, `account`, `verify-email`, `forgot-password`, `reset-password`, `support`, `help`, `about`, `terms`, `privacy`, plus the instance name (lower-cased, letters and numbers only).
 
 **Sign in** is email and password. **Sign out** is in Settings. **Forgot password** and **change email** use Resend (hidden or disabled without it).
 
@@ -406,7 +406,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 ### 8.13 Design and experience
 
 - **Theme.** Follows the phone by default (or the instance default), with a toggle in the top bar that sets a cookie. Both themes are designed and checked, including with extreme brand colours.
-- **Layout.** Top bar (avatar, logo, theme toggle), bottom tabs (Home, Search, Alerts, Profile), round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected.
+- **Layout.** Top bar (avatar, logo, theme toggle), bottom tabs (Home, Search, Alerts, Profile), round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected. Until Search and Alerts exist, the bottom tabs are Home, Profile and Settings.
 - **Type.** The instance font. No emoji or em dashes in interface text.
 - **Icons.** Feather.
 - **No** shadows, gradients, glows or cards in the feed.

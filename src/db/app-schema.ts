@@ -192,3 +192,24 @@ export const likes = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.postId] }), index("likes_post_idx").on(t.postId)],
 );
+
+/** Who follows whom. One row per pair; the database refuses following yourself. */
+export const follows = sqliteTable(
+  "follows",
+  {
+    followerId: text("follower_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    followeeId: text("followee_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [
+    primaryKey({ columns: [t.followerId, t.followeeId] }),
+    check("follows_not_self", sql`${t.followerId} <> ${t.followeeId}`),
+    // "Who follows X" newest first, and "who does X follow" newest first.
+    index("follows_followee_idx").on(t.followeeId, t.createdAt, t.followerId),
+    index("follows_follower_idx").on(t.followerId, t.createdAt, t.followeeId),
+  ],
+);
