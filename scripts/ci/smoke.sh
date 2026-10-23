@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Reads the deployed URL from the deploy log and checks the live site.
+# A fresh instance sends "/" to /setup; a configured one shows the home page. Both prove the
+# Worker renders and can read D1 (the redirect itself is a database read).
 set -euo pipefail
 
 log="${1:?usage: smoke.sh <deploy-log>}"
@@ -11,16 +13,18 @@ fi
 echo "Smoke testing $url"
 
 for attempt in 1 2 3 4 5 6; do
-  body="$(curl -fsS --max-time 20 "$url/" || true)"
-  if echo "$body" | grep -q "D1 binding" && echo "$body" | grep -q "ok"; then
-    if echo "$body" | grep -qE 'D1 binding: (<!-- -->)?ok' && echo "$body" | grep -qE 'R2 binding: (<!-- -->)?ok'; then
-      echo "Live site reaches D1 and R2."
-      exit 0
-    fi
+  body="$(curl -fsSL --max-time 20 "$url/" || true)"
+  if echo "$body" | grep -qE 'D1 binding: (<!-- -->)?ok' && echo "$body" | grep -qE 'R2 binding: (<!-- -->)?ok'; then
+    echo "Configured instance: home page reaches D1 and R2."
+    exit 0
+  fi
+  if echo "$body" | grep -qE 'Prove it is you|Setup is not ready'; then
+    echo "Fresh instance: /setup is served (the database was read to decide that)."
+    exit 0
   fi
   echo "Attempt $attempt not ready, retrying in 10s"
   sleep 10
 done
 
-echo "::error::Live site did not report D1 and R2 as ok"
+echo "::error::Live site did not render the home page or the setup page"
 exit 1

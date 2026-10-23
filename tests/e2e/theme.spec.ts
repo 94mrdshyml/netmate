@@ -1,13 +1,14 @@
 import { expect, test } from "@playwright/test";
+import { E2E } from "./constants";
 
 const cssVar = (name: string) => `getComputedStyle(document.documentElement).getPropertyValue('${name}').trim()`;
 
-test("instance theme variables reach the page and drive the colours", async ({ page }) => {
+test("what the admin chose in setup reaches every page as CSS variables", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
 
-  expect(await page.evaluate(cssVar("--brand"))).toBe("#2F6FED");
-  expect(await page.evaluate(cssVar("--radius"))).toBe("8px");
+  expect(await page.evaluate(cssVar("--brand"))).toBe(E2E.instance.primary);
+  expect(await page.evaluate(cssVar("--radius"))).toBe("16px");
   expect(await page.evaluate(cssVar("--font"))).toContain("Inter");
 
   const light = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);

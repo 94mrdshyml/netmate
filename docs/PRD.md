@@ -81,7 +81,7 @@ First open of a fresh deployment. One mobile-width, multi-step flow:
 
 1. **Prove ownership.** Enter the `SETUP_TOKEN` secret that was set at deploy time. Without it, a stranger who finds the URL first could claim the instance.
 2. **Admin account.** First name, last name, email, username, password (rules in 8.1).
-3. **Instance identity.** Name, logo, favicon (defaults offered: name "Netmate" and the built-in Netmate logo and favicon).
+3. **Instance identity.** Name (default "Netmate"). The built-in logo and favicon are used at first; uploading your own logo and favicon happens in `/hq` (it needs a signed-in admin, because uploads require a session).
 4. **Look.** Primary colour, corner radius, font, default avatar style, with a live preview of a sample post, button and field.
 5. **Email.** Resend API key and sender address. The key is validated by a real call. Skippable, with a clear warning of what then does not work (verification, reset, notifications; invite links are shared by hand).
 6. **Optional services.** Klipy key for GIF search (feature hidden if blank), place suggestions on or off.
@@ -92,6 +92,10 @@ Rules:
 - The final write is **atomic**: admin, settings and the configured flag succeed together or not at all. If two people finish at once, exactly one wins; the other sees the sign-in page.
 - Everything entered before the last step is kept in the browser session only; nothing is partly saved.
 - After completion `/setup` cannot be reached, even by the admin. Changes go through `/hq`.
+- **Deployment secrets.** `/setup` refuses to run unless `SETUP_TOKEN`, `AUTH_SECRET` and `SETTINGS_ENCRYPTION_KEY` are set, each at least 32 characters (so the token cannot be guessed). When one is missing the page lists which, never a value. The token is checked first, in constant time, before any other validation, so a stranger learns nothing about the form.
+- **One write.** The admin user, their credentials, profile, the instance row and the encrypted keys go into a single D1 batch. The instance row comes first and its fixed key is the one-time claim: of two simultaneous attempts exactly one succeeds and the other leaves nothing behind. Any failure rolls the whole batch back.
+- **Choices offered.** Font and avatar style are chosen from short lists (`src/instance/options.ts`); the full Google Fonts search and font hosting arrive with `/hq`. The Resend key is checked with a real call to Resend (a sending-only key counts as valid); an unreachable Resend asks to retry or skip.
+- **After finishing**, the new admin is signed in and lands on Home.
 
 ## 5. Customisation
 
@@ -105,12 +109,12 @@ All values live in instance settings, are first chosen in `/setup`, edited in `/
 | **Primary colour** | any hex colour. See "Colour derivation" below |
 | **Corner radius** | `zero`, `sm`, `md`, `lg` = 0, 4, 8, 16 px. Applies to buttons and form fields. Avatars stay round; post media keeps its own fixed radius |
 | **Font** | any open-licence (OFL) family from Google Fonts, chosen from a searchable list. The font file is fetched once at save time and **stored and served from our own bucket**, so readers never contact Google |
-| **Default avatar style** | any DiceBear style (for example Cameo, Initials, Thumbs). Generated inside the app from the member's id, so it is stable and makes no outside request |
+| **Default avatar style** | any DiceBear style (for example Initials, Thumbs, Shapes). Generated inside the app from the member's id, so it is stable and makes no outside request |
 | **Theme default** | dark, light or follow the phone. Members can still override with a toggle (a cookie) |
 | **Invite quota** | number of auto-approved sign-ups per member link. Default 5 |
 | **Optional features** | GIF search (needs Klipy key), place suggestions |
 
-**Defaults on a fresh instance:** name "Netmate", the built-in logo and favicon, a neutral accessible primary colour, radius `md`, font Inter, avatar style Cameo, theme follows the phone, quota 5.
+**Defaults on a fresh instance:** name "Netmate", the built-in logo and favicon, a neutral accessible primary colour, radius `md`, font Inter, avatar style Initials, theme follows the phone, quota 5.
 
 **Colour derivation.** From the chosen primary the system derives: text colour on top of it, hover and pressed shades, a dark-mode variant, and a light-mode text-link colour (darkened where needed so brand-coloured text is readable on white). Any choice that cannot reach WCAG AA (4.5:1 for text) in both themes is adjusted or refused with a clear message in the editor.
 
