@@ -5,6 +5,7 @@ import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { follows, profiles } from "@/db/schema";
 import { isId } from "@/lib/ids";
+import { alertOnFollow, removeFollowAlert } from "@/server/notifications";
 
 export const PEOPLE_PAGE_SIZE = 20;
 
@@ -37,10 +38,17 @@ export async function setFollow(
     .get();
   if (!target) return { ok: false, code: "not_found" };
 
+  // The follow and the person's alert change together.
   if (wanted) {
-    await db.insert(follows).values({ followerId: viewerId, followeeId: targetId }).onConflictDoNothing();
+    await db.batch([
+      db.insert(follows).values({ followerId: viewerId, followeeId: targetId }).onConflictDoNothing(),
+      alertOnFollow(db, viewerId, targetId),
+    ]);
   } else {
-    await db.delete(follows).where(and(eq(follows.followerId, viewerId), eq(follows.followeeId, targetId)));
+    await db.batch([
+      db.delete(follows).where(and(eq(follows.followerId, viewerId), eq(follows.followeeId, targetId))),
+      removeFollowAlert(db, viewerId, targetId),
+    ]);
   }
   return { ok: true, following: wanted };
 }

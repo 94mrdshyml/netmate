@@ -1,5 +1,8 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { redirect } from "next/navigation";
 import { getMember } from "@/auth/session";
+import { getDb } from "@/db";
+import { countUnreadAlerts } from "@/server/notifications";
 import { BottomNav } from "./_components/bottom-nav";
 
 // Every page a signed-in member uses. Signed-out visitors go to sign in; each page and action
@@ -9,11 +12,13 @@ export const dynamic = "force-dynamic";
 export default async function MemberLayout({ children }: { children: React.ReactNode }) {
   const member = await getMember();
   if (!member) redirect("/sign-in");
+  const { env } = await getCloudflareContext({ async: true });
+  const unread = await countUnreadAlerts(getDb(env.DB), member.userId);
 
   return (
     <div className="with-nav">
       {children}
-      <BottomNav username={member.username} />
+      <BottomNav username={member.username} unread={unread} />
     </div>
   );
 }

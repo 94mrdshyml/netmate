@@ -255,3 +255,59 @@ export const emailState = sqliteTable(
     check("email_state_error_length", sql`${t.lastError} is null or length(${t.lastError}) <= 300`),
   ],
 );
+
+/** The kinds of alert the app can show (docs/PRD.md section 8.7). Only some exist in the app so far. */
+export const NOTIFICATION_TYPES = [
+  "like",
+  "repost",
+  "follow",
+  "follow_request",
+  "reply",
+  "quote",
+  "mention",
+  "invite_used",
+  "pending_approval",
+] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+/**
+ * One alert for one person about one thing another person did. The row is written in the same
+ * batch as the like, follow, reply or sign-up that causes it, and removed in the batch that undoes
+ * it. The database refuses an alert about your own action.
+ */
+export const notifications = sqliteTable(
+  "notifications",
+  {
+    id: text("id").primaryKey(),
+    recipientId: text("recipient_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    actorId: text("actor_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    /** The post this is about (the liked post, or the reply). Empty for follows and sign-up alerts. */
+    postId: text("post_id").references(() => posts.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+    /** Empty while unread. */
+    readAt: integer("read_at", { mode: "timestamp_ms" }),
+  },
+  (t) => [
+    check(
+      "notifications_type",
+      sql`${t.type} in ('like', 'repost', 'follow', 'follow_request', 'reply', 'quote', 'mention', 'invite_used', 'pending_approval')`,
+    ),
+    check("notifications_no_self", sql`${t.recipientId} <> ${t.actorId}`),
+    // Alerts about people have no post; alerts about posts always have one.
+    check(
+      "notifications_post_matches_type",
+      sql`(${t.type} in ('follow', 'follow_request', 'invite_used', 'pending_approval')) = (${t.postId} is null)`,
+    ),
+    // The same person doing the same thing alerts once, however often it is sent. Two indexes, because
+    // an empty post never counts as equal to another empty post in a unique index.
+    uniqueIndex("notifications_once_per_post").on(t.recipientId, t.actorId, t.type, t.postId).where(sql`${t.postId} is not null`),
+    uniqueIndex("notifications_once_per_person").on(t.recipientId, t.actorId, t.type).where(sql`${t.postId} is null`),
+    index("notifications_recipient_idx").on(t.recipientId, t.createdAt, t.id),
+    index("notifications_unread_idx").on(t.recipientId).where(sql`${t.readAt} is null`),
+  ],
+);

@@ -7,6 +7,7 @@ import type { Db } from "@/db";
 import { follows, likes, posts, profiles } from "@/db/schema";
 import { isId, newId } from "@/lib/ids";
 import { checkPostText } from "@/lib/post-text";
+import { alertOnLike, alertOnReply, removeLikeAlert } from "@/server/notifications";
 import { visiblePosts } from "@/server/visibility";
 
 export const PAGE_SIZE = 20;
@@ -197,8 +198,12 @@ export async function createPost(db: Db, authorId: string, rawBody: unknown, par
   if (parentId === undefined) {
     await insert;
   } else {
-    // The reply and the parent's count change together.
-    await db.batch([insert, db.update(posts).set({ replyCount: replyCountOf(parentId) }).where(eq(posts.id, parentId))]);
+    // The reply, the parent's count and the parent's author's alert change together.
+    await db.batch([
+      insert,
+      db.update(posts).set({ replyCount: replyCountOf(parentId) }).where(eq(posts.id, parentId)),
+      alertOnReply(db, authorId, parentId, id),
+    ]);
   }
   return { ok: true, id };
 }
@@ -243,6 +248,8 @@ export async function setLike(
   await db.batch([
     change,
     db.update(posts).set({ likeCount: sql`(select count(*) from ${likes} where ${likes.postId} = ${postId})` }).where(eq(posts.id, postId)),
+    // The author's alert is added with the like and taken away with it.
+    liked ? alertOnLike(db, viewerId, postId) : removeLikeAlert(db, viewerId, postId),
   ]);
 
   const after = await db.select({ likeCount: posts.likeCount }).from(posts).where(eq(posts.id, postId)).get();

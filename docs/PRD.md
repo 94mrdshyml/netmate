@@ -322,6 +322,15 @@ No typo tolerance, no trending tags in v1.
 
 `/notifications` (bell in the bottom bar, with unread badge). Types: **like, repost, follow, follow request, reply, quote, mention, invite used** (your link was used) and, for the admin only, **pending approval**. Never for your own actions. Newest first, paged (30). Likes and reposts of the same post within a page collapse ("Meera and 2 others liked your post"). Each row shows a snippet (up to 140 characters). Alerts from people you blocked, were blocked by, or muted are hidden. Opening the screen marks all read. A quote alert replaces a mention alert for the same person.
 
+**Built so far (session 24).** The kinds that exist in the app today: **like, follow, reply, invite used and pending approval**. Repost, follow request, quote and mention are allowed by the database already and arrive with their features. How it works:
+- An alert is written in the same `db.batch()` as the like, follow, reply or sign-up that causes it, and taken back in the batch that undoes it (unlike, unfollow). Approving a sign-up removes the admin's "pending approval" alert for that person; rejecting deletes the account, which removes it with it. A reply tells the author of the post it answers (not yourself). Invite used goes to the link's owner (the admin's link too); pending approval goes to the admin when a sign-up lands over the quota.
+- The database refuses an alert about your own action, an unknown kind, a post alert with no post (or a person alert with one), and the same alert twice (one partial unique index for alerts about a post, one for alerts about a person). Sending a like twice leaves one alert, and an old read alert does not come back as new.
+- Reading goes through `visiblePosts`: an alert about a deleted post is not shown or counted.
+- Likes of one post inside a page collapse into one line ("Meera and 2 others liked your post", up to three pictures). Each row can show a snippet (cut at 140 characters). Tapping a row opens the post, the reply, the person, or `/hq/approvals`.
+- `/notifications` shows the alerts, newest first, 30 per page ("Older alerts"). Opening it marks all read (done from the browser by a small server action, so a prefetch never does it). Unread rows have a brand tint.
+- The Alerts tab shows the unread count (capped "99+") and its name says it ("Alerts, 3 unread"). The bar is told the count when the page is drawn, asks again after each move to another screen, and every minute while the tab is visible. The count hides while you are on the Alerts screen.
+- Not yet: alerts hidden for blocked or muted people (those features do not exist), email for alerts.
+
 ### 8.8 Privacy and safety
 
 `Settings > Privacy`.
@@ -411,7 +420,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 ### 8.13 Design and experience
 
 - **Theme.** Follows the phone by default (or the instance default). A sun and moon button in the Home top bar flips light and dark, and Settings has a three-way Appearance choice (Match phone, Light, Dark). Both save the choice in a cookie that the server reads, so the right theme is painted on the first frame. Both themes are designed and checked, including with extreme brand colours.
-- **Layout.** Home has a top bar (your picture, which opens Settings; the instance mark; the theme button). Every other screen has a sticky header with a back arrow and its title. Bottom tabs (Home, Search, Alerts, Profile), round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected. Until Alerts exists, the bottom tabs are Home, Search, Profile and Settings.
+- **Layout.** Home has a top bar (your picture, which opens Settings; the instance mark; the theme button). Every other screen has a sticky header with a back arrow and its title. Bottom tabs (Home, Search, Alerts, Profile), round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected. Until the final bar ships, the bottom tabs are Home, Search, Alerts, Profile and Settings.
 - **Type.** The instance font. No emoji or em dashes in interface text.
 - **Icons.** Feather.
 - **No** shadows, gradients, glows or cards in the feed.
@@ -462,6 +471,7 @@ All data is on Cloudflare D1. Times are integer milliseconds UTC. Yes/no is 0/1.
 | `inv_` | invite link |
 | `invu_` | invite use |
 | `post_` | post or reply |
+| `ntf_` | notification (alert) |
 
 More prefixes are added as their tables are created (posts, invites, notifications and so on). Invite link codes are a separate, longer random value, not an id.
 
@@ -483,7 +493,7 @@ More prefixes are added as their tables are created (posts, invites, notificatio
 | `follows`, `follow_requests` | follower/followee (no self-follow); pending asks for private accounts |
 | `blocks`, `mutes` | who blocked or muted whom |
 | `likes`, `reposts`, `bookmarks` | one row per person per post |
-| `notifications` | recipient, actor, type, post, read time (no self-notify) |
+| `notifications` | id (`ntf_`), recipient, actor, type, post, created, read time. The database checks the kind, refuses an alert about yourself, requires a post for post alerts and none for person alerts, and allows one alert per actor, kind and post (two partial unique indexes) |
 | `rate_hits` | one row per allowed limited attempt: key (label plus a salted hash of the IP, email or link, never the raw value) and time in ms; plain row number as id because nothing refers to it; pruned daily |
 | `analytics_events` | append-only: owner, viewer, kind, post, day, time. Unique per person per thing per day for the six view/tap kinds; follows and unfollows never squashed |
 
