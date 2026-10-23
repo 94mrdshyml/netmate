@@ -5,6 +5,8 @@ interface CloudflareEnv {
   SETUP_TOKEN?: string;
   SETTINGS_ENCRYPTION_KEY?: string;
   BETTER_AUTH_URL?: string;
+  /** "test" only in tests: email goes to an in-memory outbox instead of Resend. */
+  ENV?: string;
 }
 
 declare namespace Cloudflare {
@@ -13,5 +15,6 @@ declare namespace Cloudflare {
     SETUP_TOKEN?: string;
     SETTINGS_ENCRYPTION_KEY?: string;
     BETTER_AUTH_URL?: string;
+    ENV?: string;
   }
 }

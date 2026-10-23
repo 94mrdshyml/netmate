@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/hq/branding", label: "Branding" },
   { href: "/hq/approvals", label: "Approvals" },
   { href: "/hq/invites", label: "Invites" },
+  { href: "/hq/email", label: "Email" },
 ] as const;
 
 export function HqNav({ pending }: { pending: number }) {

@@ -57,6 +57,13 @@
       "when": 1792762289055,
       "tag": "0007_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792764051500,
+      "tag": "0008_email_state",
+      "breakpoints": true
     }
   ]
 }

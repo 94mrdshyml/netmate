@@ -238,6 +238,24 @@ export const fonts = sqliteTable(
   ],
 );
 
+/**
+ * What /hq/email shows about sending: when the last email went out and the last error Resend gave.
+ * One row. Holds no address and no key; the error text has both scrubbed before it is stored.
+ */
+export const emailState = sqliteTable(
+  "email_state",
+  {
+    id: text("id").primaryKey().default("singleton"),
+    lastSentAt: integer("last_sent_at", { mode: "timestamp_ms" }),
+    lastError: text("last_error"),
+    lastErrorAt: integer("last_error_at", { mode: "timestamp_ms" }),
+  },
+  (t) => [
+    check("email_state_singleton", sql`${t.id} = 'singleton'`),
+    check("email_state_error_length", sql`${t.lastError} is null or length(${t.lastError}) <= 300`),
+  ],
+);
+
 /** The kinds of alert the app can show (docs/PRD.md section 8.7). Only some exist in the app so far. */
 export const NOTIFICATION_TYPES = [
   "like",

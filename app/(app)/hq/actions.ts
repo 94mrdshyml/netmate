@@ -4,6 +4,11 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/auth/admin";
 import { getDb } from "@/db";
+import { transportFor } from "@/email/transport";
+import { pngLogoUrl } from "@/email/template";
+import { removeEmailSettings, saveEmailSettings, sendTestEmail, type SaveEmailResult } from "@/server/email";
+import { limitTestEmail, tooManyMessage } from "@/server/rate-limit";
+import { getInstanceState } from "@/instance/request";
 import { saveBrandingForm, type BrandingResult } from "@/instance/branding";
 import { clearInstanceCache } from "@/instance/settings";
 import { isId } from "@/lib/ids";
@@ -65,5 +70,52 @@ export async function saveBrandingAction(input: unknown): Promise<BrandingResult
     clearInstanceCache();
     revalidatePath("/", "layout");
   }
+  return result;
+}
+
+/** Saves the Resend key (checked with a real call) and the sender address. The key is never sent back. */
+export async function saveEmailAction(input: unknown): Promise<SaveEmailResult> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await saveEmailSettings(getDb(env.DB), transportFor(env), env.SETTINGS_ENCRYPTION_KEY, input);
+  if (result.ok) revalidatePath("/hq", "layout");
+  return result;
+}
+
+/** Forgets the Resend key and sender. */
+export async function removeEmailAction(): Promise<{ ok: boolean }> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const ok = await removeEmailSettings(getDb(env.DB));
+  revalidatePath("/hq", "layout");
+  return { ok };
+}
+
+export type TestEmailResult = { ok: true } | { ok: false; message: string };
+
+/** Sends a test email to the admin's own address. Five an hour. */
+export async function sendTestEmailAction(): Promise<TestEmailResult> {
+  const admin = await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const db = getDb(env.DB);
+
+  const limited = await limitTestEmail(env.DB, env.AUTH_SECRET, admin.userId);
+  if (!limited.ok) return { ok: false, message: tooManyMessage(limited.retryAfterSeconds) };
+
+  const { settings } = await getInstanceState();
+  const result = await sendTestEmail(
+    db,
+    transportFor(env),
+    env.SETTINGS_ENCRYPTION_KEY,
+    {
+      name: settings.name,
+      primary: settings.primaryColor,
+      radius: settings.radius,
+      fontFamily: settings.fontFamily,
+      logoUrl: pngLogoUrl(env.BETTER_AUTH_URL, settings.logoKey),
+    },
+    admin.email,
+  );
+  revalidatePath("/hq/email");
   return result;
 }

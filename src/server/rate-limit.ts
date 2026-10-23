@@ -18,6 +18,7 @@ export const LIMITS = {
   likes: { name: "likes", max: 60, windowMs: MINUTE },
   follows: { name: "follows", max: 30, windowMs: 10 * MINUTE },
   uploads: { name: "uploads", max: 30, windowMs: 10 * MINUTE },
+  testEmail: { name: "email:test", max: 5, windowMs: 60 * MINUTE },
 } as const satisfies Record<string, Limit>;
 
 async function keyFor(limit: Limit, subject: string, salt: string): Promise<string> {
@@ -93,6 +94,9 @@ export const limitFollow = (db: D1Database, salt: string, userId: string, now?: 
 
 export const limitUpload = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.uploads, userId, salt, now);
+
+export const limitTestEmail = (db: D1Database, salt: string, userId: string, now?: number) =>
+  takeSlot(db, LIMITS.testEmail, userId, salt, now);
 
 /** The visitor's address as Cloudflare reports it. Used only as a hashed, expiring limit key. */
 export function clientIp(headers: Headers): string {

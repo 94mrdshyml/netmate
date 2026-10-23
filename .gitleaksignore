@@ -1,0 +1,5 @@
+# Made-up Resend keys in the first version of tests/integration/email.test.ts (PR 43).
+# They are test values, not secrets; later commits build them at run time. Reviewed by the owner.
+ccf055da0b3f04e9037904b75804077ae78d85f6:tests/integration/email.test.ts:generic-api-key:57
+ccf055da0b3f04e9037904b75804077ae78d85f6:tests/integration/email.test.ts:generic-api-key:75
+ccf055da0b3f04e9037904b75804077ae78d85f6:tests/integration/email.test.ts:generic-api-key:230
