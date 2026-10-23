@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getInstanceState } from "@/instance/request";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export default async function WaitingPage() {
           again later.
         </p>
       </div>
-      <a href="/sign-in">Go to sign in</a>
+      <Link href="/sign-in">Go to sign in</Link>
     </main>
   );
 }

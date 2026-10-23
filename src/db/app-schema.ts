@@ -3,7 +3,7 @@
 // times are integer milliseconds UTC, booleans are 0/1, enums are text with a CHECK.
 
 import { sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { user } from "./auth-schema";
 
 const nowMs = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
@@ -149,4 +149,46 @@ export const rateHits = sqliteTable(
     at: integer("at").notNull(),
   },
   (t) => [index("rate_hits_key_at_idx").on(t.key, t.at)],
+);
+
+/** A post, or a reply when `parentId` is set. Text only for now (docs/PRD.md section 8.2). */
+export const posts = sqliteTable(
+  "posts",
+  {
+    id: text("id").primaryKey(),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** The post this one replies to. Null for a top-level post. */
+    parentId: text("parent_id").references((): AnySQLiteColumn => posts.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    replyCount: integer("reply_count").notNull().default(0),
+    likeCount: integer("like_count").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+    /** Deleting hides the post everywhere but keeps the row. */
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+  },
+  (t) => [
+    check("posts_body_length", sql`length(${t.body}) between 1 and 280`),
+    check("posts_counts", sql`${t.replyCount} >= 0 and ${t.likeCount} >= 0`),
+    // The home feed: top-level posts, newest first.
+    index("posts_feed_idx").on(t.createdAt, t.id).where(sql`${t.parentId} is null and ${t.deletedAt} is null`),
+    index("posts_replies_idx").on(t.parentId, t.createdAt).where(sql`${t.parentId} is not null`),
+    index("posts_author_idx").on(t.authorId, t.createdAt),
+  ],
+);
+
+/** One row per person per post. Idempotent: liking twice leaves one row. */
+export const likes = sqliteTable(
+  "likes",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.postId] }), index("likes_post_idx").on(t.postId)],
 );

@@ -453,6 +453,9 @@ All data is on Cloudflare D1. Times are integer milliseconds UTC. Yes/no is 0/1.
 | `sess_` | session (Better Auth) |
 | `acc_` | sign-in account of a user (Better Auth) |
 | `ver_` | verification token (Better Auth) |
+| `inv_` | invite link |
+| `invu_` | invite use |
+| `post_` | post or reply |
 
 More prefixes are added as their tables are created (posts, invites, notifications and so on). Invite link codes are a separate, longer random value, not an id.
 

@@ -14,6 +14,8 @@ export const LIMITS = {
   signInEmail: { name: "signin:email", max: 10, windowMs: 10 * MINUTE },
   signUpIp: { name: "signup:ip", max: 10, windowMs: 10 * MINUTE },
   signUpLink: { name: "signup:link", max: 20, windowMs: 10 * MINUTE },
+  posts: { name: "posts", max: 10, windowMs: MINUTE },
+  likes: { name: "likes", max: 60, windowMs: MINUTE },
 } as const satisfies Record<string, Limit>;
 
 async function keyFor(limit: Limit, subject: string, salt: string): Promise<string> {
@@ -73,6 +75,16 @@ export const limitSignIn = (db: D1Database, salt: string, who: { ip: string; ema
 
 export const limitSignUp = (db: D1Database, salt: string, who: { ip: string; inviteLinkId: string }, now?: number) =>
   takeAll(db, [[LIMITS.signUpIp, who.ip], [LIMITS.signUpLink, who.inviteLinkId]], salt, now);
+
+/**
+ * Per-person limits. The PRD sends likes to the approximate Workers Rate Limiting binding; until
+ * that binding is set up they use the exact table too, which is correct, only heavier.
+ */
+export const limitPost = (db: D1Database, salt: string, userId: string, now?: number) =>
+  takeSlot(db, LIMITS.posts, userId, salt, now);
+
+export const limitLike = (db: D1Database, salt: string, userId: string, now?: number) =>
+  takeSlot(db, LIMITS.likes, userId, salt, now);
 
 /** The visitor's address as Cloudflare reports it. Used only as a hashed, expiring limit key. */
 export function clientIp(headers: Headers): string {
