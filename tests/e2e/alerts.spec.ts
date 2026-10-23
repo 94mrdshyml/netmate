@@ -14,6 +14,13 @@ const nav = (page: import("@playwright/test").Page) => page.getByRole("navigatio
 let postText = "";
 let postUrl = "";
 
+// Sign-ups are limited to 20 per invite link in 10 minutes and every spec shares the admin's link,
+// so this spec joins only twice. Alice stays signed in for the last test: nobody has acted on her.
+let alice: Awaited<ReturnType<typeof signUpMember>>;
+test.afterAll(async () => {
+  await alice?.context.close();
+});
+
 test("a new alert shows a count on the Alerts tab, and opening Alerts lists it and clears the count", async ({ browser, page }) => {
   // The admin writes a post.
   postText = unique();
@@ -26,7 +33,7 @@ test("a new alert shows a count on the Alerts tab, and opening Alerts lists it a
   postUrl = new URL(page.url()).pathname;
 
   // A new member (who joined with the admin's link) likes it, follows the admin, and replies.
-  const alice = await signUpMember(browser, "198.18.50.1", { first: "Alice", last: "Admirer" });
+  alice = await signUpMember(browser, "198.18.50.1", { first: "Alice", last: "Admirer" });
   await alice.page.goto(postUrl);
   await thePost(alice.page).getByRole("button", { name: /^Like, / }).click();
   await expect(thePost(alice.page).getByRole("button", { name: /^Unlike, / })).toBeEnabled();
@@ -37,7 +44,6 @@ test("a new alert shows a count on the Alerts tab, and opening Alerts lists it a
   await alice.page.getByPlaceholder("Write your reply").fill("Great post!");
   await alice.page.getByRole("button", { name: "Reply", exact: true }).click();
   await expect(alice.page.getByRole("region", { name: "Replies" })).toContainText("Great post!");
-  await alice.context.close();
 
   // The admin sees a count on the tab, with an accessible name that says so.
   await page.goto("/");
@@ -102,13 +108,12 @@ test("tapping an alert opens the post or the person", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Alice Admirer" })).toBeVisible();
 });
 
-test("a member with no alerts sees a friendly empty screen, and cannot see anyone else's alerts", async ({ browser }) => {
-  const carol = await signUpMember(browser, "198.18.50.3", { first: "Carol", last: "Quiet" });
-  await carol.page.goto("/notifications");
-  await expect(carol.page.getByText("No alerts yet.")).toBeVisible();
-  await expect(carol.page.getByText("Alice Admirer")).toHaveCount(0);
-  expect(await carol.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
-  await carol.context.close();
+test("a member nobody has acted on sees a friendly empty screen, and cannot see anyone else's alerts", async () => {
+  await alice.page.goto("/notifications");
+  await expect(alice.page.getByText("No alerts yet.")).toBeVisible();
+  await expect(alice.page.getByText("Alice Admirer")).toHaveCount(0);
+  await expect(alice.page.getByText("Bob Bystander")).toHaveCount(0);
+  expect(await alice.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
 });
 
 test("a signed-out visitor is sent to sign in", async ({ browser }) => {

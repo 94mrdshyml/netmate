@@ -9,6 +9,16 @@ test.describe.configure({ mode: "serial" });
 const word = () => `q${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36)}`;
 const adminName = `${E2E.admin.firstName} ${E2E.admin.lastName}`;
 
+// One new member does the posting and is also the person People finds. Sign-ups are limited to 20 per
+// invite link in 10 minutes and every spec shares the admin's link, so this spec joins only once.
+let zephyrine: Awaited<ReturnType<typeof signUpMember>>;
+test.beforeAll(async ({ browser }) => {
+  zephyrine = await signUpMember(browser, "198.18.40.1", { first: "Zephyrine", last: "Quillfeather" });
+});
+test.afterAll(async () => {
+  await zephyrine?.context.close();
+});
+
 test("the bottom bar opens Search, which suggests people while the box is empty", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Search" }).click();
@@ -25,8 +35,8 @@ test("the bottom bar opens Search, which suggests people while the box is empty"
 
 // These tests post as members of their own: posting is limited to 10 a minute per person, and the
 // admin's allowance is shared with every other spec.
-test("posts appear while I type, with no button pressed, and the clear button empties the box", async ({ browser }) => {
-  const { page, context } = await signUpMember(browser, "198.18.40.2");
+test("posts appear while I type, with no button pressed, and the clear button empties the box", async () => {
+  const { page } = zephyrine;
   const mine = word();
   const other = word();
   await page.goto("/compose");
@@ -66,11 +76,10 @@ test("posts appear while I type, with no button pressed, and the clear button em
   await expect(field).toHaveValue("");
   await expect(page.getByRole("heading", { name: "Suggested for you" })).toBeVisible();
   await expect(page).toHaveURL(/\/search$/);
-  await context.close();
 });
 
-test("Enter works, a deleted post disappears from results, and a missing word says so", async ({ browser }) => {
-  const { page, context } = await signUpMember(browser, "198.18.40.3");
+test("Enter works, a deleted post disappears from results, and a missing word says so", async () => {
+  const { page } = zephyrine;
   const mine = word();
   await page.goto("/compose");
   await page.getByLabel("Your post").fill(`Delete me ${mine}`);
@@ -88,11 +97,10 @@ test("Enter works, a deleted post disappears from results, and a missing word sa
   await expect(article).toHaveCount(0);
   await page.goto(`/search?q=${mine}`);
   await expect(page.getByText(/No posts found/)).toBeVisible();
-  await context.close();
 });
 
-test("People finds a member by name or @username, ranks them, and Follow works from the results", async ({ browser, page }) => {
-  const { context, username } = await signUpMember(browser, "198.18.40.1", { first: "Zephyrine", last: "Quillfeather" });
+test("People finds a member by name or @username, ranks them, and Follow works from the results", async ({ page }) => {
+  const { username } = zephyrine;
 
   await page.goto("/search");
   const field = page.getByRole("searchbox", { name: "Search posts and people" });
@@ -125,7 +133,6 @@ test("People finds a member by name or @username, ranks them, and Follow works f
   // Nobody by that name.
   await page.goto("/search?tab=people&q=qqqqnoonehere");
   await expect(page.getByText(/No one found/)).toBeVisible();
-  await context.close();
 });
 
 test("a signed-out visitor is sent to sign in", async ({ browser }) => {
