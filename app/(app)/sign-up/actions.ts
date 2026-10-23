@@ -8,7 +8,9 @@ import { signInMember } from "@/auth/sign-in";
 import { getDb } from "@/db";
 import { findActiveInvite } from "@/server/invites";
 import { clientIp, limitSignUp, tooManyMessage } from "@/server/rate-limit";
+import { mailContext } from "@/server/mail-context";
 import { signUpWithInvite, type SignUpFailure } from "@/server/sign-up";
+import { emailAdminOfPending } from "@/server/status-emails";
 
 export type SignUpActionResult = {
   ok: false;
@@ -42,7 +44,11 @@ export async function signUpAction(input: SignUpInput): Promise<SignUpActionResu
   const result = await signUpWithInvite(authEnv, input);
   if (!result.ok) return result;
 
-  if (result.status === "pending") redirect("/waiting");
+  if (result.status === "pending") {
+    // The admin hears about it. A failed email never changes the sign-up.
+    await emailAdminOfPending(getDb(env.DB), mailContext(env), result.userId);
+    redirect("/waiting");
+  }
 
   const signedIn = await signInMember(
     createNextAuth(authEnv),

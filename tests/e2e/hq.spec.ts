@@ -120,6 +120,98 @@ test("rejecting asks first, then deletes the account", async ({ page, browser })
   await guest.context.close();
 });
 
+// Sign-up status emails. These live here because this file's member already used up the automatic
+// approvals, so people joining through the link wait, and no extra sign-up goes through the admin's
+// link, which allows only 20 sign-ups per ten minutes across the whole run). The Worker runs with
+// ENV=test, so mail goes to an in-memory fake, never to Resend. The fake's outbox is not readable
+// from the browser, so these read what /hq/email records: when the last email went, and Resend's
+// own error if it was refused. What each email says is checked in tests/integration/status-emails.test.ts
+// and tests/email/messages.test.tsx. Each test leaves email not set up.
+const RESEND_KEY = "re_test_e2esecretkey123456";
+
+async function forgetEmail(page: Page) {
+  await page.goto("/hq/email");
+  const remove = page.getByRole("button", { name: "Remove email settings" });
+  if (await remove.count()) {
+    await remove.click();
+    await page.getByRole("button", { name: "Yes, remove" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Email is not set up." }).first()).toBeVisible();
+  }
+}
+
+async function setUpEmail(page: Page, from: string) {
+  await forgetEmail(page);
+  await page.getByLabel("Sender address").fill(from);
+  await page.getByLabel("Resend API key").fill(RESEND_KEY);
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
+}
+
+test("a waiting sign-up emails the admin, and approving or rejecting still works with email set up", async ({ page, browser }) => {
+  try {
+    await setUpEmail(page, "hello@example.org");
+    await expect(page.getByText("No email has been sent yet.")).toBeVisible();
+
+    const waiter = await joinThrough(browser, memberLink, "Mailwaiter");
+    await expect(waiter.page).toHaveURL(/\/waiting$/, { timeout: 20_000 });
+    await page.goto("/hq/email");
+    await expect(page.getByText(/Last email sent .* UTC\./)).toBeVisible();
+    await expect(page.getByText("No errors.")).toBeVisible();
+
+    await page.goto("/hq/approvals");
+    await page.getByRole("listitem").filter({ hasText: "Mailwaiter" }).getByRole("button", { name: "Approve Wanda Mailwaiter" }).click();
+    await expect(page.getByRole("listitem").filter({ hasText: "Mailwaiter" })).toHaveCount(0);
+    await waiter.context.close();
+
+    const turned = await joinThrough(browser, memberLink, "Mailturned");
+    await expect(turned.page).toHaveURL(/\/waiting$/, { timeout: 20_000 });
+    await page.goto("/hq/approvals");
+    const row = page.getByRole("listitem").filter({ hasText: "Mailturned" });
+    await row.getByRole("button", { name: "Reject", exact: true }).click();
+    await row.getByRole("button", { name: "Yes, reject" }).click();
+    await expect(page.getByRole("listitem").filter({ hasText: "Mailturned" })).toHaveCount(0);
+    await turned.context.close();
+
+    await page.goto("/hq/email");
+    await expect(page.getByText("No errors.")).toBeVisible();
+  } finally {
+    await forgetEmail(page);
+  }
+});
+
+test("when the email is refused, sign-up and approval still go through and /hq/email says why", async ({ page, browser }) => {
+  try {
+    // Saved fine, but the sender's domain is not verified, so every send is refused.
+    await setUpEmail(page, "hello@nowhere.invalid");
+    const refused = await joinThrough(browser, memberLink, "Mailrefused");
+    await expect(refused.page).toHaveURL(/\/waiting$/, { timeout: 20_000 });
+
+    await page.goto("/hq/approvals");
+    await page.getByRole("listitem").filter({ hasText: "Mailrefused" }).getByRole("button", { name: "Approve Wanda Mailrefused" }).click();
+    await expect(page.getByRole("listitem").filter({ hasText: "Mailrefused" })).toHaveCount(0);
+    await refused.context.close();
+
+    await page.goto("/hq/email");
+    await expect(page.getByTestId("last-error")).toContainText("not verified");
+  } finally {
+    await forgetEmail(page);
+  }
+});
+
+test("with email not set up, a waiting sign-up works as before", async ({ page, browser }) => {
+  await forgetEmail(page);
+  const quiet = await joinThrough(browser, memberLink, "Mailquiet");
+  await expect(quiet.page).toHaveURL(/\/waiting$/, { timeout: 20_000 });
+  await page.goto("/hq/approvals");
+  const row = page.getByRole("listitem").filter({ hasText: "Mailquiet" });
+  await expect(row).toBeVisible();
+  // Leave the queue empty for the next test.
+  await row.getByRole("button", { name: "Reject", exact: true }).click();
+  await row.getByRole("button", { name: "Yes, reject" }).click();
+  await expect(row).toHaveCount(0);
+  await quiet.context.close();
+});
+
 test("a new link replaces a leaked one at once", async ({ page, browser }) => {
   await page.goto("/hq/invites");
   const row = page.getByRole("listitem").filter({ hasText: memberName });
