@@ -1,0 +1,7 @@
+# 38. Post count on profiles (2026-10-23)
+- Branch / PR: feat/profile-post-count, PR below once opened. The owner asked for a posts counter next to Following and Followers on a profile (with "images and GIFs on quotes", which is its own PR, session 39).
+- Done: the profile's count row now reads "9 Posts  0 Following  0 Followers". The post count is plain text (not a link); the other two still open their lists.
+- How: `getProfile` counts the person's top-level posts that are not deleted (the Posts tab: replies and reposts are not counted, a quote is its own post) with one subquery next to the follower and following counts, so there is no stored counter and no migration. It returns `null` when their content is hidden from you (the same `personVisible` answer the page already uses for the lock), and the page then leaves the number out, so a private account does not show how active it is. The plain `span`s in the count row are now styled like the links (muted, 44px high).
+- Tests: `tests/integration/profile-posts.test.ts` (4: zero and counting; not replies, reposts or deleted posts; per person; hidden for a private account you do not follow and for a block, shown to a follower and to the owner), `tests/e2e/profile-posts.spec.ts` (1: the row has Posts first as plain text, then the two links, no overflow; it writes nothing so it runs anywhere in the suite).
+- Not done: counting replies (Twitter does; the Posts tab here does not); a stored counter (a count over the author index is enough at this size).
+- Next: images and GIFs on quotes (`feat/quote-media`).

@@ -1506,7 +1506,8 @@ a.alert-link:focus-visible {
   margin: 4px 0 0;
 }
 
-.counts a {
+.counts a,
+.counts span {
   display: inline-flex;
   align-items: center;
   gap: 4px;

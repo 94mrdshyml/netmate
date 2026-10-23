@@ -3,7 +3,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db";
-import { blocks, followRequests, follows, mutes, profiles, user } from "@/db/schema";
+import { blocks, followRequests, follows, mutes, posts, profiles, user } from "@/db/schema";
 import { LINK_MAX, normalizeLink } from "@/lib/link";
 import { normalizeUsername } from "@/lib/username";
 import { personVisible } from "@/server/visibility";
@@ -22,6 +22,12 @@ export type ProfileView = {
   joinedAt: number;
   followerCount: number;
   followingCount: number;
+  /**
+   * How many posts they have made: top-level posts that are not deleted, the ones on the Posts tab
+   * (replies are on their own tab and are not counted). Null when you may not see their content (a
+   * private account you do not follow, or a block), so the number does not give away how active it is.
+   */
+  postCount: number | null;
   iFollow: boolean;
   /** You asked to follow this private account and are waiting. */
   requested: boolean;
@@ -55,6 +61,7 @@ export async function getProfile(db: Db, viewerId: string, username: string): Pr
       joinedAt: profiles.createdAt,
       followerCount: sql<number>`(select count(*) from ${follows} where ${follows.followeeId} = ${profiles.userId})`,
       followingCount: sql<number>`(select count(*) from ${follows} where ${follows.followerId} = ${profiles.userId})`,
+      postCount: sql<number>`(select count(*) from ${posts} where ${posts.authorId} = ${profiles.userId} and ${posts.parentId} is null and ${posts.deletedAt} is null)`,
       iFollow: sql<number>`exists (select 1 from ${follows} as v where v.follower_id = ${viewerId} and v.followee_id = ${profiles.userId})`,
       requested: sql<number>`exists (select 1 from ${followRequests} as rq where rq.requester_id = ${viewerId} and rq.target_id = ${profiles.userId})`,
       isPrivate: profiles.isPrivate,
@@ -85,6 +92,7 @@ export async function getProfile(db: Db, viewerId: string, username: string): Pr
     joinedAt: row.joinedAt.getTime(),
     followerCount: row.followerCount,
     followingCount: row.followingCount,
+    postCount: row.canSeeContent ? row.postCount : null,
     iFollow: Boolean(row.iFollow),
     requested: Boolean(row.requested),
     isPrivate: row.isPrivate,
