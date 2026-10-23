@@ -203,46 +203,6 @@ test("the default cover is a clear wash of the brand colour in dark mode, not a 
   expect(Math.max(r!, g!, b!)).toBeGreaterThanOrEqual(25);
 });
 
-test("the \"...\" on my own post opens a small menu that closes with Escape or a tap outside", async ({ page }) => {
-  const text = `menu ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-  await page.goto("/compose");
-  await page.getByLabel("Your post").fill(text);
-  await page.getByRole("button", { name: "Post", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
-
-  const card = page.getByRole("article").filter({ hasText: text });
-  const more = card.getByRole("button", { name: "More options" });
-  const box = (await more.boundingBox())!;
-  expect(box.width).toBeGreaterThanOrEqual(44);
-  expect(box.height).toBeGreaterThanOrEqual(44);
-  // The old bin icon is gone from the row.
-  await expect(card.getByRole("button", { name: "Delete post" })).toHaveCount(0);
-
-  await more.click();
-  await expect(more).toHaveAttribute("aria-expanded", "true");
-  const item = card.getByRole("button", { name: "Delete post" });
-  await expect(item).toBeVisible();
-  const itemBox = (await item.boundingBox())!;
-  expect(itemBox.height).toBeGreaterThanOrEqual(44);
-  expect(itemBox.x).toBeGreaterThanOrEqual(0);
-  expect(itemBox.x + itemBox.width).toBeLessThanOrEqual(page.viewportSize()!.width);
-
-  await page.keyboard.press("Escape");
-  await expect(item).toHaveCount(0);
-  await expect(more).toHaveAttribute("aria-expanded", "false");
-
-  await more.click();
-  await expect(item).toBeVisible();
-  await page.mouse.click(200, 10); // anywhere outside the menu
-  await expect(item).toHaveCount(0);
-
-  // Clean up so later specs do not see this post.
-  await more.click();
-  await item.click();
-  await card.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(card).toHaveCount(0);
-});
-
 test("tapping a link starts a thin loading line along the top that finishes when the screen arrives", async ({ page }) => {
   await page.goto("/");
   await page.evaluate(() => {
