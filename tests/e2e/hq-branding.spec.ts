@@ -9,7 +9,7 @@ const restore = async (page: import("@playwright/test").Page) => {
   await page.goto("/hq/branding");
   await page.getByLabel("Name", { exact: true }).fill(E2E.instance.name);
   await page.locator("#primary").fill(E2E.instance.primary);
-  await page.getByRole("radio", { name: "Medium" }).check();
+  await page.getByRole("radio", { name: "Round" }).check();
   await page.getByLabel("Font").selectOption("Inter");
   await page.getByRole("radio", { name: "initials" }).check();
   await page.getByRole("button", { name: "Save" }).click();
@@ -81,7 +81,9 @@ test("saving changes the name, colour and corners for everyone at once, and putt
     await restore(page);
   }
 
-  await page.goto("/hq");
+  // Back to what setup chose (theme.spec reads it): name, colour and the Round corners.
+  await page.goto("/hq/branding");
+  await expect(page.getByRole("radio", { name: "Round" })).toBeChecked();
   await expect(page.getByText(`${E2E.instance.name} admin`)).toBeVisible();
 });
 
