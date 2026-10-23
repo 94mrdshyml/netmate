@@ -1618,6 +1618,10 @@ a.alert-link:focus-visible {
   transform: translate(-50%, -50%) scale(0.9);
 }
 
+.edit-notes p {
+  margin: 8px 0 0;
+}
+
 .edit-fields {
   display: flex;
   flex-direction: column;

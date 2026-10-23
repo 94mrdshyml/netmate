@@ -189,9 +189,8 @@ export function EditProfileForm({
           ) : null}
         </div>
       </div>
-      <div className="edit-gutter">{pictureNote("banner")}</div>
 
-      <div className="edit-gutter edit-avatar-row">
+      <div className="edit-avatar-row">
         <div className="edit-avatar">
           <Avatar userId={userId} avatarKey={avatarKey} size={88} />
           <label className="pic-btn pic-btn-avatar" title="Change profile picture">
@@ -205,9 +204,12 @@ export function EditProfileForm({
           </button>
         ) : null}
       </div>
-      <div className="edit-gutter">{pictureNote("avatar")}</div>
+      <div className="edit-notes">
+        {pictureNote("avatar")}
+        {pictureNote("banner")}
+      </div>
 
-      <div className="edit-gutter edit-fields">
+      <div className="edit-fields">
         <div className="tfield-wrap">
           <div className="tfield tfield-readonly">
             <div className="tfield-top">
