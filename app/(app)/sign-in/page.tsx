@@ -14,7 +14,7 @@ export default async function SignInPage() {
 
   return (
     <main className="column stack auth">
-      <BrandMark name={settings.name} size="lg" />
+      <BrandMark name={settings.name} logoKey={settings.logoKey} size="lg" />
       <div>
         <h1>Sign in</h1>
         <p className="muted">Welcome back to {settings.name}.</p>

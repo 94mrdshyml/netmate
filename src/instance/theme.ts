@@ -129,7 +129,7 @@ function modeCss(t: ModeTokens): string {
  * Builds the stylesheet text for the page head. Light is the base; dark applies when the
  * phone prefers it (unless the member forced light) or when the member forced dark.
  */
-export function buildThemeCss(settings: ThemeSettings): { css: string; adjusted: DerivedTheme["adjusted"] } {
+export function buildThemeCss(settings: ThemeSettings, fontFaces: string = ""): { css: string; adjusted: DerivedTheme["adjusted"] } {
   if (!Object.hasOwn(RADII, settings.radius)) {
     throw new RangeError(`Unknown radius: ${JSON.stringify(settings.radius)}`);
   }
@@ -143,6 +143,7 @@ export function buildThemeCss(settings: ThemeSettings): { css: string; adjusted:
   const dark = modeCss(theme.dark);
 
   const css =
+    fontFaces +
     `:root{${shared};${light};color-scheme:light dark}` +
     `@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${dark}}}` +
     `:root[data-theme="dark"]{${dark}}`;

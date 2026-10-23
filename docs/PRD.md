@@ -104,11 +104,11 @@ All values live in instance settings, are first chosen in `/setup`, edited in `/
 | Setting | Options and rules |
 |---|---|
 | **Name** | 1 to 30 characters. Shown in the top bar, page titles, emails, share text |
-| **Logo** | PNG or SVG, up to 1 MB. Emails use a PNG, so an SVG upload also needs a PNG, otherwise email shows the name as text. SVG is sanitised or rasterised so it cannot carry script |
-| **Favicon** | PNG (at least 512px square) or SVG. Browser tab and home-screen icon |
+| **Logo** | PNG or SVG, up to 1 MB. Emails use a PNG, so an SVG upload also needs a PNG, otherwise email shows the name as text. An SVG is read as text and **refused** (not cleaned) if it has a script, event handler, link, embedded page or picture, style block or entity, and is always served with a locked-down policy and shown only as a picture. Admin only; checked again when attached. The PNG for email arrives with email (`/hq/email`) |
+| **Favicon** | PNG (at least 512px, square) or SVG, up to 1 MB. Browser tab and home-screen icon. Until one is uploaded the tab icon is drawn from the name's first letter and the brand colour (`/brand-icon`) |
 | **Primary colour** | any hex colour. See "Colour derivation" below |
 | **Corner radius** | `zero`, `sm`, `md`, `lg` = 0, 4, 8, 16 px. Applies to buttons and form fields. Avatars stay round; post media keeps its own fixed radius |
-| **Font** | any open-licence (OFL) family from Google Fonts, chosen from a searchable list. The font file is fetched once at save time and **stored and served from our own bucket**, so readers never contact Google |
+| **Font** | any open-licence (OFL) family from Google Fonts, chosen from a list (short for now). The Worker fetches the latin and latin-ext files for weights 400, 500, 600 and 700 once, when the font is saved, and **stores and serves them from our own bucket**, so readers never contact Google. Only the listed families, only files from Google's font host, woff2 only, 600 KB at most each. If the download fails, everything else still saves with a warning, the page uses a fallback font, and saving again retries |
 | **Default avatar style** | one of the DiceBear styles whose artwork is CC0 or MIT: Initials, Thumbs, Shapes, Identicon, Rings, Glass, Pixel art, Notionists (neutral). Generated inside the app, so it makes no outside request, and seeded from the member's username (unique and never changed, so it is stable and no two people share a picture). The Initials style draws letters, so its letters come from the name and its colour from the username. An unknown stored style falls back to Initials. Styles with a CC BY or custom licence are left out on purpose (no attribution duty) |
 | **Theme default** | dark, light or follow the phone. Members can still override with a toggle (a cookie) |
 | **Invite quota** | number of auto-approved sign-ups per member link. Default 5 |
@@ -434,12 +434,12 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/analytics` (`?range=28`) | Your analytics | mobile |
 | `/settings` and `/profile`, `/account`, `/invite`, `/privacy`, `/privacy/requests`, `/privacy/blocked`, `/privacy/muted` | Settings | mobile |
 | `/hq` | Admin overview (members, waiting for approval). Reached from Settings, admin only | **wide** |
-| `/hq/branding` | Name, colour, radius, font, avatar style, live preview (logo, favicon and font hosting come in a later change) | **wide** |
+| `/hq/branding` | Name, logo, favicon, colour, radius, font (downloaded and kept on our storage), avatar style, live preview | **wide** |
 | `/hq/approvals` | Pending sign-ups | **wide** |
 | `/hq/invites` | Admin link, quota, member links with usage, replace a link | **wide** |
 | `/hq/email` | Resend key, sender, test email, status | **wide** |
 | `/api/auth/*`, `/api/me`, `/api/upload` | Auth, session probe, upload | n/a |
-| `/avatar/[userId]`, `/media/[...key]` | The drawn default picture; stored pictures from R2 (avatars, banners, posts only; random names, cached for ever). The media subdomain replaces `/media` later | n/a |
+| `/avatar/[userId]`, `/media/[...key]` | The drawn default picture; stored files from R2 (avatars, banners, posts, the instance logo and favicon, hosted fonts; each only as the type it was stored with; random names, cached for ever). The media subdomain replaces `/media` later | n/a |
 
 `/hq` is admin-only; anyone else gets 404.
 
@@ -466,7 +466,7 @@ More prefixes are added as their tables are created (posts, invites, notificatio
 | Auth tables (Better Auth) | users, accounts (password hash), sessions, verifications |
 | `instance` | one row, **present only once setup has finished** (no row means not configured; the fixed primary key `singleton` makes setup one-time): name, logo key, favicon key, primary colour, radius, font family, avatar style, theme default, invite quota, sign-up policy, feature flags (GIFs, places, link previews), created and updated time. The database itself checks the name length, hex colour, radius, theme default and quota |
 | `instance_secrets` | encrypted Resend key, Resend sender address and Klipy key, one row per name, stored as `v1:<nonce>:<ciphertext>` (AES-256-GCM, key derived from `SETTINGS_ENCRYPTION_KEY`, the name bound into the ciphertext). Separate from `instance` so theme code never reads them |
-| `fonts` | cached font files for the chosen family: storage key, weight, style |
+| `fonts` | hosted font files: family, weight, style, script subset, unicode range, storage key (a variable font may share one file between rows) |
 | `profiles` | one per user: username (unique, lower case), first and last name, bio, link, location, private flag, avatar and banner keys, `role` (admin or member), `status` (active or pending), `invited_by`, `email_verified_at`, created time |. The database enforces the username rules (3 to 15 characters of a-z, 0-9, underscore), name and bio lengths, role and status values, and **exactly one admin** (a partial unique index). If the inviter is deleted, `invited_by` becomes empty
 | `invite_links` | id (`inv_`), member id, long random code (not an id), uses count, created, revoked. At most one active (not revoked) link per member |
 | `invite_uses` | id (`invu_`), invite link, new user (one use per person), time, outcome (`approved` or `pending`) |

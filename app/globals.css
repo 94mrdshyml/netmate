@@ -152,9 +152,22 @@ p {
   line-height: 1;
 }
 
+.brand-logo {
+  flex: none;
+  height: 28px;
+  width: auto;
+  max-width: 120px;
+  object-fit: contain;
+}
+
 .brand-lg {
   gap: 12px;
   font-size: 1.25rem;
+}
+
+.brand-lg .brand-logo {
+  height: 40px;
+  max-width: 160px;
 }
 
 .brand-lg .brand-chip {
@@ -1434,4 +1447,14 @@ legend.label {
 .avatar-choice:has(input:focus-visible) {
   outline: 2px solid var(--brand-text);
   outline-offset: 2px;
+}
+
+.brand-file-preview {
+  flex: none;
+  max-width: 96px;
+  max-height: 48px;
+  object-fit: contain;
+  border: 1px solid var(--line-input);
+  border-radius: var(--radius);
+  padding: 4px;
 }

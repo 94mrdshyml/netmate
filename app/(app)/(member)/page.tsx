@@ -25,7 +25,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
 
   return (
     <main className="column">
-      <TopBar instanceName={settings.name} username={member.username} userId={member.userId} avatarKey={member.avatarKey} />
+      <TopBar instanceName={settings.name} logoKey={settings.logoKey} username={member.username} userId={member.userId} avatarKey={member.avatarKey} />
       <h1 className="sr-only">{settings.name}</h1>
 
       {/* "For you" is the latest posts from everyone until the ranked feed arrives. */}

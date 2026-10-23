@@ -30,6 +30,16 @@ export function newMediaKey(kind: Exclude<MediaKind, "instance" | "font">, owner
   return `${MEDIA_PREFIXES[kind]}/${ownerId}/${randomId(24)}.${ext}`;
 }
 
+/** The instance logo or favicon: `instance/<random>.<ext>`. Fresh name each time, so a swap is never stale. */
+export function newInstanceKey(ext: "png" | "svg"): string {
+  return `${MEDIA_PREFIXES.instance}/${randomId(24)}.${ext}`;
+}
+
+/** One hosted font file: `fonts/<family slug>/<random>.woff2`. */
+export function newFontKey(slug: string): string {
+  return `${MEDIA_PREFIXES.font}/${slug}/${randomId(24)}.woff2`;
+}
+
 /** Which kind of file a stored key belongs to, or null if it is not one of ours. */
 export function mediaKindOf(key: string): MediaKind | null {
   const found = (Object.entries(MEDIA_PREFIXES) as [MediaKind, string][]).find(([, p]) => key.startsWith(`${p}/`) && key.length > p.length + 1);

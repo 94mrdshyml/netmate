@@ -4,7 +4,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/auth/admin";
 import { getDb } from "@/db";
-import { saveBranding, type BrandingResult } from "@/instance/branding";
+import { saveBrandingForm, type BrandingResult } from "@/instance/branding";
 import { clearInstanceCache } from "@/instance/settings";
 import { isId } from "@/lib/ids";
 import { approvePending, regenerateInvite, rejectPending, setInviteQuota } from "@/server/admin";
@@ -60,7 +60,7 @@ export async function saveQuotaAction(input: unknown): Promise<QuotaResult> {
 export async function saveBrandingAction(input: unknown): Promise<BrandingResult> {
   await requireAdmin();
   const { env } = await getCloudflareContext({ async: true });
-  const result = await saveBranding(getDb(env.DB), input);
+  const result = await saveBrandingForm(getDb(env.DB), env.MEDIA, input);
   if (result.ok) {
     clearInstanceCache();
     revalidatePath("/", "layout");

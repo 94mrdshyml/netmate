@@ -7,17 +7,51 @@ import { parseHex } from "@/lib/color";
 import { RADII, deriveTheme, type DerivedTheme } from "@/instance/theme";
 import { saveBrandingAction } from "../actions";
 
-type Values = { name: string; primary: string; radius: (typeof RADIUS_OPTIONS)[number]; fontFamily: string; avatarStyle: string };
+type Values = { name: string; primary: string; radius: (typeof RADIUS_OPTIONS)[number]; fontFamily: string; avatarStyle: string; logoKey: string | null; faviconKey: string | null };
 
 const CORNER_LABELS = { zero: "Square", sm: "Small", md: "Medium", lg: "Round" } as const;
 
-export function BrandingForm({ initial, avatarSamples }: { initial: Values; avatarSamples: Record<string, string> }) {
+const FILE_KINDS = {
+  logo: { key: "logoKey", label: "Logo", hint: "PNG or SVG, up to 1 MB. Shown beside the name." },
+  favicon: { key: "faviconKey", label: "Favicon", hint: "Square PNG, at least 512 pixels wide, or SVG, up to 1 MB. Shown in the browser tab." },
+} as const;
+type FileKind = keyof typeof FILE_KINDS;
+
+export function BrandingForm({
+  initial,
+  avatarSamples,
+  fontHosted,
+}: {
+  initial: Values;
+  avatarSamples: Record<string, string>;
+  fontHosted: boolean;
+}) {
   const router = useRouter();
   const [values, setValues] = useState<Values>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [note, setNote] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [pending, start] = useTransition();
+  const [uploading, setUploading] = useState<FileKind | null>(null);
   const set = <K extends keyof Values>(key: K, value: Values[K]) => setValues((v) => ({ ...v, [key]: value }));
+
+  async function upload(kind: FileKind, file: File | undefined) {
+    if (!file) return;
+    setErrors((e) => ({ ...e, [FILE_KINDS[kind].key]: "" }));
+    setUploading(kind);
+    try {
+      const body = new FormData();
+      body.set("kind", kind);
+      body.set("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body });
+      const data = (await res.json().catch(() => ({}))) as { key?: string; message?: string };
+      if (res.ok && data.key) set(FILE_KINDS[kind].key, data.key);
+      else setErrors((e) => ({ ...e, [FILE_KINDS[kind].key]: data.message ?? "The file could not be saved. Try again." }));
+    } catch {
+      setErrors((e) => ({ ...e, [FILE_KINDS[kind].key]: "The file could not be sent. Check your connection and try again." }));
+    } finally {
+      setUploading(null);
+    }
+  }
 
   // Keep the last good colour while someone is part-way through typing a hex value.
   const valid = parseHex(values.primary.trim()) !== null;
@@ -36,7 +70,7 @@ export function BrandingForm({ initial, avatarSamples }: { initial: Values; avat
         start(async () => {
           const result = await saveBrandingAction(values);
           if (result.ok) {
-            setNote({ kind: "ok", text: "Saved." });
+            setNote({ kind: "ok", text: result.warning ? `Saved. ${result.warning}` : "Saved." });
             router.refresh();
           } else {
             setErrors(result.fieldErrors);
@@ -90,6 +124,42 @@ export function BrandingForm({ initial, avatarSamples }: { initial: Values; avat
         </p>
       </div>
 
+      {(Object.keys(FILE_KINDS) as FileKind[]).map((kind) => {
+        const { key, label, hint } = FILE_KINDS[kind];
+        const stored = values[key];
+        return (
+          <div className="field" key={kind}>
+            <label htmlFor={`${kind}-file`}>{label}</label>
+            <div className="picture-row">
+              {stored ? (
+                // eslint-disable-next-line @next/next/no-img-element -- our own stored file
+                <img className="brand-file-preview" src={`/media/${stored}`} alt="" />
+              ) : null}
+              <input
+                id={`${kind}-file`}
+                className="file-input"
+                type="file"
+                accept="image/png,image/svg+xml"
+                disabled={uploading !== null}
+                aria-describedby={`${kind}-note`}
+                onChange={(e) => {
+                  void upload(kind, e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+              {stored ? (
+                <button type="button" className="btn btn-ghost" onClick={() => set(key, null)}>
+                  Remove
+                </button>
+              ) : null}
+            </div>
+            <p id={`${kind}-note`} className={errors[key] ? "error" : "hint"} role={errors[key] ? "alert" : undefined}>
+              {uploading === kind ? "Uploading" : errors[key] || `${hint} Applied when you save.`}
+            </p>
+          </div>
+        );
+      })}
+
       <fieldset className="choices" aria-label="Corner style">
         <legend className="label" style={{ gridColumn: "1 / -1" }}>
           Corner style
@@ -111,7 +181,13 @@ export function BrandingForm({ initial, avatarSamples }: { initial: Values; avat
             </option>
           ))}
         </select>
-        {errors.fontFamily ? <p className="error">{errors.fontFamily}</p> : null}
+        {errors.fontFamily ? (
+          <p className="error">{errors.fontFamily}</p>
+        ) : (
+          <p className="hint">
+            {fontHosted ? "Kept on your own storage, so readers never contact another site." : "Not downloaded yet. Saving downloads it once and keeps it on your own storage."}
+          </p>
+        )}
       </div>
 
       <fieldset className="avatar-choices" aria-label="Default avatar style">

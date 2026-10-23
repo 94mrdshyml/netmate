@@ -1,6 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getMember } from "@/auth/session";
 import { MAX_BYTES } from "@/storage/images";
+import { uploadBrandFile } from "@/storage/brand-files";
 import { uploadPicture } from "@/storage/upload";
 import { limitUpload, tooManyMessage } from "@/server/rate-limit";
 
@@ -32,6 +33,16 @@ export async function POST(request: Request) {
   }
 
   const kind = form.get("kind");
+
+  // The logo and favicon belong to the instance: only the admin may upload them, and anyone else
+  // gets the same plain not-found as the admin panel.
+  if (kind === "logo" || kind === "favicon") {
+    if (member.role !== "admin") return json({ message: "Not found." }, 404);
+    const brand = await uploadBrandFile(env.MEDIA, kind, form.get("file"));
+    if (!brand.ok) return json({ message: brand.message }, brand.code === "failed" ? 500 : 400);
+    return json({ key: brand.key });
+  }
+
   if (kind !== "avatar" && kind !== "banner") return json({ message: "Unknown picture type." }, 400);
 
   const result = await uploadPicture(env.MEDIA, member.userId, kind, form.get("file"));

@@ -213,3 +213,27 @@ export const follows = sqliteTable(
     index("follows_follower_idx").on(t.followerId, t.createdAt, t.followeeId),
   ],
 );
+
+/**
+ * Hosted font files for the chosen family (docs/PRD.md section 5). One row per weight, style and
+ * script subset; two rows may share a file when the font is a variable font. The file lives in R2.
+ */
+export const fonts = sqliteTable(
+  "fonts",
+  {
+    family: text("family").notNull(),
+    weight: integer("weight").notNull(),
+    style: text("style").notNull(),
+    subset: text("subset").notNull(),
+    /** The CSS unicode-range for this subset, so a browser downloads only the files it needs. */
+    unicodeRange: text("unicode_range").notNull(),
+    storageKey: text("storage_key").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [
+    primaryKey({ columns: [t.family, t.weight, t.style, t.subset] }),
+    check("fonts_weight", sql`${t.weight} between 100 and 900`),
+    check("fonts_style", sql`${t.style} in ('normal', 'italic')`),
+    check("fonts_subset", sql`${t.subset} in ('latin', 'latin-ext')`),
+  ],
+);
