@@ -1,14 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { THEME_COOKIE, type ThemeChoice } from "@/lib/theme-choice";
 import { Icon } from "./icon";
 
-/** Applies a theme at once and remembers it in a cookie, so the server can paint it next time. */
-function applyTheme(choice: ThemeChoice) {
-  const root = document.documentElement;
-  if (choice === "system") root.removeAttribute("data-theme");
-  else root.setAttribute("data-theme", choice);
+/** Applies light or dark at once and remembers it in a cookie, so the server can paint it next time. */
+function applyTheme(choice: Exclude<ThemeChoice, "system">) {
+  document.documentElement.setAttribute("data-theme", choice);
   try {
     document.cookie = `${THEME_COOKIE}=${choice}; path=/; max-age=31536000; samesite=lax`;
   } catch {
@@ -39,41 +36,5 @@ export function ThemeToggle() {
         <Icon name="sun" size={22} />
       </span>
     </button>
-  );
-}
-
-const CHOICES: { value: ThemeChoice; label: string; icon: "monitor" | "sun" | "moon" }[] = [
-  { value: "system", label: "Match phone", icon: "monitor" },
-  { value: "light", label: "Light", icon: "sun" },
-  { value: "dark", label: "Dark", icon: "moon" },
-];
-
-/** The three-way choice in Settings. */
-export function ThemeChoicePicker({ initial }: { initial: ThemeChoice }) {
-  const [choice, setChoice] = useState<ThemeChoice>(initial);
-  return (
-    <fieldset className="segmented">
-      <legend>Appearance</legend>
-      <div className="segmented-row">
-        {CHOICES.map((c) => (
-          <label key={c.value} className="segment">
-            <input
-              type="radio"
-              name="appearance"
-              value={c.value}
-              checked={choice === c.value}
-              onChange={() => {
-                setChoice(c.value);
-                applyTheme(c.value);
-              }}
-            />
-            <span>
-              <Icon name={c.icon} size={18} />
-              {c.label}
-            </span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
   );
 }

@@ -34,7 +34,7 @@ test("the bottom bar takes me Home, to Search, to Alerts and to my profile, and 
   await expect(page).toHaveURL(new RegExp(`/${E2E.admin.username}$`));
   await expect(nav.getByRole("link", { name: "Profile" })).toHaveAttribute("aria-current", "page");
 
-  // Settings is in the account menu (opened from your picture), not in the bar.
+  // Settings opens from your picture in the corner, not from the bar.
   await expect(nav.getByRole("link")).toHaveCount(4);
   await expect(nav.getByRole("link", { name: "Settings" })).toHaveCount(0);
 

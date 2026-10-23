@@ -41,17 +41,15 @@ test("content stays in one phone-width column", async ({ page }) => {
 
 const themeButton = (page: import("@playwright/test").Page) => page.getByRole("button", { name: "Switch between light and dark" });
 
-test("the top bar shows the instance mark, my account button and the theme button", async ({ page }) => {
+test("the top bar shows the instance mark, my picture (a link to Settings) and the theme button", async ({ page }) => {
   await page.goto("/");
   const bar = page.locator("header.topbar");
   await expect(bar).toContainText(E2E.instance.name);
-  await expect(bar.getByRole("button", { name: `Account, @${E2E.admin.username}` })).toBeVisible();
+  await expect(bar.getByRole("link", { name: `Settings, signed in as @${E2E.admin.username}` })).toHaveAttribute("href", "/settings");
   await expect(themeButton(page)).toBeVisible();
 
-  // Both buttons are easy to hit and the page never scrolls sideways.
-  const buttons = await bar.getByRole("button").all();
-  expect(buttons).toHaveLength(2);
-  for (const control of buttons) {
+  // Both are easy to hit and the page never scrolls sideways.
+  for (const control of [bar.getByRole("link"), bar.getByRole("button")]) {
     const box = (await control.boundingBox())!;
     expect(box.width).toBeGreaterThanOrEqual(44);
     expect(box.height).toBeGreaterThanOrEqual(44);
@@ -76,18 +74,19 @@ test("the theme button switches light and dark, and the server remembers the cho
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });
 
-test("Settings lets me pick match phone, light or dark", async ({ page }) => {
+test("Settings has a Dark or light theme row that switches the theme and remembers it", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/settings");
-  await expect(page.getByRole("radio", { name: "Match phone" })).toBeChecked();
+  await expect(page.locator("html")).not.toHaveAttribute("data-theme", /.+/);
 
-  await page.getByRole("radio", { name: "Dark" }).check();
+  const toggle = page.getByRole("list", { name: "Settings" }).getByRole("button", { name: "Switch between light and dark" });
+  await toggle.click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.reload();
-  await expect(page.getByRole("radio", { name: "Dark" })).toBeChecked();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
-  await page.getByRole("radio", { name: "Match phone" }).check();
-  await expect(page.locator("html")).not.toHaveAttribute("data-theme", /.+/);
+  await toggle.click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.reload();
-  await expect(page.getByRole("radio", { name: "Match phone" })).toBeChecked();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });

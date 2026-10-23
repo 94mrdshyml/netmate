@@ -1,62 +1,89 @@
 import { expect, test, type Page } from "@playwright/test";
 import { E2E } from "./constants";
 
-const accountButton = (page: Page) => page.getByRole("button", { name: `Account, @${E2E.admin.username}` });
-const menu = (page: Page) => page.getByRole("dialog", { name: "Account menu" });
+const accountLink = (page: Page) => page.getByRole("link", { name: `Settings, signed in as @${E2E.admin.username}` });
+const nav = (page: Page) => page.getByRole("navigation", { name: "Main" });
 
-test("my picture opens the account menu on Home, Search and Alerts", async ({ page }) => {
+test("my picture opens Settings from Home, Search and Alerts", async ({ page }) => {
   for (const path of ["/", "/search", "/notifications"]) {
     await page.goto(path);
-    await expect(accountButton(page)).toBeVisible();
-    await expect(menu(page)).toBeHidden();
-    await accountButton(page).click();
-    await expect(menu(page)).toBeVisible();
-    await expect(accountButton(page)).toHaveAttribute("aria-expanded", "true");
-    await page.keyboard.press("Escape");
-    await expect(menu(page)).toBeHidden();
-    await expect(accountButton(page)).toHaveAttribute("aria-expanded", "false");
+    await expect(accountLink(page)).toHaveAttribute("href", "/settings");
+    const box = (await accountLink(page).boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
   }
+  await page.goto("/");
+  await accountLink(page).click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
 });
 
-test("the menu lists Profile, Invite people, Settings, Admin panel and Log out, each easy to tap", async ({ page }) => {
-  await page.goto("/");
-  await accountButton(page).click();
-  const sheet = menu(page);
-  await expect(sheet).toContainText(`${E2E.admin.firstName} ${E2E.admin.lastName}`);
-  await expect(sheet).toContainText(`@${E2E.admin.username}`);
+test("Settings is a plain list: edit profile, invites, admin panel, theme and log out, each with a short line under it", async ({ page }) => {
+  await page.goto("/settings");
+  const list = page.getByRole("list", { name: "Settings" });
 
-  await expect(sheet.getByRole("link", { name: "Profile" })).toHaveAttribute("href", `/${E2E.admin.username}`);
-  await expect(sheet.getByRole("link", { name: "Invite people" })).toHaveAttribute("href", "/invite");
-  await expect(sheet.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
-  await expect(sheet.getByRole("link", { name: "Admin panel" })).toHaveAttribute("href", "/hq");
-  await expect(sheet.getByRole("button", { name: "Log out" })).toBeVisible();
+  await expect(list.getByRole("link", { name: /^Edit profile/ })).toHaveAttribute("href", "/profile");
+  await expect(list.getByRole("link", { name: /^Edit profile/ })).toContainText("Name, bio and photos");
+  await expect(list.getByRole("link", { name: /^Invite people/ })).toHaveAttribute("href", "/invite");
+  await expect(list.getByRole("link", { name: /^Admin panel/ })).toHaveAttribute("href", "/hq");
+  await expect(list).toContainText("Dark or light theme");
+  await expect(list.getByRole("button", { name: "Switch between light and dark" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Log out" })).toBeVisible();
 
-  for (const control of [...(await sheet.getByRole("link").all()), sheet.getByRole("button", { name: "Log out" })]) {
+  // Every row is easy to hit, the title is centred, and nothing scrolls sideways.
+  for (const control of [...(await list.getByRole("link").all()), list.getByRole("button"), page.getByRole("button", { name: "Log out" })]) {
     const box = (await control.boundingBox())!;
     expect(box.height).toBeGreaterThanOrEqual(44);
   }
-  // The sheet stays inside the phone screen.
-  const box = (await sheet.boundingBox())!;
-  expect(box.x).toBeGreaterThanOrEqual(0);
-  expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
-});
+  const title = (await page.getByRole("heading", { name: "Settings" }).boundingBox())!;
+  const mid = title.x + title.width / 2;
+  expect(Math.abs(mid - page.viewportSize()!.width / 2)).toBeLessThan(8);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
 
-test("Settings opens from the menu and closes it; tapping the dimmed page closes it too", async ({ page }) => {
-  await page.goto("/");
-  await accountButton(page).click();
-  await menu(page).getByRole("link", { name: "Settings" }).click();
-  await expect(page).toHaveURL(/\/settings$/);
-  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
   // Settings is no longer a tab, so it has a way back.
   await page.getByRole("link", { name: "Back to Home" }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(menu(page)).toBeHidden();
+});
 
-  await accountButton(page).click();
-  await expect(menu(page)).toBeVisible();
-  const width = page.viewportSize()!.width;
-  await page.mouse.click(width - 8, 300); // the dimmed page to the right of the sheet
-  await expect(menu(page)).toBeHidden();
+test("your own profile has one way in, the Profile tab, and not a second one in Settings", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "Profile" })).toHaveCount(1);
+  await expect(nav(page).getByRole("link", { name: "Profile" })).toHaveAttribute("href", `/${E2E.admin.username}`);
+
+  await page.goto("/settings");
+  await expect(page.getByRole("link", { name: /^Profile/ })).toHaveCount(1); // the tab again
+  await expect(page.getByRole("list", { name: "Settings" }).getByRole("link", { name: /^Profile/ })).toHaveCount(0);
+});
+
+test("hovering or pressing an icon turns it the brand colour, with no background behind it", async ({ page }) => {
+  await page.goto("/");
+  // The current tab already wears the brand colour, so that is the colour to expect.
+  const brandText = await nav(page).locator('a[aria-current="page"]').evaluate((el) => getComputedStyle(el).color);
+
+  // The others are quiet until the pointer is on them.
+  const search = nav(page).getByRole("link", { name: "Search" });
+  const before = await search.evaluate((el) => getComputedStyle(el).color);
+  expect(before).not.toBe(brandText);
+  await search.hover();
+  await expect.poll(() => search.evaluate((el) => getComputedStyle(el).color)).toBe(brandText);
+  expect(await search.locator(".nav-icon").evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+
+  // Round icon buttons do the same.
+  const theme = page.getByRole("button", { name: "Switch between light and dark" });
+  await theme.hover();
+  await expect.poll(() => theme.evaluate((el) => getComputedStyle(el).color)).toBe(brandText);
+  expect(await theme.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+});
+
+test("text is a notch smaller and only names and titles are heavy", async ({ page }) => {
+  await page.goto("/settings");
+  expect(await page.evaluate(() => getComputedStyle(document.body).fontSize)).toBe("15px");
+  const weight = (selector: string) => page.locator(selector).first().evaluate((el) => Number(getComputedStyle(el).fontWeight));
+  expect(await weight("h1")).toBeLessThanOrEqual(600);
+  expect(await weight(".srow-title")).toBeLessThanOrEqual(500);
+  expect(await weight(".bottom-nav a")).toBeLessThanOrEqual(500);
+  expect(await weight('.bottom-nav a[aria-current="page"], .bottom-nav a')).toBeLessThanOrEqual(500);
+  expect(await weight(".btn")).toBeLessThanOrEqual(500);
 });
 
 test("Edit profile has a close button, Save in the header, counters on every field and camera buttons on the pictures", async ({ page }) => {

@@ -8,17 +8,20 @@ export function PageHeader({
   back,
   sub,
   lead,
+  centered = false,
   children,
 }: {
   title: string;
   back?: { href: string; label: string };
   sub?: string;
-  /** Something before the title, such as the account menu button on a bottom bar screen. */
+  /** Something before the title, such as your picture (the link to Settings) on a bottom bar screen. */
   lead?: ReactNode;
+  /** Title in the middle of the bar, with the back arrow at the left (Settings). */
+  centered?: boolean;
   children?: ReactNode;
 }) {
   return (
-    <header className="page-header">
+    <header className={centered ? "page-header page-header-center" : "page-header"}>
       {back ? (
         <Link className="icon-btn back" href={back.href} aria-label={back.label}>
           <Icon name="arrow-left" />
@@ -30,7 +33,7 @@ export function PageHeader({
         <h1>{title}</h1>
         {sub ? <p className="page-sub">{sub}</p> : null}
       </div>
-      {children}
+      {children ?? (centered ? <span aria-hidden="true" /> : null)}
     </header>
   );
 }

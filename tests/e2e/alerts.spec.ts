@@ -118,15 +118,14 @@ test("a member nobody has acted on sees a friendly empty screen, and cannot see 
   expect(await alice.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
 });
 
-// Alice is the one regular member this spec has, so the account menu of a member who is not the admin is checked here.
-test("a regular member's account menu has no Admin panel", async () => {
+// Alice is the one regular member this spec has, so Settings for a member who is not the admin is checked here.
+test("a regular member's Settings has no Admin panel", async () => {
   await alice.page.goto("/");
-  await alice.page.getByRole("button", { name: /^Account, @/ }).click();
-  const sheet = alice.page.getByRole("dialog", { name: "Account menu" });
-  await expect(sheet.getByRole("link", { name: "Settings" })).toBeVisible();
-  await expect(sheet.getByRole("link", { name: "Invite people" })).toBeVisible();
-  await expect(sheet.getByRole("link", { name: "Admin panel" })).toHaveCount(0);
-  await alice.page.keyboard.press("Escape");
+  await alice.page.getByRole("link", { name: /^Settings, signed in as @/ }).click();
+  const list = alice.page.getByRole("list", { name: "Settings" });
+  await expect(list.getByRole("link", { name: /^Edit profile/ })).toBeVisible();
+  await expect(list.getByRole("link", { name: /^Invite people/ })).toBeVisible();
+  await expect(list.getByRole("link", { name: /^Admin panel/ })).toHaveCount(0);
 });
 
 test("a signed-out visitor is sent to sign in", async ({ browser }) => {

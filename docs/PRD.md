@@ -411,7 +411,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | Bookmarks | saved posts |
 | Analytics | your analytics |
 | Edit profile | name, bio, city, link, photos |
-| Appearance | match phone, light or dark |
+| Dark or light theme | a button that flips light and dark (a person who has not chosen follows their phone) |
 | Privacy | private account, follow requests, blocked, muted |
 | Account | email, password, delete account |
 | Log out | signs out |
@@ -419,11 +419,11 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 
 ### 8.13 Design and experience
 
-- **Theme.** Follows the phone by default (or the instance default). A sun and moon button in the Home top bar flips light and dark, and Settings has a three-way Appearance choice (Match phone, Light, Dark). Both save the choice in a cookie that the server reads, so the right theme is painted on the first frame. Both themes are designed and checked, including with extreme brand colours.
-- **Layout.** Home has a top bar (your picture, which opens the account menu; the instance mark; the theme button). Search and Alerts show your picture in the same corner. Every other screen has a sticky header with a back arrow and its title. Bottom tabs: Home, Search, Alerts, Profile; round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected.
-- **Account menu.** A sheet from the left, opened from your picture: your name and handle, Profile, Invite people, Settings, Admin panel (admin only) and Log out. It is a modal dialog (page behind inert, Escape or a tap outside closes it, focus returns to your picture). Settings is not a bottom tab.
-- **Interactions.** Controls answer a pointer or finger with a hover tint, a press (scale to 90 to 97%) and a visible state change: hearts pop once when liked, "Following" reads "Unfollow" under a mouse pointer, the bottom bar's current screen sits on a soft pill. Short (120 to 200 ms), flat, and off under reduced motion. See `DESIGN.md`.
-- **Type.** The instance font. No emoji or em dashes in interface text.
+- **Theme.** Follows the phone by default (or the instance default). A sun and moon button in the Home top bar flips light and dark, and Settings has a "Dark or light theme" row with the same button. Both save the choice in a cookie that the server reads, so the right theme is painted on the first frame. Both themes are designed and checked, including with extreme brand colours.
+- **Layout.** Home has a top bar (your picture, which opens Settings; the instance mark; the theme button). Search and Alerts show your picture in the same corner. Every other screen has a sticky header with a back arrow and its title. Bottom tabs: Home, Search, Alerts, Profile; round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected.
+- **Settings screen.** Opened from your picture (Home, Search, Alerts). A full screen with a back arrow, the title in the middle and one plain list: each row has an icon, a title, a short line under it and a chevron. Today: Edit profile, Invite people, Admin panel (admin only), the Dark or light theme row, and a Log out button. Bookmarks, Analytics, Privacy and Account rows arrive with their features (8.12). Your own profile is only in the bottom bar (Profile tab), not repeated in Settings.
+- **Interactions.** Controls answer a pointer or finger with the icon turning the brand colour on hover and press (no background appears), a press (scale to 90 to 97%) and a visible state change: hearts pop once when liked, "Following" reads "Unfollow" under a mouse pointer, the bottom bar's current screen is brand-coloured. Short (120 to 200 ms), flat, and off under reduced motion. See `DESIGN.md`.
+- **Type.** The instance font, 15px body; headings and names semibold at most, buttons, tabs and rows medium, the rest regular. No emoji or em dashes in interface text.
 - **Icons.** Feather.
 - **No** shadows, gradients, glows or cards in the feed.
 - **Accessibility.** WCAG AA contrast; keyboard and screen-reader usable.
