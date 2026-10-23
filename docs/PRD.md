@@ -525,6 +525,8 @@ Worker "netmate"  ── Next.js 16 via @opennextjs/cloudflare
   │   Server Components · Server Actions · Route Handlers · Better Auth at /api/auth
   ├──► D1 "DB"          app data, instance settings, auth data, search indexes
   ├──► R2 "MEDIA"       photos, logo, favicon, cached fonts. Public reads through a media domain
+                       (key prefixes: `avatars/`, `banners/` (cover images), `posts/` (post pictures),
+                        `instance/` (logo, favicon), `fonts/`; built only by `src/storage/keys.ts`)
   ├──► Rate Limiting    "LIMITER": high-volume limits
   ├──► Cron Trigger     daily clean-up of old analytics rows and rate hits
   └──► Resend (HTTPS)   email
