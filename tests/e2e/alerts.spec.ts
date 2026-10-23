@@ -111,8 +111,10 @@ test("tapping an alert opens the post or the person", async ({ page }) => {
 test("a member nobody has acted on sees a friendly empty screen, and cannot see anyone else's alerts", async () => {
   await alice.page.goto("/notifications");
   await expect(alice.page.getByText("No alerts yet.")).toBeVisible();
-  await expect(alice.page.getByText("Alice Admirer")).toHaveCount(0);
+  // No list at all, and nothing about the admin's alerts (which name Alice and Bob) shows up for her.
+  await expect(alice.page.getByRole("list", { name: "Alerts" })).toHaveCount(0);
   await expect(alice.page.getByText("Bob Bystander")).toHaveCount(0);
+  await expect(alice.page.getByText(/liked your post|followed you|replied to your post/)).toHaveCount(0);
   expect(await alice.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
 });
 
