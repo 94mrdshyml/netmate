@@ -199,6 +199,48 @@ p {
   align-self: flex-start;
 }
 
+/* The invite welcome: a few members' faces overlapping in a row, then one friendly line. */
+.welcome h1 {
+  text-wrap: balance;
+}
+
+.welcome-people {
+  display: grid;
+  gap: 12px;
+}
+
+.welcome-faces {
+  display: flex;
+  padding-left: 14px;
+}
+
+.welcome-faces .avatar {
+  width: 48px;
+  height: 48px;
+  margin-left: -14px;
+  border: 3px solid var(--bg);
+  box-sizing: content-box;
+}
+
+.welcome-people p {
+  margin: 0;
+}
+
+/* Each face settles in a beat after the one before it. Off with reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .welcome-faces .avatar {
+    animation: face-in 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+}
+
+@keyframes face-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+}
+
 /* ---- Forms and buttons (also used by /setup) ---- */
 
 .field {

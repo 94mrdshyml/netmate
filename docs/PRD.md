@@ -151,6 +151,7 @@ Sign-up works only through an invite link `/sign-up?invite=<code>`.
 - Sign-ups per link and per IP are rate-limited.
 - When email is set up, sign-up requires email verification. Pending approval is a separate gate after it.
 - The invite page shows a clear message for an invalid or revoked code.
+- **Welcome screen.** A valid invite link first opens a welcome, not the form: the instance's name and logo, "{inviter's name} invited you to join {instance name}", up to four overlapping faces (the inviter first, then the members who joined earliest), one friendly line ("Ana, Ben, Cleo and 12 others are already here, saving you a seat.") and a "Join {instance name}" button that opens the form on the same link (`join=1`). Only first names and pictures of active, non-private members are used (the inviter is always shown, since their full name is on the screen anyway); nothing else about anyone is given to a visitor who has no account yet.
 
 **Later:** email-domain rules, closed or open sign-up modes, more admins, per-person quota overrides. Sign-up policy is stored as a setting so these can be added without redesign.
 
