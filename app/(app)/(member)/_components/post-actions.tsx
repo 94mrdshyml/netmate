@@ -14,7 +14,7 @@ export function LikeButton({ postId, liked, count }: { postId: string; liked: bo
     <>
       <button
         type="button"
-        className="action"
+        className="action like"
         aria-pressed={state.liked}
         aria-label={state.liked ? `Unlike, ${state.count} likes` : `Like, ${state.count} likes`}
         disabled={pending}
@@ -52,13 +52,13 @@ export function DeleteButton({ postId, goHomeAfter = false }: { postId: string; 
 
   if (!confirming) {
     return (
-      <button type="button" className="action" aria-label="Delete post" onClick={() => setConfirming(true)}>
+      <button type="button" className="action action-end" aria-label="Delete post" onClick={() => setConfirming(true)}>
         <Icon name="trash-2" />
       </button>
     );
   }
   return (
-    <span className="confirm" role="group" aria-label="Delete this post?">
+    <span className="confirm action-end" role="group" aria-label="Delete this post?">
       <button
         type="button"
         className="btn btn-primary"

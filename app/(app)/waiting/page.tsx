@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMark } from "../_components/brand-mark";
 import { getInstanceState } from "@/instance/request";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +9,8 @@ export const metadata = { title: "Waiting for approval" };
 export default async function WaitingPage() {
   const { settings } = await getInstanceState();
   return (
-    <main className="column stack">
+    <main className="column stack auth">
+      <BrandMark name={settings.name} size="lg" />
       <div>
         <h1>Waiting for approval</h1>
         <p>

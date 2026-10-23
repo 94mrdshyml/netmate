@@ -398,6 +398,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | Bookmarks | saved posts |
 | Analytics | your analytics |
 | Edit profile | name, bio, city, link, photos |
+| Appearance | match phone, light or dark |
 | Privacy | private account, follow requests, blocked, muted |
 | Account | email, password, delete account |
 | Log out | signs out |
@@ -405,8 +406,8 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 
 ### 8.13 Design and experience
 
-- **Theme.** Follows the phone by default (or the instance default), with a toggle in the top bar that sets a cookie. Both themes are designed and checked, including with extreme brand colours.
-- **Layout.** Top bar (avatar, logo, theme toggle), bottom tabs (Home, Search, Alerts, Profile), round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected. Until Search and Alerts exist, the bottom tabs are Home, Profile and Settings.
+- **Theme.** Follows the phone by default (or the instance default). A sun and moon button in the Home top bar flips light and dark, and Settings has a three-way Appearance choice (Match phone, Light, Dark). Both save the choice in a cookie that the server reads, so the right theme is painted on the first frame. Both themes are designed and checked, including with extreme brand colours.
+- **Layout.** Home has a top bar (your picture, which opens Settings; the instance mark; the theme button). Every other screen has a sticky header with a back arrow and its title. Bottom tabs (Home, Search, Alerts, Profile), round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected. Until Search and Alerts exist, the bottom tabs are Home, Profile and Settings.
 - **Type.** The instance font. No emoji or em dashes in interface text.
 - **Icons.** Feather.
 - **No** shadows, gradients, glows or cards in the feed.

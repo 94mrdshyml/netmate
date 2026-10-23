@@ -5,6 +5,7 @@ import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
 import { getInstanceState } from "@/instance/request";
 import { findActiveInvite } from "@/server/invites";
+import { BrandMark } from "../_components/brand-mark";
 import { SignUpForm } from "./sign-up-form";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,8 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
 
   if (!invite || !code) {
     return (
-      <main className="column stack">
+      <main className="column stack auth">
+        <BrandMark name={settings.name} size="lg" />
         <div>
           <h1>Invite link not valid</h1>
           <p className="muted">
@@ -34,7 +36,8 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
   }
 
   return (
-    <main className="column stack">
+    <main className="column stack auth">
+      <BrandMark name={settings.name} size="lg" />
       <div>
         <h1>Join {settings.name}</h1>
         <p className="muted">{invite.ownerName} invited you.</p>

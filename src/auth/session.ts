@@ -14,6 +14,7 @@ export type Member = {
   username: string;
   firstName: string;
   lastName: string;
+  avatarKey: string | null;
   role: "admin" | "member";
 };
 
@@ -34,6 +35,7 @@ export async function getMember(): Promise<Member | null> {
     username: profile.username,
     firstName: profile.firstName,
     lastName: profile.lastName,
+    avatarKey: profile.avatarKey,
     role: profile.role as Member["role"],
   };
 }
