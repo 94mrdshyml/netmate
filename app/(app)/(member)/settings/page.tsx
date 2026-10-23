@@ -13,10 +13,15 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Settings" };
 
-const ROWS: { href: string; label: string; icon: IconName }[] = [
+type Row = { href: string; label: string; icon: IconName };
+
+const ROWS: Row[] = [
   { href: "/invite", label: "Invite people", icon: "user-plus" },
   { href: "/profile", label: "Edit profile", icon: "edit-2" },
 ];
+
+// Only the admin sees this row. /hq checks the role again on the server every time.
+const ADMIN_ROW: Row = { href: "/hq", label: "Admin panel", icon: "shield" };
 
 // Rows are added here as their screens are built (bookmarks, analytics, privacy, account, admin panel).
 export default async function SettingsPage() {
@@ -40,7 +45,7 @@ export default async function SettingsPage() {
       </section>
 
       <ul className="rows" aria-label="Settings">
-        {ROWS.map((row) => (
+        {(member.role === "admin" ? [...ROWS, ADMIN_ROW] : ROWS).map((row) => (
           <li key={row.href}>
             <Link href={row.href}>
               <span className="row-icon">

@@ -83,6 +83,7 @@ const PATHS = {
       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
     </>
   ),
+  shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
   check: <polyline points="20 6 9 17 4 12" />,
   "map-pin": (
     <>
