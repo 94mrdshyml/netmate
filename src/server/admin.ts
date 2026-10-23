@@ -6,6 +6,7 @@ import type { Db } from "@/db";
 import { inviteLinks, instance, profiles, user } from "@/db/schema";
 import { newId, randomId } from "@/lib/ids";
 import { INVITE_CODE_LENGTH } from "@/server/invites";
+import { removePendingApprovalAlert } from "@/server/notifications";
 
 export type PendingPerson = {
   userId: string;
@@ -61,11 +62,15 @@ export type Decision = { ok: true } | { ok: false; code: "not_pending" };
 
 /** Pending becomes a member. Only a Pending person can be approved; the update is conditional, so a repeat does nothing. */
 export async function approvePending(db: Db, userId: string): Promise<Decision> {
-  const res = await db
-    .update(profiles)
-    .set({ status: "active" })
-    .where(and(eq(profiles.userId, userId), eq(profiles.status, "pending")))
-    .returning({ id: profiles.userId });
+  // Once decided, the admin's "waiting for approval" alert for this person goes away.
+  const [res] = await db.batch([
+    db
+      .update(profiles)
+      .set({ status: "active" })
+      .where(and(eq(profiles.userId, userId), eq(profiles.status, "pending")))
+      .returning({ id: profiles.userId }),
+    removePendingApprovalAlert(db, userId),
+  ]);
   return res.length > 0 ? { ok: true } : { ok: false, code: "not_pending" };
 }
 

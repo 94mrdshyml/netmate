@@ -105,6 +105,19 @@ const PATHS = {
       <line x1="3" y1="10" x2="21" y2="10" />
     </>
   ),
+  bell: (
+    <>
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </>
+  ),
+  "user-check": (
+    <>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="8.5" cy="7" r="4" />
+      <polyline points="17 11 19 13 23 9" />
+    </>
+  ),
   search: (
     <>
       <circle cx="11" cy="11" r="8" />

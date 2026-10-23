@@ -17,6 +17,7 @@ export const ID_PREFIXES = {
   inviteLink: "inv",
   inviteUse: "invu",
   post: "post",
+  notification: "ntf",
 } as const;
 
 export type IdModel = keyof typeof ID_PREFIXES;
