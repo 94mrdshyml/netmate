@@ -581,6 +581,80 @@ legend.label {
   font-size: 1.0625rem;
 }
 
+/* ---- Alerts ---- */
+
+.alerts {
+  list-style: none;
+  margin: 0 calc(-1 * var(--gx));
+  padding: 0;
+}
+
+.alert {
+  border-bottom: 1px solid var(--line);
+}
+
+/* A quiet brand tint marks what you have not seen yet. */
+.alert-unread {
+  background: var(--brand-soft);
+}
+
+.alert-link {
+  display: flex;
+  gap: 12px;
+  min-height: 44px;
+  padding: 12px var(--gx);
+  color: var(--fg);
+  text-decoration: none;
+  transition: background-color 0.15s var(--ease);
+}
+
+a.alert-link:hover {
+  background: var(--surface);
+}
+
+a.alert-link:focus-visible {
+  outline-offset: -2px;
+}
+
+.alert-icon {
+  flex: none;
+  display: grid;
+  place-items: start center;
+  width: 28px;
+  padding-top: 2px;
+  color: var(--muted);
+}
+
+.alert-icon-like {
+  color: var(--brand-text);
+}
+
+.alert-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.alert-avatars {
+  display: flex;
+  gap: 6px;
+}
+
+.alert-avatars .avatar {
+  width: 32px;
+  height: 32px;
+}
+
+.alert-text {
+  line-height: 1.4;
+}
+
+.alert-snippet {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
 /* ---- Tabs ---- */
 
 .tabs {
@@ -917,6 +991,28 @@ legend.label {
   color: var(--muted);
   text-decoration: none;
   transition: color 0.15s var(--ease);
+}
+
+.nav-icon {
+  position: relative;
+  display: inline-grid;
+}
+
+/* The unread count on the Alerts tab. */
+.nav-badge {
+  position: absolute;
+  top: -6px;
+  left: 55%;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  color: var(--on-brand);
+  background: var(--brand);
+  border-radius: 9px;
 }
 
 .bottom-nav a:hover {

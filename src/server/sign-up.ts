@@ -100,6 +100,20 @@ export async function signUpWithInvite(env: SignUpEnv, rawInput: unknown): Promi
        select ?2, ?1, ?3, (select case status when 'active' then 'approved' else 'pending' end from profiles where user_id = ?3), ?4 where ${live}`,
     ).bind(invite.id, newId("inviteUse"), userId, now),
     env.DB.prepare("update invite_links set uses_count = uses_count + 1 where id = ?1 and revoked_at is null").bind(invite.id),
+    // Alerts, written with the account (after the statement whose row count is checked below). The link's
+    // owner hears that it was used. When the sign-up is waiting, the admin hears that too.
+    env.DB.prepare(
+      `insert into notifications (id, recipient_id, actor_id, type, post_id, created_at)
+       select ?1, ?2, ?3, 'invite_used', null, ?4 where exists (select 1 from invite_uses where user_id = ?3)
+       on conflict do nothing`,
+    ).bind(newId("notification"), invite.ownerUserId, userId, now),
+    env.DB.prepare(
+      `insert into notifications (id, recipient_id, actor_id, type, post_id, created_at)
+       select ?1, (select user_id from profiles where role = 'admin'), ?2, 'pending_approval', null, ?3
+       where exists (select 1 from profiles where user_id = ?2 and status = 'pending')
+         and exists (select 1 from profiles where role = 'admin')
+       on conflict do nothing`,
+    ).bind(newId("notification"), userId, now),
   ];
 
   try {

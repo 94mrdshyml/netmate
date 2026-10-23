@@ -1,0 +1,11 @@
+# 24. Alerts (2026-10-23)
+- Branch / PR: feat/alerts (second of three PRs the owner asked for: Search, Alerts, then the look changes). PR #42 (Search) was merged first; this branch was cut from the fresh main. No other PR was open.
+- Done:
+  - Migration `0007_notifications.sql`: the `notifications` table with its checks (kind, no alert about yourself, post present only for post alerts) and two partial unique indexes. The first generated migration had a broken unique index (drizzle cut a `coalesce(...)` expression in two), found by reading the SQL; it was replaced by two plain partial indexes.
+  - `src/server/notifications.ts`: statements that join the caller's batch (`alertOnLike`, `removeLikeAlert`, `alertOnFollow`, `removeFollowAlert`, `alertOnReply`, `removePendingApprovalAlert`), `listAlerts` (through `visiblePosts`, likes of one post grouped, paged by (time, id)), `countUnreadAlerts`, `markAllAlertsRead`. Sign-up writes its two alerts (link used, waiting for approval) inside its existing atomic batch. Approving a person removes the admin's alert in the same batch.
+  - `src/lib/alert-text.ts`: the wording ("Meera and 2 others liked your post") and the 140-character snippet.
+  - `/notifications` screen, unread badge on a new Alerts tab (bell icon), and `ntf_` id prefix.
+- Tests: 8 new unit (`alert-text.test.ts`), 22 integration (`notifications.test.ts`: each kind, undo, repeat, own action, grouping, paging, bad cursors, read and unread, deleted post hidden, sign-up and approval, and every CHECK and unique index), 4 new e2e (`alerts.spec.ts`).
+- Real problem found: drizzle's `db.run(sql...)` cannot be part of a D1 batch (it threw `Cannot read properties of undefined (reading 'bind')` inside `setLike`); the two inserts that need a select now use `insert().select(sql)`.
+- Open: repost, follow request, quote and mention alerts wait for their features. Blocked and muted people do not exist yet, so nothing hides their alerts. The unread count is checked on each move and every minute, not pushed live.
+- Next: the look PR (avatar menu with Settings in it, Twitter-style edit profile, better icons, hover and press effects, bottom bar Home / Search / Alerts / Profile). It will change `tests/e2e/social.spec.ts`, whose first test clicks the Settings tab on the bar.
