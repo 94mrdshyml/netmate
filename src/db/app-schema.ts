@@ -178,6 +178,26 @@ export const posts = sqliteTable(
   ],
 );
 
+/** Most photos one post can carry (docs/PRD.md section 8.2). */
+export const POST_PHOTO_MAX = 4;
+
+/** The photos on a post, in the order shown. The key points at a file in R2 under `posts/`. */
+export const postMedia = sqliteTable(
+  "post_media",
+  {
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    key: text("key").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.postId, t.position] }),
+    check("post_media_position", sql`${t.position} between 0 and 3`),
+    check("post_media_key", sql`${t.key} like 'posts/%'`),
+  ],
+);
+
 /** One row per person per post. Idempotent: liking twice leaves one row. */
 export const likes = sqliteTable(
   "likes",

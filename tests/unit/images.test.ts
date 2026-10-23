@@ -31,8 +31,9 @@ describe("sniffImage", () => {
 });
 
 describe("limits", () => {
-  it("allow 2 MB for avatars and 5 MB for covers", () => {
+  it("allow 2 MB for avatars and 5 MB for covers and post photos", () => {
     expect(MAX_BYTES.avatar).toBe(2 * 1024 * 1024);
     expect(MAX_BYTES.banner).toBe(5 * 1024 * 1024);
+    expect(MAX_BYTES.post).toBe(5 * 1024 * 1024);
   });
 });

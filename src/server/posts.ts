@@ -2,9 +2,9 @@
 // they never write SQL. Who may see what is always `visiblePosts`. A counter on a post changes
 // in the same db.batch() as the row that causes it.
 
-import { and, desc, eq, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import type { Db } from "@/db";
-import { follows, likes, posts, profiles } from "@/db/schema";
+import { follows, likes, POST_PHOTO_MAX, postMedia, posts, profiles } from "@/db/schema";
 import { isId, newId } from "@/lib/ids";
 import { checkPostText } from "@/lib/post-text";
 import { alertOnLike, alertOnReply, removeLikeAlert } from "@/server/notifications";
@@ -20,6 +20,8 @@ export type PostView = {
   likeCount: number;
   likedByMe: boolean;
   parentId: string | null;
+  /** Storage keys of the photos, in the order shown. Empty for a text-only post. */
+  photos: string[];
   author: { userId: string; username: string; firstName: string; lastName: string; avatarKey: string | null };
 };
 
@@ -76,19 +78,35 @@ type Row = {
   avatarKey: string | null;
 };
 
+// A post with photos and no words keeps one space as its text (the database wants 1 to 280
+// characters); it is never shown.
 const toView = (r: Row): PostView => ({
   id: r.id,
-  body: r.body,
+  body: r.body.trim(),
   createdAt: r.createdAt.getTime(),
   replyCount: r.replyCount,
   likeCount: r.likeCount,
   likedByMe: Boolean(r.liked),
   parentId: r.parentId,
+  photos: [],
   author: { userId: r.userId, username: r.username, firstName: r.firstName, lastName: r.lastName, avatarKey: r.avatarKey },
 });
 
-export function toPage(rows: Row[], limit: number): Page {
-  const items = rows.slice(0, limit).map(toView);
+/** Fills in the photos of every post in one query. */
+async function withPhotos(db: Db, items: PostView[]): Promise<PostView[]> {
+  if (items.length === 0) return items;
+  const rows = await db
+    .select({ postId: postMedia.postId, key: postMedia.key })
+    .from(postMedia)
+    .where(inArray(postMedia.postId, items.map((p) => p.id)))
+    .orderBy(asc(postMedia.postId), asc(postMedia.position));
+  const byPost = new Map<string, string[]>();
+  for (const r of rows) byPost.set(r.postId, [...(byPost.get(r.postId) ?? []), r.key]);
+  return items.map((p) => ({ ...p, photos: byPost.get(p.id) ?? [] }));
+}
+
+export async function toPage(db: Db, rows: Row[], limit: number): Promise<Page> {
+  const items = await withPhotos(db, rows.slice(0, limit).map(toView));
   const last = items[items.length - 1];
   return { items, nextCursor: rows.length > limit && last ? encodeCursor(last.createdAt, last.id) : null };
 }
@@ -117,7 +135,7 @@ export async function listFeed(
     .where(and(visiblePosts(viewerId), isNull(posts.parentId), fromFollowed, olderThan(decodeCursor(opts.cursor))))
     .orderBy(desc(posts.createdAt), desc(posts.id))
     .limit(limit + 1);
-  return toPage(rows, limit);
+  return toPage(db, rows, limit);
 }
 
 /** One person's posts (or, with `replies`, their replies), newest first. */
@@ -142,7 +160,7 @@ export async function listByAuthor(
     )
     .orderBy(desc(posts.createdAt), desc(posts.id))
     .limit(limit + 1);
-  return toPage(rows, limit);
+  return toPage(db, rows, limit);
 }
 
 /** One post, or null when it does not exist or this person may not see it. */
@@ -154,7 +172,8 @@ export async function getPost(db: Db, viewerId: string, postId: string): Promise
     .innerJoin(profiles, eq(profiles.userId, posts.authorId))
     .where(and(visiblePosts(viewerId), eq(posts.id, postId)))
     .get();
-  return row ? toView(row) : null;
+  if (!row) return null;
+  return (await withPhotos(db, [toView(row)]))[0] ?? null;
 }
 
 /** Direct replies to a post, newest first. */
@@ -172,21 +191,40 @@ export async function listReplies(
     .where(and(visiblePosts(viewerId), eq(posts.parentId, postId), olderThan(decodeCursor(opts.cursor))))
     .orderBy(desc(posts.createdAt), desc(posts.id))
     .limit(limit + 1);
-  return toPage(rows, limit);
+  return toPage(db, rows, limit);
 }
 
 // ---- writing ----
 
 export type CreatePostResult =
   | { ok: true; id: string }
-  | { ok: false; code: "empty" | "too_long" | "bad_characters" | "parent_not_found" };
+  | { ok: false; code: "empty" | "too_long" | "bad_characters" | "parent_not_found" | "bad_photos" };
 
 const replyCountOf = (parentId: string) =>
   sql`(select count(*) from ${posts} as r where r.parent_id = ${parentId} and r.deleted_at is null)`;
 
-/** Makes a post, or a reply when `parentId` is given. */
-export async function createPost(db: Db, authorId: string, rawBody: unknown, parentId?: string): Promise<CreatePostResult> {
-  const text = checkPostText(rawBody);
+/** True when every key is a distinct post photo this person uploaded, and there are at most four. */
+export function photoKeysAreValid(authorId: string, keys: unknown): keys is string[] {
+  if (!Array.isArray(keys) || keys.length > POST_PHOTO_MAX || new Set(keys).size !== keys.length) return false;
+  const own = new RegExp(`^posts/${authorId}/[0-9A-Za-z]{24}\.(jpg|png|gif|webp)$`);
+  return isId("user", authorId) && keys.every((k) => typeof k === "string" && own.test(k));
+}
+
+/**
+ * Makes a post, or a reply when `parentId` is given. `photoKeys` are keys of pictures already
+ * uploaded and checked by the caller (the action); this only checks they are this person's.
+ */
+export async function createPost(
+  db: Db,
+  authorId: string,
+  rawBody: unknown,
+  parentId?: string,
+  photoKeys: string[] = [],
+): Promise<CreatePostResult> {
+  if (!photoKeysAreValid(authorId, photoKeys)) return { ok: false, code: "bad_photos" };
+  // Photos can stand in for words; the text is then one space (see toView).
+  const wordless = photoKeys.length > 0 && typeof rawBody === "string" && rawBody.trim() === "";
+  const text = wordless ? ({ ok: true, text: " ", length: 1 } as const) : checkPostText(rawBody);
   if (!text.ok) return { ok: false, code: text.reason };
 
   if (parentId !== undefined && !(await getPost(db, authorId, parentId))) {
@@ -195,15 +233,18 @@ export async function createPost(db: Db, authorId: string, rawBody: unknown, par
 
   const id = newId("post");
   const insert = db.insert(posts).values({ id, authorId, parentId: parentId ?? null, body: text.text });
-  if (parentId === undefined) {
+  const photos = photoKeys.map((key, position) => ({ postId: id, position, key }));
+  if (parentId === undefined && photos.length === 0) {
     await insert;
   } else {
-    // The reply, the parent's count and the parent's author's alert change together.
+    // The post, its photos, and for a reply the parent's count and the parent's author's alert change together.
     await db.batch([
       insert,
-      db.update(posts).set({ replyCount: replyCountOf(parentId) }).where(eq(posts.id, parentId)),
-      alertOnReply(db, authorId, parentId, id),
-    ]);
+      ...(photos.length > 0 ? [db.insert(postMedia).values(photos)] : []),
+      ...(parentId === undefined
+        ? []
+        : [db.update(posts).set({ replyCount: replyCountOf(parentId) }).where(eq(posts.id, parentId)), alertOnReply(db, authorId, parentId, id)]),
+    ] as unknown as Parameters<Db["batch"]>[0]);
   }
   return { ok: true, id };
 }

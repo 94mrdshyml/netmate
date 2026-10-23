@@ -4,6 +4,7 @@ import type { PostView } from "@/server/posts";
 import { Avatar } from "./avatar";
 import { Icon } from "./icon";
 import { LikeButton, PostMenu } from "./post-actions";
+import { PostPhotos } from "./post-photos";
 
 /** One post in a list. The text is always rendered as text, never as markup. */
 export function PostCard({
@@ -37,7 +38,8 @@ export function PostCard({
             {relativeTime(post.createdAt, now)}
           </time>
         </header>
-        <p className="post-body">{post.body}</p>
+        {post.body ? <p className="post-body">{post.body}</p> : null}
+        <PostPhotos keys={post.photos} name={name} />
         <footer className="post-actions">
           {linkToPost ? (
             <Link className="action" href={href} aria-label={`Reply, ${post.replyCount} replies`}>

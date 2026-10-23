@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     return json({ key: brand.key });
   }
 
-  if (kind !== "avatar" && kind !== "banner") return json({ message: "Unknown picture type." }, 400);
+  if (kind !== "avatar" && kind !== "banner" && kind !== "post") return json({ message: "Unknown picture type." }, 400);
 
   const result = await uploadPicture(env.MEDIA, member.userId, kind, form.get("file"));
   if (!result.ok) return json({ message: result.message }, result.code === "failed" ? 500 : 400);
