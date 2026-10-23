@@ -30,13 +30,23 @@ export function isAvatarStyle(value: string): value is AvatarStyle {
   return Object.hasOwn(STYLES, value);
 }
 
+// Dark enough for the white letters of the initials style to stay readable.
+const INITIALS_COLOURS = ["1d4ed8", "0f766e", "b45309", "be123c", "6d28d9", "4d7c0f", "0e7490", "a21caf", "c2410c", "475569"];
+
+function pick(username: string): string {
+  let h = 0;
+  for (const ch of username) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return INITIALS_COLOURS[h % INITIALS_COLOURS.length] ?? "1d4ed8";
+}
+
 /**
- * The SVG for a member's default picture. The seed is the account id, so the picture survives a
- * name change. The initials style needs the name to draw letters, so it is seeded by the name.
- * An unknown stored style falls back to the default instead of failing.
+ * The SVG for a member's default picture. The seed is the username, which is unique, so two
+ * people never share a picture. The initials style draws the name's letters, so its letters come
+ * from the name and only its colour comes from the username (two people called "Sam Lee" still
+ * differ). An unknown stored style falls back to the default instead of failing.
  */
-export function defaultAvatarSvg(style: string, input: { userId: string; name: string }): string {
+export function defaultAvatarSvg(style: string, input: { username: string; name: string }): string {
   const key: AvatarStyle = isAvatarStyle(style) ? style : DEFAULT_AVATAR_STYLE;
-  const seed = key === "initials" ? input.name : input.userId;
-  return createAvatar(STYLES[key], { seed }).toString();
+  if (key === "initials") return createAvatar(STYLES[key], { seed: input.name, backgroundColor: [pick(input.username)] }).toString();
+  return createAvatar(STYLES[key], { seed: input.username }).toString();
 }

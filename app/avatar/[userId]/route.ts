@@ -15,14 +15,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
   const { env } = await getCloudflareContext({ async: true });
   const db = getDb(env.DB);
   const profile = await db
-    .select({ firstName: profiles.firstName, lastName: profiles.lastName })
+    .select({ username: profiles.username, firstName: profiles.firstName, lastName: profiles.lastName })
     .from(profiles)
     .where(and(eq(profiles.userId, userId), eq(profiles.status, "active")))
     .get();
   if (!profile) return new Response("Not found", { status: 404 });
 
   const { settings } = await readInstanceCached(db);
-  const svg = defaultAvatarSvg(settings.avatarStyle, { userId, name: `${profile.firstName} ${profile.lastName}` });
+  const svg = defaultAvatarSvg(settings.avatarStyle, { username: profile.username, name: `${profile.firstName} ${profile.lastName}` });
 
   return new Response(svg, {
     headers: {

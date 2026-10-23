@@ -109,7 +109,7 @@ All values live in instance settings, are first chosen in `/setup`, edited in `/
 | **Primary colour** | any hex colour. See "Colour derivation" below |
 | **Corner radius** | `zero`, `sm`, `md`, `lg` = 0, 4, 8, 16 px. Applies to buttons and form fields. Avatars stay round; post media keeps its own fixed radius |
 | **Font** | any open-licence (OFL) family from Google Fonts, chosen from a searchable list. The font file is fetched once at save time and **stored and served from our own bucket**, so readers never contact Google |
-| **Default avatar style** | one of the DiceBear styles whose artwork is CC0 or MIT: Initials, Thumbs, Shapes, Identicon, Rings, Glass, Pixel art, Notionists (neutral). Generated inside the app, so it makes no outside request, and seeded from the member's id so it is stable. The Initials style draws letters, so it is seeded from the name. An unknown stored style falls back to Initials. Styles with a CC BY or custom licence are left out on purpose (no attribution duty) |
+| **Default avatar style** | one of the DiceBear styles whose artwork is CC0 or MIT: Initials, Thumbs, Shapes, Identicon, Rings, Glass, Pixel art, Notionists (neutral). Generated inside the app, so it makes no outside request, and seeded from the member's username (unique and never changed, so it is stable and no two people share a picture). The Initials style draws letters, so its letters come from the name and its colour from the username. An unknown stored style falls back to Initials. Styles with a CC BY or custom licence are left out on purpose (no attribution duty) |
 | **Theme default** | dark, light or follow the phone. Members can still override with a toggle (a cookie) |
 | **Invite quota** | number of auto-approved sign-ups per member link. Default 5 |
 | **Optional features** | GIF search (needs Klipy key), place suggestions |
@@ -196,7 +196,7 @@ The username field checks availability as you type (after a short pause). Reserv
 
 **Onboarding.** If an account exists without a profile (tab closed halfway), the person is sent to a short page to finish: first name, last name, username.
 
-**Default picture.** Everyone without an uploaded avatar gets a DiceBear picture in the instance's style, seeded from their account id (so it survives a name change).
+**Default picture.** Everyone without an uploaded avatar gets a DiceBear picture in the instance's style, seeded from their username (unique and permanent, so it survives a name change and is never shared).
 
 **Account settings:** shows the email; change password (current password required, 5 tries per 10 minutes); change email (confirmation by email); delete account (password required). Deleting removes the profile, posts, follows, likes and everything attached, **and their uploaded files from storage**.
 
