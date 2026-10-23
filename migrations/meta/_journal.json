@@ -64,6 +64,13 @@
       "when": 1792764051500,
       "tag": "0008_email_state",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1792779281975,
+      "tag": "0009_privacy",
+      "breakpoints": true
     }
   ]
 }

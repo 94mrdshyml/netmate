@@ -1,11 +1,13 @@
-// Following people (docs/PRD.md section 8.5). Follow and unfollow send the wanted state, so
-// repeating them changes nothing. Private accounts and blocks join the same rules later.
+// Following people (docs/PRD.md sections 8.5 and 8.8). Follow and unfollow send the wanted state, so
+// repeating them changes nothing. Following a private account sends a request instead; blocks
+// stop a follow before it starts.
 
 import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { follows, profiles } from "@/db/schema";
+import { followRequests, follows, profiles } from "@/db/schema";
 import { isId } from "@/lib/ids";
-import { alertOnFollow, removeFollowAlert } from "@/server/notifications";
+import { alertOnFollow, alertOnFollowRequest, removeFollowAlert, removeFollowRequestAlert } from "@/server/notifications";
+import { canSeeContentOf, notBlockedWith } from "@/server/visibility";
 
 export const PEOPLE_PAGE_SIZE = 20;
 
@@ -17,40 +19,63 @@ export type PersonView = {
   bio: string;
   avatarKey: string | null;
   iFollow: boolean;
+  /** You asked to follow this private account and are waiting. */
+  requested: boolean;
   isMe: boolean;
 };
 
 export type PeoplePage = { items: PersonView[]; nextCursor: string | null };
+
+export type FollowState = "none" | "following" | "requested";
 
 export async function setFollow(
   db: Db,
   viewerId: string,
   targetId: string,
   wanted: boolean,
-): Promise<{ ok: true; following: boolean } | { ok: false; code: "not_found" | "self" }> {
+): Promise<{ ok: true; state: FollowState } | { ok: false; code: "not_found" | "self" }> {
   if (viewerId === targetId) return { ok: false, code: "self" };
   if (!isId("user", targetId)) return { ok: false, code: "not_found" };
 
+  // Someone who is not an active member, or who blocked you or whom you blocked, is "not found".
   const target = await db
-    .select({ one: profiles.userId })
+    .select({ isPrivate: profiles.isPrivate })
     .from(profiles)
-    .where(and(eq(profiles.userId, targetId), eq(profiles.status, "active")))
+    .where(and(eq(profiles.userId, targetId), eq(profiles.status, "active"), notBlockedWith(viewerId, profiles.userId)))
     .get();
   if (!target) return { ok: false, code: "not_found" };
 
-  // The follow and the person's alert change together.
-  if (wanted) {
+  // Whatever is taken back, the follow, the request and their alerts go together.
+  if (!wanted) {
+    await db.batch([
+      db.delete(follows).where(and(eq(follows.followerId, viewerId), eq(follows.followeeId, targetId))),
+      db.delete(followRequests).where(and(eq(followRequests.requesterId, viewerId), eq(followRequests.targetId, targetId))),
+      removeFollowAlert(db, viewerId, targetId),
+      removeFollowRequestAlert(db, viewerId, targetId),
+    ]);
+    return { ok: true, state: "none" };
+  }
+
+  if (!target.isPrivate) {
     await db.batch([
       db.insert(follows).values({ followerId: viewerId, followeeId: targetId }).onConflictDoNothing(),
       alertOnFollow(db, viewerId, targetId),
     ]);
-  } else {
-    await db.batch([
-      db.delete(follows).where(and(eq(follows.followerId, viewerId), eq(follows.followeeId, targetId))),
-      removeFollowAlert(db, viewerId, targetId),
-    ]);
+    return { ok: true, state: "following" };
   }
-  return { ok: true, following: wanted };
+
+  // A private account: people who already follow stay followers; everyone else asks.
+  const already = await db
+    .select({ one: follows.followerId })
+    .from(follows)
+    .where(and(eq(follows.followerId, viewerId), eq(follows.followeeId, targetId)))
+    .get();
+  if (already) return { ok: true, state: "following" };
+  await db.batch([
+    db.insert(followRequests).values({ requesterId: viewerId, targetId }).onConflictDoNothing(),
+    alertOnFollowRequest(db, viewerId, targetId),
+  ]);
+  return { ok: true, state: "requested" };
 }
 
 export function encodePeopleCursor(createdAt: number, userId: string): string {
@@ -72,6 +97,8 @@ export async function listPeople(
   opts: { cursor?: unknown; limit?: number } = {},
 ): Promise<PeoplePage> {
   const limit = opts.limit ?? PEOPLE_PAGE_SIZE;
+  // A private account's lists are for its followers (and itself); a blocked pair see nothing of each other.
+  if (!(await canSeeContentOf(db, viewerId, userId))) return { items: [], nextCursor: null };
   const cursor = decodePeopleCursor(opts.cursor);
   const mine = kind === "followers" ? follows.followeeId : follows.followerId;
   const theirs = kind === "followers" ? follows.followerId : follows.followeeId;
@@ -92,10 +119,11 @@ export async function listPeople(
       bio: profiles.bio,
       avatarKey: profiles.avatarKey,
       iFollow: sql<number>`exists (select 1 from ${follows} as mine where mine.follower_id = ${viewerId} and mine.followee_id = ${profiles.userId})`,
+      requested: sql<number>`exists (select 1 from ${followRequests} as rq where rq.requester_id = ${viewerId} and rq.target_id = ${profiles.userId})`,
     })
     .from(follows)
     .innerJoin(profiles, eq(profiles.userId, theirs))
-    .where(and(eq(mine, userId), eq(profiles.status, "active"), after))
+    .where(and(eq(mine, userId), eq(profiles.status, "active"), notBlockedWith(viewerId, profiles.userId), after))
     .orderBy(desc(follows.createdAt), desc(theirs))
     .limit(limit + 1);
 
@@ -107,6 +135,7 @@ export async function listPeople(
     bio: r.bio,
     avatarKey: r.avatarKey,
     iFollow: Boolean(r.iFollow),
+    requested: Boolean(r.requested),
     isMe: r.userId === viewerId,
   }));
   const lastRow = rows[limit - 1];
