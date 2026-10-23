@@ -90,6 +90,29 @@ a {
   padding: 24px var(--gx) 32px;
 }
 
+/* On a screen wider than the phone column, a hairline marks each edge of it. It is drawn on the page
+   (not the viewport), so it lines up with the column even beside a scrollbar. Phones and the wide
+   admin pages have no column edge to mark. */
+@media (min-width: 481px) {
+  body:has(.column) {
+    position: relative;
+  }
+
+  body:has(.column)::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    width: 480px;
+    margin: 0 auto;
+    border-inline: 1px solid var(--line);
+    pointer-events: none;
+  }
+}
+
 h1,
 h2,
 h3,

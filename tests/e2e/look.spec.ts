@@ -122,3 +122,40 @@ test("Edit profile has a close button, Save in the header, counters on every fie
   await header.getByRole("link", { name: /^Close/ }).click();
   await expect(page).toHaveURL(new RegExp(`/${E2E.admin.username}$`));
 });
+
+test("on a wide screen a hairline marks each edge of the phone column, on a phone and in the admin panel there is none", async ({ page }) => {
+  const frame = () =>
+    page.evaluate(() => {
+      const edge = getComputedStyle(document.body, "::before");
+      const column = document.querySelector("main.column")?.getBoundingClientRect();
+      return {
+        content: edge.content,
+        width: edge.width,
+        left: edge.borderLeftWidth,
+        right: edge.borderRightWidth,
+        marginLeft: parseFloat(edge.marginLeft),
+        columnLeft: column?.left ?? -1,
+      };
+    });
+
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await page.goto("/");
+  const wide = await frame();
+  expect(wide.content).not.toBe("none");
+  expect(wide.width).toBe("480px");
+  expect(wide.left).toBe("1px");
+  expect(wide.right).toBe("1px");
+  // The lines sit exactly on the column's edges.
+  expect(Math.abs(wide.marginLeft - wide.columnLeft)).toBeLessThan(1);
+  // And they do not scroll the page sideways or catch clicks.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+
+  // The same on a screen as wide as the column or narrower: nothing is drawn.
+  await page.setViewportSize({ width: 412, height: 800 });
+  expect((await frame()).content).toBe("none");
+
+  // The admin panel is the one wide layout and has no phone column to frame.
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await page.goto("/hq");
+  expect(await page.evaluate(() => getComputedStyle(document.body, "::before").content)).toBe("none");
+});

@@ -1,0 +1,6 @@
+# 28. A hairline on each edge of the phone column (2026-10-23)
+- Branch / PR: feat/column-border. Cut from fresh main after #47 (Settings screen look) merged. No other PR was open.
+- Owner ask: "very small border around the screen size". Read as the thin vertical lines on both sides of the column in the owner's Settings reference picture, which show on a screen wider than a phone. If a frame around the whole screen on a phone was meant, it is a small change.
+- Done: one CSS rule (`body:has(.column)::before`, only above 481px): a 480px centred strip with a 1px `--line` border on the left and right, drawn from the page (absolute inside `body`) so it matches the column's edges even beside a scrollbar, above the sticky header and the bottom bar (z-index 40), and ignoring the pointer. Nothing on a phone, and nothing on `/hq` (it has no `.column`). `DESIGN.md` and `docs/PRD.md` (8.13) say so.
+- Tests: one e2e in `look.spec.ts`: at 1000px wide the pseudo element is 480px with 1px left and right borders and sits on the column's own left edge, there is no sideways scroll, at 412px nothing is drawn, and `/hq` has none.
+- Open: the lines are the same colour as every other hairline, so they are quiet in light and dark; checked by eye.

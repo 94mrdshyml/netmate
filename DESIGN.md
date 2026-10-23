@@ -38,7 +38,7 @@ The instance font, 15px body, 1.45 line height. Headings and names are semibold 
 
 ## Layout
 
-- `.column` is the page. Its gutter is `--gx`. Anything that should reach the screen edge (post rows, people rows, tabs, headers, the cover picture) uses a negative side margin of `--gx` and puts the gutter back as padding.
+- `.column` is the page. Its gutter is `--gx`. Anything that should reach the screen edge (post rows, people rows, tabs, headers, the cover picture) uses a negative side margin of `--gx` and puts the gutter back as padding. On a screen wider than the column, a 1px `--line` hairline runs down each edge of it (drawn from the page, so it lines up even beside a scrollbar). Phones, and the wide `/hq`, have none.
 - **Home** has the top bar: your picture (opens Settings), the instance mark, the theme button. Under it, the For you and Following tabs, which stick. Search and Alerts show your picture in the same corner.
 - **Every other screen** has a sticky page header: a back arrow where there is somewhere to go back to, then the title (and a quiet second line when useful). Both headers are 52px tall.
 - **Bottom bar:** Home, Search, Alerts, Profile. Icon and label are `--muted`; on hover, on press and for the current screen they turn the brand colour. No background, no bold. Alerts carries the unread count. Profile is only here: your picture opens Settings, not your profile.
