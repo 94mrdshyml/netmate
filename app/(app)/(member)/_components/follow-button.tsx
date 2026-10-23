@@ -30,7 +30,15 @@ export function FollowButton({ userId, name, following }: { userId: string; name
           });
         }}
       >
-        {isFollowing ? "Following" : "Follow"}
+        {isFollowing ? (
+          // With a mouse, "Following" turns into "Unfollow" under the pointer (the button's name stays the same).
+          <span className="follow-label" aria-hidden="true">
+            <span className="follow-on">Following</span>
+            <span className="follow-off">Unfollow</span>
+          </span>
+        ) : (
+          "Follow"
+        )}
       </button>
       {error ? (
         <span className="error" role="alert">

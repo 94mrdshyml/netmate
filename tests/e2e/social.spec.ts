@@ -16,18 +16,27 @@ async function post(page: Page, text: string) {
 
 const adminName = `${E2E.admin.firstName} ${E2E.admin.lastName}`;
 
-test("the bottom bar takes me Home, to my profile and to Settings, and shows where I am", async ({ page }) => {
+test("the bottom bar takes me Home, to Search, to Alerts and to my profile, and shows where I am", async ({ page }) => {
   await page.goto("/");
   const nav = page.getByRole("navigation", { name: "Main" });
   await expect(nav.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+
+  await nav.getByRole("link", { name: "Search" }).click();
+  await expect(page).toHaveURL(/\/search$/);
+  await expect(nav.getByRole("link", { name: "Search" })).toHaveAttribute("aria-current", "page");
+
+  // The Alerts tab may carry an unread count in its name ("Alerts, 3 unread").
+  await nav.getByRole("link", { name: /^Alerts/ }).click();
+  await expect(page).toHaveURL(/\/notifications$/);
+  await expect(page.getByRole("heading", { name: "Alerts" })).toBeVisible();
 
   await nav.getByRole("link", { name: "Profile" }).click();
   await expect(page).toHaveURL(new RegExp(`/${E2E.admin.username}$`));
   await expect(nav.getByRole("link", { name: "Profile" })).toHaveAttribute("aria-current", "page");
 
-  await nav.getByRole("link", { name: "Settings" }).click();
-  await expect(page).toHaveURL(/\/settings$/);
-  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  // Settings is in the account menu (opened from your picture), not in the bar.
+  await expect(nav.getByRole("link")).toHaveCount(4);
+  await expect(nav.getByRole("link", { name: "Settings" })).toHaveCount(0);
 
   // Tap targets are at least 44px and the bar stays inside the phone column.
   for (const link of await nav.getByRole("link").all()) {

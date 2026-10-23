@@ -50,7 +50,6 @@ export function BottomNav({ username, unread }: { username: string; unread: numb
     { href: "/search", label: "Search", icon: "search", active: pathname.startsWith("/search") },
     { href: "/notifications", label: "Alerts", icon: "bell", active: onAlerts },
     { href: `/${username}`, label: "Profile", icon: "user", active: pathname === `/${username}` },
-    { href: "/settings", label: "Settings", icon: "settings", active: pathname.startsWith("/settings") },
   ];
 
   return (

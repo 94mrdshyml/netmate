@@ -271,7 +271,7 @@ The score is **computed in TypeScript** over candidate posts and counts fetched 
 
 **Own profile:** Edit profile and Analytics buttons. **Other profiles:** Follow / Following (Unfollow on hover or long press) / Requested (private accounts). If either side blocked the other, the page says so instead of showing posts. A private account you don't follow shows only the header.
 
-**Edit profile:** first name, last name, bio (160), city or country (60), link, avatar (up to 2 MB), banner (up to 5 MB).
+**Edit profile:** first name, last name, bio (160), city or country (60), link, avatar (up to 2 MB), banner (up to 5 MB). The screen has a header with a close button (back to your profile), the title and Save; the cover picture and your picture each have a camera button (Remove appears once there is a picture); fields are boxed with the label inside and a character counter. Saving stays on the page with a "Saved." note.
 
 **Link in bio.** One link, up to 100 characters. "riya.dev" gets `https://` added. Only http and https with a real domain, no username:password. Shown without the scheme, opens in a new tab, `nofollow`. Taps are counted in analytics.
 
@@ -420,7 +420,9 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 ### 8.13 Design and experience
 
 - **Theme.** Follows the phone by default (or the instance default). A sun and moon button in the Home top bar flips light and dark, and Settings has a three-way Appearance choice (Match phone, Light, Dark). Both save the choice in a cookie that the server reads, so the right theme is painted on the first frame. Both themes are designed and checked, including with extreme brand colours.
-- **Layout.** Home has a top bar (your picture, which opens Settings; the instance mark; the theme button). Every other screen has a sticky header with a back arrow and its title. Bottom tabs (Home, Search, Alerts, Profile), round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected. Until the final bar ships, the bottom tabs are Home, Search, Alerts, Profile and Settings.
+- **Layout.** Home has a top bar (your picture, which opens the account menu; the instance mark; the theme button). Search and Alerts show your picture in the same corner. Every other screen has a sticky header with a back arrow and its title. Bottom tabs: Home, Search, Alerts, Profile; round compose button on Home and your own profile. Tap targets at least 44px; safe areas respected.
+- **Account menu.** A sheet from the left, opened from your picture: your name and handle, Profile, Invite people, Settings, Admin panel (admin only) and Log out. It is a modal dialog (page behind inert, Escape or a tap outside closes it, focus returns to your picture). Settings is not a bottom tab.
+- **Interactions.** Controls answer a pointer or finger with a hover tint, a press (scale to 90 to 97%) and a visible state change: hearts pop once when liked, "Following" reads "Unfollow" under a mouse pointer, the bottom bar's current screen sits on a soft pill. Short (120 to 200 ms), flat, and off under reduced motion. See `DESIGN.md`.
 - **Type.** The instance font. No emoji or em dashes in interface text.
 - **Icons.** Feather.
 - **No** shadows, gradients, glows or cards in the feed.

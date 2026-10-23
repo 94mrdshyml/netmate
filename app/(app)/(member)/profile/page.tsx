@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
 import { getProfile } from "@/server/profiles";
-import { PageHeader } from "../_components/page-header";
 import { EditProfileForm } from "./edit-profile-form";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +19,6 @@ export default async function EditProfilePage() {
 
   return (
     <main className="column">
-      <PageHeader title="Edit profile" back={{ href: "/settings", label: "Back to Settings" }} />
       <EditProfileForm
         username={profile.username}
         userId={profile.userId}

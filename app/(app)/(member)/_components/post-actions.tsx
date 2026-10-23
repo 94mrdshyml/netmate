@@ -7,6 +7,8 @@ import { Icon } from "./icon";
 
 export function LikeButton({ postId, liked, count }: { postId: string; liked: boolean; count: number }) {
   const [state, setState] = useState({ liked, count });
+  // True for the moment after you like, so the heart pops once (not when the page loads already liked).
+  const [popping, setPopping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -14,12 +16,14 @@ export function LikeButton({ postId, liked, count }: { postId: string; liked: bo
     <>
       <button
         type="button"
-        className="action like"
+        className={popping ? "action like pop" : "action like"}
+        onAnimationEnd={() => setPopping(false)}
         aria-pressed={state.liked}
         aria-label={state.liked ? `Unlike, ${state.count} likes` : `Like, ${state.count} likes`}
         disabled={pending}
         onClick={() => {
           const wanted = !state.liked;
+          setPopping(wanted);
           // Show the change at once, then settle on what the server says.
           setState({ liked: wanted, count: Math.max(0, state.count + (wanted ? 1 : -1)) });
           setError(null);

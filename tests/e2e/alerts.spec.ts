@@ -111,9 +111,22 @@ test("tapping an alert opens the post or the person", async ({ page }) => {
 test("a member nobody has acted on sees a friendly empty screen, and cannot see anyone else's alerts", async () => {
   await alice.page.goto("/notifications");
   await expect(alice.page.getByText("No alerts yet.")).toBeVisible();
-  await expect(alice.page.getByText("Alice Admirer")).toHaveCount(0);
+  // No list at all, and nothing about the admin's alerts (which name Alice and Bob) shows up for her.
+  await expect(alice.page.getByRole("list", { name: "Alerts" })).toHaveCount(0);
   await expect(alice.page.getByText("Bob Bystander")).toHaveCount(0);
+  await expect(alice.page.getByText(/liked your post|followed you|replied to your post/)).toHaveCount(0);
   expect(await alice.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+});
+
+// Alice is the one regular member this spec has, so the account menu of a member who is not the admin is checked here.
+test("a regular member's account menu has no Admin panel", async () => {
+  await alice.page.goto("/");
+  await alice.page.getByRole("button", { name: /^Account, @/ }).click();
+  const sheet = alice.page.getByRole("dialog", { name: "Account menu" });
+  await expect(sheet.getByRole("link", { name: "Settings" })).toBeVisible();
+  await expect(sheet.getByRole("link", { name: "Invite people" })).toBeVisible();
+  await expect(sheet.getByRole("link", { name: "Admin panel" })).toHaveCount(0);
+  await alice.page.keyboard.press("Escape");
 });
 
 test("a signed-out visitor is sent to sign in", async ({ browser }) => {
