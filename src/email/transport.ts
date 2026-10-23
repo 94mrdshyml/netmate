@@ -52,8 +52,21 @@ export function realTransport(fetchFn: typeof fetch = fetch): Transport {
 }
 
 export type OutboxItem = OutgoingEmail & { at: number };
+// Kept on globalThis so every route in the Worker bundle sees the same list, however it was split.
+const shared = globalThis as typeof globalThis & { __netmateOutbox?: OutboxItem[] };
+
 /** Everything the fake transport "sent", oldest first. Only the fake writes here. */
-export const outbox: OutboxItem[] = [];
+export const outbox: OutboxItem[] = (shared.__netmateOutbox ??= []);
+
+/**
+ * What the fake "sent" to one address, for the end-to-end tests to read a reset link. Null unless
+ * ENV is exactly "test": anywhere else, including production, there is nothing to read.
+ */
+export function readOutbox(env: { ENV?: string }, to: string): OutboxItem[] | null {
+  if (env.ENV !== "test") return null;
+  const wanted = to.trim().toLowerCase();
+  return outbox.filter((item) => item.to.toLowerCase() === wanted);
+}
 
 /**
  * The fake. A key starting `re_test_` is accepted. A sender on a `.invalid` domain is refused the

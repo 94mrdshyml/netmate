@@ -3,9 +3,9 @@
 // integration tests (plain Workers runtime) do not have.
 
 import { nextCookies } from "better-auth/next-js";
-import { createAuth, type AuthEnv } from "@/auth";
+import { createAuth, type AuthEnv, type CreateAuthOptions } from "@/auth";
 
-export function createNextAuth(env: AuthEnv) {
+export function createNextAuth(env: AuthEnv, options: Omit<CreateAuthOptions, "plugins"> = {}) {
   // nextCookies must be the last plugin.
-  return createAuth(env, { plugins: [nextCookies()] });
+  return createAuth(env, { ...options, plugins: [nextCookies()] });
 }

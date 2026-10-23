@@ -11,6 +11,7 @@ let memberPage: Page;
 let closeMember: () => Promise<void>;
 let memberName = "";
 let memberLink = "";
+let fillerEmail = "";
 
 /** A visitor with no session, from an address of their own, who opens a link and signs up. */
 async function joinThrough(browser: Browser, link: string, last: string) {
@@ -43,6 +44,7 @@ test.beforeAll(async ({ browser }) => {
     const filler = await joinThrough(browser, memberLink, `Filler${n}`);
     // Password hashing is slow when several test files run at once, so allow more than the default 5 seconds.
     await expect(filler.page).toHaveURL(/\/$/, { timeout: 20_000 });
+    if (n === 1) fillerEmail = filler.email;
     await filler.context.close();
   }
 });
@@ -210,6 +212,130 @@ test("with email not set up, a waiting sign-up works as before", async ({ page, 
   await row.getByRole("button", { name: "Yes, reject" }).click();
   await expect(row).toHaveCount(0);
   await quiet.context.close();
+});
+
+// Forgot password. The member is one of this file's fillers (already in, with a known address and
+// password), so no extra sign-up goes through the admin's link. The reset link is read from the fake
+// mail through the test-only outbox route, which answers only when the Worker runs with ENV=test.
+const FILLER_PASSWORD = "a-long-enough-pass";
+const NEW_PASSWORD = "a-brand-new-password-2";
+
+async function resetLinkFor(page: Page, to: string): Promise<string> {
+  let link = "";
+  await expect
+    .poll(
+      async () => {
+        const res = await page.request.get(`/api/test-outbox?to=${encodeURIComponent(to)}`);
+        const body = (await res.json()) as { items: { text: string }[] };
+        const last = body.items.at(-1)?.text ?? "";
+        link = /https?:\/\/[^\s"<>]+\/reset-password\?token=[^\s"<>]+/.exec(last)?.[0] ?? "";
+        return link;
+      },
+      { timeout: 15_000 },
+    )
+    .not.toBe("");
+  return link;
+}
+
+async function trySignIn(page: Page, email: string, password: string) {
+  await page.goto("/sign-in");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+}
+
+test("without email, sign-in has no forgot link and the reset page says it is not available", async ({ browser, page }) => {
+  await forgetEmail(page);
+  const anonymous = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const visitor = await anonymous.newPage();
+  await visitor.goto("/sign-in");
+  await expect(visitor.getByRole("link", { name: "Forgot your password?" })).toHaveCount(0);
+  await visitor.goto("/forgot-password");
+  await expect(visitor.getByText("Password reset is not available because")).toBeVisible();
+  await expect(visitor.getByLabel("Email")).toHaveCount(0);
+  await anonymous.close();
+});
+
+test("a member who forgot their password gets a link, chooses a new password, and signs in with it", async ({ page, browser }) => {
+  try {
+    await setUpEmail(page, "hello@example.org");
+    const anonymous = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      storageState: { cookies: [], origins: [] },
+      extraHTTPHeaders: { "cf-connecting-ip": "198.18.77.1" },
+    });
+    const visitor = await anonymous.newPage();
+
+    await visitor.goto("/sign-in");
+    await visitor.getByRole("link", { name: "Forgot your password?" }).click();
+    await expect(visitor).toHaveURL(/\/forgot-password$/);
+    await visitor.getByLabel("Email").fill("not an address");
+    await visitor.getByRole("button", { name: "Send reset link" }).click();
+    await expect(visitor.getByRole("alert").filter({ hasText: "Enter a valid email address" })).toBeVisible();
+
+    await visitor.getByLabel("Email").fill(fillerEmail);
+    await visitor.getByRole("button", { name: "Send reset link" }).click();
+    await expect(visitor.getByRole("status").filter({ hasText: "If that address belongs to a member" })).toBeVisible();
+
+    const link = await resetLinkFor(visitor, fillerEmail);
+    await visitor.goto(link);
+    await expect(visitor.getByRole("heading", { name: "Choose a new password" })).toBeVisible();
+    const overflow = await visitor.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(overflow).toBe(false);
+
+    await visitor.getByLabel("New password").fill("short");
+    await visitor.getByRole("button", { name: "Save new password" }).click();
+    await expect(visitor.getByRole("alert").filter({ hasText: "Use at least 8 characters" })).toBeVisible();
+
+    await visitor.getByLabel("New password").fill(NEW_PASSWORD);
+    await visitor.getByRole("button", { name: "Save new password" }).click();
+    await expect(visitor).toHaveURL(/\/sign-in\?reset=1$/);
+    await expect(visitor.getByRole("status").filter({ hasText: "Your password was changed" })).toBeVisible();
+
+    // The old password is dead and the new one works.
+    await trySignIn(visitor, fillerEmail, FILLER_PASSWORD);
+    await expect(visitor.getByRole("alert")).toBeVisible();
+    await trySignIn(visitor, fillerEmail, NEW_PASSWORD);
+    await expect(visitor).toHaveURL(/\/$/);
+
+    // The same link cannot be used again.
+    await visitor.goto(link);
+    await expect(visitor.getByRole("heading", { name: "Link not valid" })).toBeVisible();
+    await expect(visitor.getByLabel("New password")).toHaveCount(0);
+    await anonymous.close();
+  } finally {
+    await forgetEmail(page);
+  }
+});
+
+test("asking for a link for an address that is not a member looks the same and sends nothing", async ({ page, browser }) => {
+  try {
+    await setUpEmail(page, "hello@example.org");
+    const anonymous = await browser.newContext({
+      storageState: { cookies: [], origins: [] },
+      extraHTTPHeaders: { "cf-connecting-ip": "198.18.77.2" },
+    });
+    const visitor = await anonymous.newPage();
+    const stranger = `nobody-${Date.now().toString(36)}@example.org`;
+    await visitor.goto("/forgot-password");
+    await visitor.getByLabel("Email").fill(stranger);
+    await visitor.getByRole("button", { name: "Send reset link" }).click();
+    await expect(visitor.getByRole("status").filter({ hasText: "If that address belongs to a member" })).toBeVisible();
+
+    // Give a background send time to happen, then check that nothing went to that address.
+    await visitor.waitForTimeout(1500);
+    const res = await visitor.request.get(`/api/test-outbox?to=${encodeURIComponent(stranger)}`);
+    expect(((await res.json()) as { items: unknown[] }).items).toHaveLength(0);
+
+    // A made-up token is not a reset link.
+    await visitor.goto("/reset-password?token=abcdefghijklmnopqrstuvwx");
+    await expect(visitor.getByRole("heading", { name: "Link not valid" })).toBeVisible();
+    await visitor.goto("/reset-password");
+    await expect(visitor.getByRole("heading", { name: "Link not valid" })).toBeVisible();
+    await anonymous.close();
+  } finally {
+    await forgetEmail(page);
+  }
 });
 
 test("a new link replaces a leaked one at once", async ({ page, browser }) => {
