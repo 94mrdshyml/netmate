@@ -132,5 +132,11 @@ jobs:
       - run: bunx opennextjs-cloudflare build
       - name: Deploy Worker
         run: bunx opennextjs-cloudflare deploy 2>&1 | tee deploy.log
+      - name: Set Worker secrets
+        env:
+          SETUP_TOKEN: ${{ secrets.SETUP_TOKEN }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          SETTINGS_ENCRYPTION_KEY: ${{ secrets.SETTINGS_ENCRYPTION_KEY }}
+        run: bash scripts/ci/set-secrets.sh
       - name: Smoke test the live site
         run: bash scripts/ci/smoke.sh deploy.log

@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, type BetterAuthPlugin } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "@/db/schema";
@@ -12,7 +12,7 @@ export type AuthEnv = {
 };
 
 /** Built per request: bindings only exist inside a request on Workers. */
-export function createAuth(env: AuthEnv) {
+export function createAuth(env: AuthEnv, options: { plugins?: BetterAuthPlugin[] } = {}) {
   const db = drizzle(env.DB, { schema });
 
   return betterAuth({
@@ -24,6 +24,7 @@ export function createAuth(env: AuthEnv) {
       minPasswordLength: 8,
       maxPasswordLength: 128,
     },
+    plugins: options.plugins ?? [],
     // Stripe-style ids such as usr_... made in code (docs/PRD.md section 10).
     advanced: {
       database: {

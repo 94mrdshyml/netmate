@@ -1,0 +1,13 @@
+# Copy to .dev.vars (gitignored) for `bun run dev` and `bun run preview`.
+# Each value must be at least 32 characters. Generate one with:
+#   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+
+# Proves ownership at /setup on a fresh instance. Only you know it.
+SETUP_TOKEN=
+
+# Signs sessions. Changing it signs everyone out.
+AUTH_SECRET=
+
+# Encrypts the Resend and Klipy keys stored in the database. Losing it means
+# re-entering those keys; no other data is lost.
+SETTINGS_ENCRYPTION_KEY=

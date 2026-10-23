@@ -83,7 +83,7 @@ bun run build                        # next build (OpenNext calls this; never po
 bun run build:cf                     # OpenNext build for Workers
 ```
 
-Local secrets live in `.dev.vars` (gitignored). Production secrets are set by a human, never by an agent.
+Local secrets live in `.dev.vars` (gitignored; copy `.dev.vars.example`). The production Worker secrets (`SETUP_TOKEN`, `AUTH_SECRET`, `SETTINGS_ENCRYPTION_KEY`) are set by the deploy job from GitHub Actions secrets of the same name, never by an agent.
 
 ## Hard rules
 
@@ -142,6 +142,8 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 - Never stack PRs (a PR whose base is another feature branch). GitHub's GraphQL `associatedPullRequests` returned internal errors for commits that belong to two merged PRs (#3 and #4), which broke release-please until it was removed. Releases are now manual, but stacked PRs still leave a confusing history. Open every PR against `main`.
 - D1 rejects long GLOB patterns ("LIKE or GLOB pattern too complex"), and only at insert time, so a bad CHECK passes the migration and breaks the first write. Use a short negated class such as `not glob '*[^0-9A-Fa-f]*'`, and test every CHECK with an integration test.
 - The e2e preview runs on an empty local D1: `playwright.config.ts` applies the real migrations first. A page that reads a table that does not exist returns 500 and makes every e2e test wait out its timeouts, which looks like a very slow suite. A leftover preview server on port 8788 is reused (and serves an old build): stop it before a fresh run.
+- A shell command that puts the words "wrangler" and "secret" in one command line (even inside a heredoc or commit text) is blocked by the guard hook. Write such text with the file tool, or reword it.
+- Zod skips object-level refinements when another field is already invalid, so cross-field rules (username versus instance name, Resend key versus sender) run separately in `validateSetup`. Use it, not the raw schema.
 - Workers Free will exceed CPU and query limits. Test on Paid.
 - No I/O (D1, R2, fetch) at module scope. Use bindings per request.
 - Workers cannot pin a resolved DNS address like Node can. The link-preview fetcher needs its own safe design (resolve over DNS-over-HTTPS and refuse private ranges, re-check every redirect), or the feature stays off.
