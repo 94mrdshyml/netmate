@@ -39,6 +39,21 @@ export function inviteByEmail(instanceName: string, inviterName: string, joinUrl
   };
 }
 
+export function passwordReset(instanceName: string, firstName: string, resetUrl: string, minutes: number): Message {
+  return {
+    subject: oneLine(`Reset your ${instanceName} password`),
+    content: {
+      heading: "Reset your password",
+      paragraphs: [
+        `Hi ${firstName},`,
+        `Someone asked to reset the password for your ${instanceName} account. The link works for ${minutes} minutes and only once.`,
+        "If it was not you, ignore this email. Your password stays the same.",
+      ],
+      button: { label: "Choose a new password", url: resetUrl },
+    },
+  };
+}
+
 export function approvedForInvitee(instanceName: string, firstName: string, signInUrl: string | null): Message {
   return {
     subject: oneLine(`You're in: welcome to ${instanceName}`),

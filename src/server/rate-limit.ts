@@ -19,6 +19,9 @@ export const LIMITS = {
   follows: { name: "follows", max: 30, windowMs: 10 * MINUTE },
   uploads: { name: "uploads", max: 30, windowMs: 10 * MINUTE },
   testEmail: { name: "email:test", max: 5, windowMs: 60 * MINUTE },
+  resetEmail: { name: "reset:email", max: 5, windowMs: 60 * MINUTE },
+  resetIp: { name: "reset:ip", max: 20, windowMs: 60 * MINUTE },
+  resetSubmit: { name: "reset:submit", max: 10, windowMs: 10 * MINUTE },
   inviteEmail: { name: "invite:email", max: 10, windowMs: 60 * MINUTE },
   inviteEmailTo: { name: "invite:to", max: 2, windowMs: 24 * 60 * MINUTE },
 } as const satisfies Record<string, Limit>;
@@ -99,6 +102,14 @@ export const limitUpload = (db: D1Database, salt: string, userId: string, now?: 
 
 export const limitTestEmail = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.testEmail, userId, salt, now);
+
+/** Asking for a reset link: per address and per visitor, so neither one inbox nor one visitor can be flooded. */
+export const limitPasswordResetRequest = (db: D1Database, salt: string, who: { ip: string; email: string }, now?: number) =>
+  takeAll(db, [[LIMITS.resetIp, who.ip], [LIMITS.resetEmail, who.email.trim()]], salt, now);
+
+/** Trying to set a new password with a link: per visitor, so a link cannot be guessed at. */
+export const limitPasswordResetSubmit = (db: D1Database, salt: string, ip: string, now?: number) =>
+  takeSlot(db, LIMITS.resetSubmit, ip, salt, now);
 
 /** An invite by email: a cap on what one member sends, and a cap on mail to one address from anyone. */
 export const limitInviteEmail = (db: D1Database, salt: string, who: { userId: string; to: string }, now?: number) =>

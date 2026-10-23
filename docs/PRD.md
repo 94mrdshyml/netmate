@@ -198,6 +198,8 @@ The username field checks availability as you type (after a short pause). Reserv
 
 **Sign in** is email and password. **Sign out** is in Settings. **Forgot password** and **change email** use Resend (hidden or disabled without it).
 
+**Forgot password.** When email is set up, the sign-in screen has a "Forgot your password?" link to `/forgot-password`, where a person types their email. The answer is always the same ("If that address belongs to a member, a link is on its way. It works for an hour."), whether or not the address is a member, and the email is sent after the response so the time taken is the same too. The email has a button to `/reset-password?token=...`. The link works once and for 60 minutes. The reset page checks the link before it shows the form, asks for a new password (8 to 128 characters), then sends the person to the sign-in screen with "Your password was changed". Setting a new password ends every other session of that account. The page sends no Referer header, so the token is not passed on. A wrong, used or expired link says "Link not valid" and offers a new one. Without email set up the link is hidden and `/forgot-password` says reset is not available. Limits: 5 links an hour per address, 20 requests an hour per visitor, and 10 tries with a link per 10 minutes per visitor.
+
 **Onboarding.** If an account exists without a profile (tab closed halfway), the person is sent to a short page to finish: first name, last name, username.
 
 **Default picture.** Everyone without an uploaded avatar gets a DiceBear picture in the instance's style, seeded from their username (unique and permanent, so it survives a name change and is never shared).
@@ -403,6 +405,7 @@ Limits are counted per person, or per IP address for sign-up and sign-in. IPs ar
 | Password checks (change, delete) | 5 per 10 minutes |
 | Any request to the auth service | 60 per 10 minutes per IP |
 | Email sends (verify, reset) | 5 per hour per address |
+| Reset link requests | also 20 per hour per visitor; trying a link: 10 per 10 minutes per visitor |
 | Invitations by email | 10 an hour per member, and 2 a day to any one address |
 | Test email from `/hq/email` | 5 per hour per admin |
 

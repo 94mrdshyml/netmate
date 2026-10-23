@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { approvedForInvitee, inviteByEmail, pendingForAdmin, rejectedForInvitee } from "@/email/messages";
+import { approvedForInvitee, inviteByEmail, passwordReset, pendingForAdmin, rejectedForInvitee } from "@/email/messages";
 import { renderEmail } from "@/email/render";
 import { siteUrl, type EmailBrand } from "@/email/template";
 
@@ -69,6 +69,27 @@ describe("the invitation email", () => {
   it("takes the instance name from the caller and uses no em dash", () => {
     for (const name of ["Green Valley", "Birch Club"]) {
       const m = inviteByEmail(name, "Owen", "https://x.test/");
+      expect(JSON.stringify(m)).toContain(name);
+      expect(JSON.stringify(m)).not.toContain("—");
+    }
+  });
+});
+
+describe("the password reset email", () => {
+  it("greets by first name, says how long the link lasts, and has the button", async () => {
+    const m = passwordReset("Green Valley", "Grace", "https://club.example.org/reset-password?token=abc", 60);
+    const { html, text } = await renderEmail(brand, m.content);
+    expect(m.subject).toBe("Reset your Green Valley password");
+    expect(html).toContain("Hi Grace,");
+    expect(html).toContain("60 minutes");
+    expect(html).toContain("If it was not you, ignore this email.");
+    expect(html).toContain('href="https://club.example.org/reset-password?token=abc"');
+    expect(text).toContain("https://club.example.org/reset-password?token=abc");
+  });
+
+  it("takes the instance name from the caller and uses no em dash", () => {
+    for (const name of ["Green Valley", "Birch Club"]) {
+      const m = passwordReset(name, "Grace", "https://x.test/", 60);
       expect(JSON.stringify(m)).toContain(name);
       expect(JSON.stringify(m)).not.toContain("—");
     }
