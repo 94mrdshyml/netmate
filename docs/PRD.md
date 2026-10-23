@@ -277,7 +277,7 @@ The score is **computed in TypeScript** over candidate posts and counts fetched 
 
 ### 8.4 Profiles
 
-`/[username]` shows banner (3:1 picture, or a flat colour), avatar, name, `@username`, bio, joined date, city or country, link, follower and following counts, and the Mates line. Tabs: **Posts** (with reposts) and **Replies**. No Likes tab.
+`/[username]` shows banner (3:1 picture, or a flat colour), avatar, name, `@username`, bio, joined date, city or country, link, the post count, follower and following counts, and the Mates line. The **post count** (built, session 38) is the number of top-level posts the person has made that are not deleted, which is what the Posts tab lists (replies and reposts are not counted; a quote is a post of its own). It is plain text, first in the row before Following and Followers, and is left out when their posts are hidden from you (a private account you do not follow, or a block), so it does not show how active a private account is. Tabs: **Posts** (with reposts) and **Replies**. No Likes tab.
 
 **Own profile:** Edit profile and Analytics buttons. **Other profiles:** Follow / Following (Unfollow on hover or long press) / Requested (private accounts). If either side blocked the other, the page says so instead of showing posts. A private account you don't follow shows only the header.
 

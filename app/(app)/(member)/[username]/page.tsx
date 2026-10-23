@@ -132,6 +132,12 @@ export default async function ProfilePage({
 
         {/* The lists are for followers of a private account, so the counts are plain numbers there. */}
         <p className="counts">
+          {/* Not a link, and left out when this person's posts are hidden from you. */}
+          {profile.postCount !== null ? (
+            <span>
+              <strong>{profile.postCount}</strong> {profile.postCount === 1 ? "Post" : "Posts"}
+            </span>
+          ) : null}
           {locked ? (
             <>
               <span>
