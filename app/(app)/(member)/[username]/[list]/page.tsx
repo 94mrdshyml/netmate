@@ -5,6 +5,7 @@ import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
 import { listPeople } from "@/server/follows";
 import { getProfile } from "@/server/profiles";
+import { EmptyState } from "../../_components/empty-state";
 import { PageHeader } from "../../_components/page-header";
 import { PersonRow } from "../../_components/person-row";
 
@@ -57,7 +58,13 @@ export default async function PeoplePage({
         ))}
       </ul>
       {page.items.length === 0 ? (
-        <p className="empty">{list === "followers" ? "No followers yet." : "Not following anyone yet."}</p>
+        list === "followers" ? (
+          <EmptyState icon="users" title="No followers yet.">
+            When people follow, they show up here.
+          </EmptyState>
+        ) : (
+          <EmptyState icon="users" title="Not following anyone yet." action={{ href: "/search", label: "Find people" }} />
+        )
       ) : null}
       {page.nextCursor ? (
         <Link className="btn btn-ghost more" href={`${base}/${list}?cursor=${page.nextCursor}`}>

@@ -64,7 +64,7 @@ export function BottomNav({ username, unread }: { username: string; unread: numb
             aria-label={unreadHere > 0 ? `${item.label}, ${unreadHere} unread` : undefined}
           >
             <span className="nav-icon">
-              <Icon name={item.icon} size={24} strokeWidth={item.active ? 2.5 : 1.75} />
+              <Icon name={item.icon} size={24} />
               {unreadHere > 0 ? (
                 <span className="nav-badge" aria-hidden="true">
                   {unreadHere > 99 ? "99+" : unreadHere}

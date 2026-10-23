@@ -92,10 +92,14 @@ test("deleting my own post asks first and removes it everywhere", async ({ page 
   await writePost(page, text);
   const card = page.getByRole("article").filter({ hasText: text });
 
+  // Deleting lives in the "..." menu on my own post, and it asks first.
+  await card.getByRole("button", { name: "More options" }).click();
   await card.getByRole("button", { name: "Delete post" }).click();
   await card.getByRole("button", { name: "Keep" }).click();
   await expect(card).toBeVisible();
+  await expect(card.getByRole("button", { name: "Delete post" })).toHaveCount(0);
 
+  await card.getByRole("button", { name: "More options" }).click();
   await card.getByRole("button", { name: "Delete post" }).click();
   await card.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(page.getByRole("article").filter({ hasText: text })).toHaveCount(0);
@@ -109,6 +113,8 @@ test("another member sees my post, and cannot delete it", async ({ browser, page
   await other.page.goto("/");
   const card = other.page.getByRole("article").filter({ hasText: text });
   await expect(card).toBeVisible();
+  // Not even the "..." menu: there is nothing in it for someone else's post.
+  await expect(card.getByRole("button", { name: "More options" })).toHaveCount(0);
   await expect(card.getByRole("button", { name: "Delete post" })).toHaveCount(0);
   await other.context.close();
 });

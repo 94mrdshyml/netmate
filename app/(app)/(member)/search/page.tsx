@@ -6,6 +6,7 @@ import { currentTime } from "@/lib/time";
 import { buildSearchQuery, SEARCH_MIN_CHARS } from "@/lib/search-query";
 import { searchPeople, searchPosts, suggestPeople } from "@/server/search";
 import { AccountLink } from "../_components/account-link";
+import { EmptyState } from "../_components/empty-state";
 import { PersonRow } from "../_components/person-row";
 import { PostCard } from "../_components/post-card";
 import { SearchBox } from "./search-box";
@@ -59,7 +60,7 @@ export default async function SearchPage({
             ))}
           </ul>
         ) : (
-          <p className="empty">No one to suggest yet. Search for a name or a word.</p>
+          <EmptyState icon="users" title="No one to suggest yet.">Search for a name or a word.</EmptyState>
         )}
       </main>
     );
@@ -81,7 +82,7 @@ export default async function SearchPage({
       <main className="column">
         {header}
         {tabs}
-        <p className="empty">Type at least {SEARCH_MIN_CHARS} letters or numbers.</p>
+        <EmptyState icon="search" title={`Type at least ${SEARCH_MIN_CHARS} letters or numbers.`} />
       </main>
     );
   }
@@ -99,7 +100,7 @@ export default async function SearchPage({
             ))}
           </ul>
         ) : (
-          <p className="empty">No one found for &ldquo;{q.trim()}&rdquo;.</p>
+          <EmptyState icon="users" title={<>No one found for &ldquo;{q.trim()}&rdquo;.</>}>Try another spelling.</EmptyState>
         )}
       </main>
     );
@@ -114,7 +115,11 @@ export default async function SearchPage({
         {results.items.map((post) => (
           <PostCard key={post.id} post={post} viewerId={member.userId} now={now} />
         ))}
-        {results.items.length === 0 ? <p className="empty">No posts found for &ldquo;{q.trim()}&rdquo;.</p> : null}
+        {results.items.length === 0 ? (
+          <EmptyState icon="search" title={<>No posts found for &ldquo;{q.trim()}&rdquo;.</>}>
+            Try another word.
+          </EmptyState>
+        ) : null}
         {results.nextCursor ? (
           <Link className="btn btn-ghost more" href={`/search?${new URLSearchParams({ q, cursor: results.nextCursor })}`}>
             More posts

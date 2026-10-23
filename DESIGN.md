@@ -9,7 +9,7 @@ How the app looks and feels. The product rules are in `CLAUDE.md` and `docs/PRD.
 - Flat. No shadows, no gradients, no glows, no cards in the feed.
 - One brand colour. Everything else is a mix of the page colour and the text colour.
 - Nothing is hard-coded to a brand: name, colour, radius, font and avatar style come from instance settings.
-- Feather icons only. No emoji and no em dashes in interface text.
+- Feather icons only, all drawn with one line thickness (1.75), so the set looks like one. No emoji and no em dashes in interface text.
 - Tap targets are at least 44px. Safe areas are respected. One column, 480px at most, centred.
 - Text and controls pass WCAG AA in light and dark, with any brand colour.
 - Motion is small and stops under `prefers-reduced-motion`.
@@ -38,7 +38,7 @@ The instance font, 15px body, 1.45 line height. Headings and names are semibold 
 
 ## Layout
 
-- `.column` is the page. Its gutter is `--gx`. Anything that should reach the screen edge (post rows, people rows, tabs, headers, the cover picture) uses a negative side margin of `--gx` and puts the gutter back as padding. On a screen wider than the column, a 1px `--line` hairline runs down each edge of it (drawn from the page, so it lines up even beside a scrollbar). Phones, and the wide `/hq`, have none.
+- `.column` is the page. Its gutter is `--gx`. Anything that should reach the screen edge (post rows, people rows, tabs, headers, the cover picture) uses a negative side margin of `--gx` and puts the gutter back as padding. On a screen wider than the column, the page around it is a shade apart (5% of the text colour mixed into the page colour) and a 1px `--line` hairline runs down each edge. The body itself is the column's width, so the lines are exactly on its edges even beside a scrollbar, and the bottom bar has them too. Phones, and the wide `/hq`, have neither.
 - **Home** has the top bar: your picture (opens Settings), the instance mark, the theme button. Under it, the For you and Following tabs, which stick. Search and Alerts show your picture in the same corner.
 - **Every other screen** has a sticky page header: a back arrow where there is somewhere to go back to, then the title (and a quiet second line when useful). Both headers are 52px tall.
 - **Bottom bar:** Home, Search, Alerts, Profile. Icon and label are `--muted`; on hover, on press and for the current screen they turn the brand colour. No background, no bold. Alerts carries the unread count. Profile is only here: your picture opens Settings, not your profile.
@@ -49,14 +49,14 @@ The instance font, 15px body, 1.45 line height. Headings and names are semibold 
 - **Settings:** a full screen opened from your picture: a header with a back arrow and the title in the middle, then one plain list. Each row is an icon (muted, thin line), a title (medium) with a short quiet line under it, and a chevron; hairlines run edge to edge. Edit profile, Invite people, Admin panel (admin only), then a row with the "Dark or light theme" button where the chevron would be, then an outlined full-width Log out button. The bottom bar stays visible.
 - **Edit profile:** like the screens people know. Sticky header with a close button, the title and Save. The cover picture has a camera button (and a remove button once there is a cover); your picture overlaps its corner with its own camera button and a Remove button. Fields sit in bordered boxes with the label inside, a character counter (`12 / 160`) and a brand border when focused. Saving stays on the page with a "Saved." note; close goes back to your profile.
 - **Brand mark:** a round chip in the brand colour with the first letter of the instance name, then the name. An uploaded logo replaces the chip when logo upload exists.
-- **Post row:** picture, then name, handle and time on one line, text, then the action row (reply, like, and delete for your own). Rows are separated by a hairline. A liked heart is filled and brand-coloured. On the post's own page the text is larger.
+- **Post row:** picture, then name, handle and time on one line, text, then the action row (reply, like, and a "..." menu for your own, holding Delete post, which still asks first). Rows are separated by a hairline. A liked heart is filled and brand-coloured. On the post's own page the text is larger.
 - **Tabs:** the current tab has full-strength text and a short brand bar under it. The others are `--muted`.
 - **Buttons:** primary (brand), ghost (hairline border), full width when alone on a row. Corners follow the instance radius. Pressing scales to 97%.
 - **Icon buttons:** 44px round. Hover and press turn the icon the brand colour; there is no background.
 - **Fields:** 48px tall, the instance radius, a visible border, a brand border and outline on focus.
 - **Appearance:** the sun and moon button (top bar on Home, and the "Dark or light theme" row in Settings) flips light and dark. A person who has not chosen follows their phone. The choice is saved in a cookie, which the server reads to paint the right theme on the first frame, so nothing flashes.
-- **Loading:** no route-level `loading.tsx`. It makes Next send "200" before a page can say "not found", which breaks the 404 rule. Use buttons that show a pending word instead, and no spinners.
-- **Empty and end states:** centred, quiet, plain English. Zeros show as zeros.
+- **Loading:** no route-level `loading.tsx`. It makes Next send "200" before a page can say "not found", which breaks the 404 rule. Instead, a thin brand line along the top of the column starts the moment you tap a link to another screen and finishes when it arrives (`NavigationProgress`); buttons that send something show a pending word. No spinners.
+- **Empty and end states:** centred and quiet: a muted icon in a soft circle, one plain line, a second line that says what will appear, and one button where there is something useful to do (`EmptyState`). Plain English. Zeros show as zeros.
 
 ## Motion
 

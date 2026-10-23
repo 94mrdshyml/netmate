@@ -5,6 +5,7 @@ import { getDb } from "@/db";
 import { getInstanceState } from "@/instance/request";
 import { currentTime } from "@/lib/time";
 import { listFeed } from "@/server/posts";
+import { EmptyState } from "./_components/empty-state";
 import { Icon } from "./_components/icon";
 import { PostCard } from "./_components/post-card";
 import { TopBar } from "./_components/top-bar";
@@ -43,9 +44,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
           <PostCard key={post.id} post={post} viewerId={member.userId} now={now} />
         ))}
         {feed.items.length === 0 ? (
-          <p className="empty">
-            {following ? "Your feed is empty. Follow people to see their posts here." : "Nothing here yet. Be the first to post."}
-          </p>
+          following ? (
+            <EmptyState icon="users" title="Your feed is empty" action={{ href: "/search", label: "Find people" }}>
+              Follow people to see their posts here.
+            </EmptyState>
+          ) : (
+            <EmptyState icon="feather" title="Nothing here yet." action={{ href: "/compose", label: "Write a post" }}>
+              Be the first to post.
+            </EmptyState>
+          )
         ) : null}
         {feed.nextCursor ? (
           <Link className="btn btn-ghost more" href={`/?${following ? "feed=following&" : ""}cursor=${feed.nextCursor}`}>

@@ -8,6 +8,7 @@ import { listAlerts, type AlertItem } from "@/server/notifications";
 import { Avatar } from "../_components/avatar";
 import { Icon, type IconName } from "../_components/icon";
 import { AccountLink } from "../_components/account-link";
+import { EmptyState } from "../_components/empty-state";
 import { PageHeader } from "../_components/page-header";
 import { MarkRead } from "./mark-read";
 
@@ -95,7 +96,9 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
           ))}
         </ul>
       ) : (
-        <p className="empty">No alerts yet. Likes, replies and new followers show up here.</p>
+        <EmptyState icon="bell" title="No alerts yet.">
+          Likes, replies and new followers show up here.
+        </EmptyState>
       )}
 
       {page.nextCursor ? (

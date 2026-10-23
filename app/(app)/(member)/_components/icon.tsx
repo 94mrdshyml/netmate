@@ -111,6 +111,21 @@ const PATHS = {
       <circle cx="12" cy="13" r="4" />
     </>
   ),
+  users: (
+    <>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </>
+  ),
+  "more-horizontal": (
+    <>
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="19" cy="12" r="1" />
+      <circle cx="5" cy="12" r="1" />
+    </>
+  ),
   bell: (
     <>
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -146,16 +161,17 @@ const PATHS = {
 
 export type IconName = keyof typeof PATHS;
 
+/** One line thickness for every icon, so the bottom bar, rows, posts and buttons look like one set. */
+const LINE = 1.75;
+
 export function Icon({
   name,
   size = 20,
   filled = false,
-  strokeWidth = 2,
 }: {
   name: IconName;
   size?: number;
   filled?: boolean;
-  strokeWidth?: number;
 }) {
   return (
     <svg
@@ -164,7 +180,7 @@ export function Icon({
       viewBox="0 0 24 24"
       fill={filled ? "currentColor" : "none"}
       stroke="currentColor"
-      strokeWidth={strokeWidth}
+      strokeWidth={LINE}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
