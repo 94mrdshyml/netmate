@@ -3236,3 +3236,16 @@ a.quote-card:hover {
 .alert-icon-repost {
   color: var(--brand-text);
 }
+
+/* ---- #tags and @mentions inside a post ---- */
+
+.entity {
+  color: var(--brand-text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.entity:hover,
+.entity:focus-visible {
+  text-decoration: underline;
+}

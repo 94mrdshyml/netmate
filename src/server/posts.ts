@@ -5,13 +5,14 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import type { Db } from "@/db";
 import { alias } from "drizzle-orm/sqlite-core";
-import { bookmarks, follows, likes, POST_PHOTO_MAX, postGifs, postMedia, posts, profiles, reposts } from "@/db/schema";
+import { bookmarks, follows, likes, POST_PHOTO_MAX, postGifs, postMedia, postMentions, posts, postTags, profiles, reposts } from "@/db/schema";
 import { checkGif, type PostGif } from "@/lib/gif";
 import { isId, newId } from "@/lib/ids";
 import { checkPlace } from "@/lib/place";
+import { extractEntities } from "@/lib/post-entities";
 import { checkPostText } from "@/lib/post-text";
-import { alertOnLike, alertOnQuote, alertOnReply, alertOnRepost, removeLikeAlert, removeRepostAlert } from "@/server/notifications";
-import { notMutedBy, personVisible, visiblePosts } from "@/server/visibility";
+import { alertOnLike, alertOnMention, alertOnQuote, alertOnReply, alertOnRepost, removeLikeAlert, removeRepostAlert } from "@/server/notifications";
+import { notBlockedWith, notMutedBy, personVisible, visiblePosts } from "@/server/visibility";
 
 export const PAGE_SIZE = 20;
 
@@ -46,6 +47,10 @@ export type PostView = {
   gif: PostGif | null;
   /** Where it was posted from, as plain text such as "Berlin, Germany", or null. */
   place: string | null;
+  /** The post's hashtags, lower-cased. Only these are drawn as links; a `#word` not in the list is plain text. */
+  tags: string[];
+  /** Usernames (lower-cased) of the people it mentions who exist. Only these are drawn as links. */
+  mentions: string[];
   repostCount: number;
   repostedByMe: boolean;
   /** Private: only ever the reader's own saved state, never a count. */
@@ -136,6 +141,8 @@ const toView = (r: Row): PostView => ({
   replyCount: r.replyCount,
   likeCount: r.likeCount,
   likedByMe: Boolean(r.liked),
+  tags: [],
+  mentions: [],
   repostCount: r.repostCount,
   repostedByMe: Boolean(r.reposted),
   bookmarkedByMe: Boolean(r.bookmarked),
@@ -160,7 +167,10 @@ async function hydrate(db: Db, viewerId: string, rows: Row[], by: (RepostedBy | 
   if (items.length === 0) return items;
   const ids = [...new Set(items.map((p) => p.id))];
   const quotedIds = [...new Set(rows.flatMap((r) => (r.quotedPostId ? [r.quotedPostId] : [])))];
-  const [media, gifs, quoted] = await Promise.all([
+  // Tags and mentions can only be in text that has a # or an @, so other posts need no query.
+  const withHash = [...new Set(items.filter((p) => p.body.includes("#")).map((p) => p.id))];
+  const withAt = [...new Set(items.filter((p) => p.body.includes("@")).map((p) => p.id))];
+  const [media, gifs, quoted, tagRows, mentionRows] = await Promise.all([
     db
       .select({ postId: postMedia.postId, key: postMedia.key })
       .from(postMedia)
@@ -188,7 +198,21 @@ async function hydrate(db: Db, viewerId: string, rows: Row[], by: (RepostedBy | 
           .from(posts)
           .innerJoin(profiles, eq(profiles.userId, posts.authorId))
           .where(and(visiblePosts(viewerId), inArray(posts.id, quotedIds))),
+    withHash.length === 0
+      ? Promise.resolve([])
+      : db.select({ postId: postTags.postId, tag: postTags.tag }).from(postTags).where(inArray(postTags.postId, withHash)),
+    withAt.length === 0
+      ? Promise.resolve([])
+      : db
+          .select({ postId: postMentions.postId, username: profiles.username })
+          .from(postMentions)
+          .innerJoin(profiles, eq(profiles.userId, postMentions.userId))
+          .where(inArray(postMentions.postId, withAt)),
   ]);
+  const tagsOf = new Map<string, string[]>();
+  for (const r of tagRows) tagsOf.set(r.postId, [...(tagsOf.get(r.postId) ?? []), r.tag]);
+  const mentionsOf = new Map<string, string[]>();
+  for (const r of mentionRows) mentionsOf.set(r.postId, [...(mentionsOf.get(r.postId) ?? []), r.username]);
   const byPost = new Map<string, string[]>();
   for (const r of media) byPost.set(r.postId, [...(byPost.get(r.postId) ?? []), r.key]);
   const gifOf = new Map<string, PostGif>();
@@ -211,6 +235,8 @@ async function hydrate(db: Db, viewerId: string, rows: Row[], by: (RepostedBy | 
       ...p,
       photos: byPost.get(p.id) ?? [],
       gif: gifOf.get(p.id) ?? null,
+      tags: tagsOf.get(p.id) ?? [],
+      mentions: mentionsOf.get(p.id) ?? [],
       quote: quotedId ? (cards.get(quotedId) ?? { available: false }) : null,
     };
   });
@@ -440,9 +466,11 @@ export async function createPost(
   const quoting = quotedId !== undefined;
   if (quoting && parentId !== undefined) return { ok: false, code: "quote_and_reply" };
   if (quoting && (photoKeys.length > 0 || gif)) return { ok: false, code: "quote_with_media" };
+  let quotedAuthorId: string | null = null;
   if (quoting) {
     const target = await shareTarget(db, authorId, quotedId);
     if (!target.ok) return { ok: false, code: target.code === "private" ? "quote_private" : "quote_not_found" };
+    quotedAuthorId = target.authorId;
   }
   const place = checkPlace(rawPlace);
   if (!place.ok) return { ok: false, code: place.reason === "too_long" ? "place_too_long" : "place_bad_characters" };
@@ -451,22 +479,43 @@ export async function createPost(
   const text = wordless ? ({ ok: true, text: " ", length: 1 } as const) : checkPostText(rawBody);
   if (!text.ok) return { ok: false, code: text.reason };
 
-  if (parentId !== undefined && !(await getPost(db, authorId, parentId))) {
-    return { ok: false, code: "parent_not_found" };
+  let parentAuthorId: string | null = null;
+  if (parentId !== undefined) {
+    const parent = await getPost(db, authorId, parentId);
+    if (!parent) return { ok: false, code: "parent_not_found" };
+    parentAuthorId = parent.author.userId;
   }
 
+  // Hashtags and mentions are found in the text. Only people who exist, are active and have no block
+  // with the author count as mentioned; the rest stay plain text.
+  const { tags, mentions } = wordless ? { tags: [], mentions: [] } : extractEntities(text.text);
+  const mentioned =
+    mentions.length === 0
+      ? []
+      : await db
+          .select({ userId: profiles.userId })
+          .from(profiles)
+          .where(and(inArray(profiles.username, mentions), eq(profiles.status, "active"), notBlockedWith(authorId, profiles.userId)));
+  // Nobody is alerted twice for one post: the author of a reply's parent already has the reply alert,
+  // and the author of a quoted post has the quote alert (docs/PRD.md section 8.7). Nor are you alerted about yourself.
+  const alertMentioned = mentioned.map((m) => m.userId).filter((u) => u !== authorId && u !== parentAuthorId && u !== quotedAuthorId);
+
   const id = newId("post");
+  const createdAt = new Date();
   const insert = db
     .insert(posts)
-    .values({ id, authorId, parentId: parentId ?? null, quotedPostId: quotedId ?? null, body: text.text, place: place.place });
+    .values({ id, authorId, parentId: parentId ?? null, quotedPostId: quotedId ?? null, body: text.text, place: place.place, createdAt });
   const photos = photoKeys.map((key, position) => ({ postId: id, position, key }));
-  if (parentId === undefined && photos.length === 0 && !gif && !quoting) {
+  if (parentId === undefined && photos.length === 0 && !gif && !quoting && tags.length === 0 && mentioned.length === 0) {
     await insert;
   } else {
-    // The post, its photos or GIF, for a quote the author's alert, and for a reply the parent's count and the parent's author's alert change together.
+    // The post, its photos or GIF, its tags and mentions with their alerts, for a quote the author's alert, and for a reply the parent's count and the parent's author's alert change together.
     await db.batch([
       insert,
       ...(photos.length > 0 ? [db.insert(postMedia).values(photos)] : []),
+      ...(tags.length > 0 ? [db.insert(postTags).values(tags.map((tag) => ({ postId: id, tag, createdAt })))] : []),
+      ...(mentioned.length > 0 ? [db.insert(postMentions).values(mentioned.map((m) => ({ postId: id, userId: m.userId })))] : []),
+      ...alertMentioned.map((userId) => alertOnMention(db, authorId, userId, id)),
       ...(gif ? [db.insert(postGifs).values({ postId: id, url: gif.url, width: gif.width, height: gif.height, title: gif.title })] : []),
       ...(parentId === undefined
         ? []

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
 import { currentTime } from "@/lib/time";
+import { parseTagQuery } from "@/lib/post-entities";
 import { buildSearchQuery, SEARCH_MIN_CHARS } from "@/lib/search-query";
 import { searchPeople, searchPosts, suggestPeople } from "@/server/search";
 import { AccountLink } from "../_components/account-link";
@@ -33,7 +34,8 @@ export default async function SearchPage({
 
   const { env } = await getCloudflareContext({ async: true });
   const db = getDb(env.DB);
-  const searchable = buildSearchQuery(q) !== null;
+  // "#a" is a real tag even though it is shorter than a word search may be.
+  const searchable = buildSearchQuery(q) !== null || parseTagQuery(q) !== null;
   const now = currentTime();
 
   const tabLink = (to: "posts" | "people") => `/search?${new URLSearchParams({ q, ...(to === "people" ? { tab: "people" } : {}) })}`;
