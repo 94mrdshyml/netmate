@@ -1159,6 +1159,64 @@ a.alert-link:focus-visible {
   font-size: 1rem;
 }
 
+/* ---- Moving between screens ---- */
+
+/* The old screen fades out as the new one fades in and settles up a few pixels. Short on purpose:
+   the wait for the server is already there, so the movement must not add to it. The bottom bar is
+   named so it stays put and above the fading screens. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(*) {
+    animation-duration: 0.2s;
+  }
+  ::view-transition-old(.screen-out) {
+    animation: 0.12s var(--ease) both screen-fade reverse;
+  }
+  ::view-transition-new(.screen-in) {
+    animation:
+      0.2s var(--ease) both screen-fade,
+      0.2s var(--ease) both screen-rise;
+  }
+}
+
+@keyframes screen-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes screen-rise {
+  from {
+    translate: 0 8px;
+  }
+}
+
+/* Taps made while the move plays go through to the real page. */
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-group(bottom-nav) {
+  animation: none;
+  z-index: 100;
+}
+
+::view-transition-old(bottom-nav) {
+  display: none;
+}
+
+::view-transition-new(bottom-nav) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
 /* ---- Navigation ---- */
 
 .with-nav {
@@ -1177,6 +1235,7 @@ a.alert-link:focus-visible {
   background: var(--bg);
   border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
+  view-transition-name: bottom-nav;
 }
 
 .bottom-nav a {
