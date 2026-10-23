@@ -12,9 +12,17 @@ async function fillSignUp(page: Page, n: number) {
   await page.getByRole("button", { name: "Create account" }).click();
 }
 
+// Each visitor gets its own address so the per-IP sign-up limit never trips across tests.
+// (Locally there is no Cloudflare in front, so the header is ours to set.)
+let nextVisitor = 0;
+
 /** A visitor with no session (the project's stored admin login is not inherited), who opens an invite link. */
 async function visitor(browser: Browser, link: string) {
-  const context = await browser.newContext({ viewport: { width: 412, height: 915 }, storageState: { cookies: [], origins: [] } });
+  const context = await browser.newContext({
+    viewport: { width: 412, height: 915 },
+    storageState: { cookies: [], origins: [] },
+    extraHTTPHeaders: { "cf-connecting-ip": `198.18.1.${++nextVisitor}` },
+  });
   const page = await context.newPage();
   await page.goto(link);
   return { page, context };

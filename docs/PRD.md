@@ -381,7 +381,7 @@ Limits are counted per person, or per IP address for sign-up and sign-in. IPs ar
 | Link-preview fetches | 20 per 10 minutes |
 | Location suggestions | 40 per minute |
 | Analytics reports | 60 per minute |
-| Sign-up | 10 per 10 minutes per IP; per invite link also limited |
+| Sign-up | 10 per 10 minutes per IP; 20 per 10 minutes per invite link |
 | Sign-in | 30 per 10 minutes per IP, 10 per 10 minutes per email |
 | Username availability checks | 60 per minute per IP |
 | Password checks (change, delete) | 5 per 10 minutes |
@@ -474,7 +474,7 @@ More prefixes are added as their tables are created (posts, invites, notificatio
 | `blocks`, `mutes` | who blocked or muted whom |
 | `likes`, `reposts`, `bookmarks` | one row per person per post |
 | `notifications` | recipient, actor, type, post, read time (no self-notify) |
-| `rate_hits` | one row per limited attempt, with key and time, pruned daily |
+| `rate_hits` | one row per allowed limited attempt: key (label plus a salted hash of the IP, email or link, never the raw value) and time in ms; plain row number as id because nothing refers to it; pruned daily |
 | `analytics_events` | append-only: owner, viewer, kind, post, day, time. Unique per person per thing per day for the six view/tap kinds; follows and unfollows never squashed |
 
 Counters on a post (replies, likes, reposts) change in the same `db.batch()` as the row that causes them.

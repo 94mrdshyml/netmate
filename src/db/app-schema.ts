@@ -135,3 +135,18 @@ export const inviteUses = sqliteTable(
     index("invite_uses_link_idx").on(t.inviteLinkId),
   ],
 );
+
+/**
+ * One row per allowed attempt at something limited (docs/PRD.md section 8.11). The key is a
+ * label plus a salted hash, never a raw IP address or email. Rows are short-lived and pruned.
+ * A plain row number is enough here: nothing refers to these rows.
+ */
+export const rateHits = sqliteTable(
+  "rate_hits",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    key: text("key").notNull(),
+    at: integer("at").notNull(),
+  },
+  (t) => [index("rate_hits_key_at_idx").on(t.key, t.at)],
+);
