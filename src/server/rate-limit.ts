@@ -21,6 +21,7 @@ export const LIMITS = {
   follows: { name: "follows", max: 30, windowMs: 10 * MINUTE },
   uploads: { name: "uploads", max: 30, windowMs: 10 * MINUTE },
   places: { name: "places", max: 40, windowMs: MINUTE },
+  mentions: { name: "mentions", max: 120, windowMs: MINUTE },
   testEmail: { name: "email:test", max: 5, windowMs: 60 * MINUTE },
   resetEmail: { name: "reset:email", max: 5, windowMs: 60 * MINUTE },
   resetIp: { name: "reset:ip", max: 20, windowMs: 60 * MINUTE },
@@ -109,6 +110,10 @@ export const limitFollow = (db: D1Database, salt: string, userId: string, now?: 
 /** Place suggestions (docs/PRD.md section 8.11): 40 a minute per person, so typing is free but a loop is not. */
 export const limitPlaces = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.places, userId, salt, now);
+
+/** Name suggestions while typing an @ (docs/PRD.md section 8.2): 120 a minute per person, so typing is free but a loop is not. */
+export const limitMentions = (db: D1Database, salt: string, userId: string, now?: number) =>
+  takeSlot(db, LIMITS.mentions, userId, salt, now);
 
 export const limitUpload = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.uploads, userId, salt, now);

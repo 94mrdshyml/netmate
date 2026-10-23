@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractEntities, MENTIONS_PER_POST, parsePostText, parseTagQuery, TAGS_PER_POST } from "@/lib/post-entities";
+import { extractEntities, mentionAtCaret, MENTIONS_PER_POST, parsePostText, parseTagQuery, TAGS_PER_POST } from "@/lib/post-entities";
 
 const kinds = (text: string) => parsePostText(text).map((s) => (s.kind === "text" ? s.text : `${s.kind}:${s.text}`));
 
@@ -101,5 +101,45 @@ describe("parseTagQuery", () => {
 
   it("refuses things that are not text", () => {
     for (const v of [undefined, null, 5, {}]) expect(parseTagQuery(v)).toBeNull();
+  });
+});
+
+describe("mentionAtCaret", () => {
+  const at = (text: string, caret = text.length) => mentionAtCaret(text, caret);
+
+  it("finds the name being typed at the cursor", () => {
+    expect(at("hello @")).toEqual({ start: 6, prefix: "" });
+    expect(at("hello @Mee")).toEqual({ start: 6, prefix: "mee" });
+    expect(at("@a")).toEqual({ start: 0, prefix: "a" });
+    expect(at("line one\n@ri_s")).toEqual({ start: 9, prefix: "ri_s" });
+    expect(at("(@bo")).toEqual({ start: 1, prefix: "bo" });
+  });
+
+  it("works with the cursor in the middle of the text", () => {
+    expect(at("hi @mee and more", 7)).toEqual({ start: 3, prefix: "mee" });
+    // After the name and a space, nothing is being typed.
+    expect(at("hi @mee and more", 8)).toBeNull();
+  });
+
+  it("is not a name: in the middle of a word, an email, a web address, or after a space", () => {
+    expect(at("me@")).toBeNull();
+    expect(at("me@example")).toBeNull();
+    expect(at("see https://x.com/@bo")).toBeNull();
+    expect(at("see www.x.com/@bo")).toBeNull();
+    expect(at("hello @ ")).toBeNull();
+    expect(at("a#@b")).toBeNull();
+    expect(at("@@b")).toBeNull();
+  });
+
+  it("stops at a name too long to be a username or an odd character", () => {
+    expect(at(`@${"a".repeat(16)}`)).toBeNull();
+    expect(at("@ab-")).toBeNull();
+    expect(at("@ab.")).toBeNull();
+  });
+
+  it("refuses a cursor that is not in the text", () => {
+    expect(mentionAtCaret("@a", -1)).toBeNull();
+    expect(mentionAtCaret("@a", 5)).toBeNull();
+    expect(mentionAtCaret("@a", 1.5)).toBeNull();
   });
 });
