@@ -18,7 +18,7 @@ export function PersonRow({ person }: { person: PersonView }) {
         </span>
       </Link>
       {person.isMe ? null : (
-        <FollowButton userId={person.userId} name={`${person.firstName} ${person.lastName}`} following={person.iFollow} />
+        <FollowButton userId={person.userId} name={`${person.firstName} ${person.lastName}`} state={person.iFollow ? "following" : person.requested ? "requested" : "none"} />
       )}
     </li>
   );

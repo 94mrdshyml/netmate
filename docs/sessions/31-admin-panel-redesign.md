@@ -1,0 +1,11 @@
+# 31. Admin panel redesign (2026-10-23)
+- Branch / PR: feat/admin-panel-redesign, PR below once opened.
+- Owner asked for /hq to feel like a full SaaS product: icons, cards, breadcrumbs.
+- Done: new shell in `app/(app)/hq/layout.tsx`. Side menu on the left (instance mark and "name admin", pages in three groups with icons, brand bar on the current page, waiting badge on Approvals); a top strip with breadcrumbs, the theme button and "Back to the app". Under 900px the menu folds into a strip along the top that scrolls sideways and keeps the current page in view. The pages are listed once in `hq/sections.ts`; the menu and breadcrumbs both read it. Shared pieces in `hq/hq-ui.tsx` (PageHeader, Card, Pill, Initial).
+- Every page is now flat panels on the quiet page shade: Overview (three number panels, "Needs you", "Your community"), Approvals (people rows with an initial chip, Approve and Reject with icons, empty state), Invites (quota panel, link rows with a small used-approvals bar, Copy link and Make a new link with icons), Branding (Identity, Colour and shape, Default avatars panels, sticky preview, sticky Save bar), Email (Status panel, Resend connection, Test and Remove panels).
+- Icon set: added grid, droplet, mail, alert-circle, check-circle, send, inbox, refresh-cw, smile, key, eye (all Feather, same 1.75 line).
+- No change in what any page does: same actions, same texts that tests and screen readers rely on (nav named "Admin", "name admin", "Email is not set up", Save, Reject, Make a new link, `#quota-note`, and so on). Looked at light and dark, wide and phone, in a real browser.
+- Tests: new e2e in `look.spec.ts` (menu with icons and 44px links, current page marked, breadcrumbs, flat panels, menu on the left when wide and a strip on a phone, no sideways scroll on all five pages). All existing hq tests pass unchanged. DESIGN.md has a new "Admin panel" entry; PRD page table updated for the Overview.
+- Decisions: no shadows, no new colours (status is words, an icon and a brand outline); no avatars for pending people or link owners, an initial chip instead, so no extra request is made. The email banner stays on every page, as the PRD says.
+- Open: a Members page does not exist yet, so the Members number is not a link.
+- Next: owner picks the next feature (bookmarks and reposts, or pictures and GIFs).

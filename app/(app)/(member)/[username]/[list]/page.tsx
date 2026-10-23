@@ -30,8 +30,11 @@ export default async function PeoplePage({
   const db = getDb(env.DB);
 
   const profile = await getProfile(db, viewer.userId, username);
-  if (!profile) notFound();
+  // A blocked pair see nothing of each other, so there is nothing here to show.
+  if (!profile || profile.blockedByMe || profile.blockedMe) notFound();
 
+  // A private account's lists are for its followers (listPeople answers empty for anyone else).
+  const locked = !profile.canSeeContent;
   const page = await listPeople(db, viewer.userId, profile.userId, list, { cursor });
   const base = `/${profile.username}`;
 
@@ -57,7 +60,11 @@ export default async function PeoplePage({
           <PersonRow key={person.userId} person={person} />
         ))}
       </ul>
-      {page.items.length === 0 ? (
+      {locked ? (
+        <EmptyState icon="lock" title="This account is private.">
+          Only people they approve can see who follows them.
+        </EmptyState>
+      ) : page.items.length === 0 ? (
         list === "followers" ? (
           <EmptyState icon="users" title="No followers yet.">
             When people follow, they show up here.

@@ -8,7 +8,7 @@ import { follows, likes, POST_PHOTO_MAX, postMedia, posts, profiles } from "@/db
 import { isId, newId } from "@/lib/ids";
 import { checkPostText } from "@/lib/post-text";
 import { alertOnLike, alertOnReply, removeLikeAlert } from "@/server/notifications";
-import { visiblePosts } from "@/server/visibility";
+import { notMutedBy, visiblePosts } from "@/server/visibility";
 
 export const PAGE_SIZE = 20;
 
@@ -114,6 +114,7 @@ export async function toPage(db: Db, rows: Row[], limit: number): Promise<Page> 
 /**
  * The home feed: top-level posts, newest first. `following` shows your own posts and those of
  * people you follow; `all` is every visible post (the ranked For you feed replaces it later).
+ * People you muted are left out of both.
  */
 export async function listFeed(
   db: Db,
@@ -132,7 +133,7 @@ export async function listFeed(
     .select(postColumns(viewerId))
     .from(posts)
     .innerJoin(profiles, eq(profiles.userId, posts.authorId))
-    .where(and(visiblePosts(viewerId), isNull(posts.parentId), fromFollowed, olderThan(decodeCursor(opts.cursor))))
+    .where(and(visiblePosts(viewerId), notMutedBy(viewerId, posts.authorId), isNull(posts.parentId), fromFollowed, olderThan(decodeCursor(opts.cursor))))
     .orderBy(desc(posts.createdAt), desc(posts.id))
     .limit(limit + 1);
   return toPage(db, rows, limit);

@@ -2,6 +2,8 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { requireAdmin } from "@/auth/admin";
 import { getDb } from "@/db";
 import { emailPanel } from "@/server/email";
+import { Icon } from "../../(member)/_components/icon";
+import { Card, PageHeader, Pill } from "../hq-ui";
 import { EmailForm } from "./email-form";
 
 export const dynamic = "force-dynamic";
@@ -14,35 +16,49 @@ export default async function EmailPage() {
   const admin = await requireAdmin();
   const { env } = await getCloudflareContext({ async: true });
   const panel = await emailPanel(getDb(env.DB), env.SETTINGS_ENCRYPTION_KEY);
+  const setUp = panel.state === "set_up";
 
   return (
     <>
-      <h1>Email</h1>
-      <p className="hint">
+      <PageHeader title="Email">
         Netmate sends sign-up, verification and password emails through Resend. The sender address must be on a domain you have verified in Resend.
-      </p>
+      </PageHeader>
 
-      <p className="banner" role="status">
-        {panel.state === "set_up"
-          ? "Email is set up."
-          : panel.state === "unreadable"
-            ? "The saved email settings cannot be read, usually because the encryption key changed. Enter the Resend key again."
-            : "Email is not set up."}
-      </p>
+      <Card
+        id="status-heading"
+        icon="send"
+        title="Status"
+        aside={setUp ? <Pill icon="check-circle">Set up</Pill> : <Pill tone="attention" icon="alert-circle">Not set up</Pill>}
+      >
+        <p className="hq-status" role="status">
+          <Icon name={setUp ? "check-circle" : "alert-circle"} size={18} />
+          {setUp
+            ? "Email is set up."
+            : panel.state === "unreadable"
+              ? "The saved email settings cannot be read, usually because the encryption key changed. Enter the Resend key again."
+              : "Email is not set up."}
+        </p>
+        <dl className="hq-facts hq-facts-wide">
+          <div>
+            <dt>Last send</dt>
+            <dd>{panel.lastSentAt ? `Last email sent ${when.format(panel.lastSentAt)} UTC.` : "No email has been sent yet."}</dd>
+          </div>
+          <div>
+            <dt>Last error</dt>
+            <dd>
+              {panel.lastError ? (
+                <span className="error" data-testid="last-error">
+                  Last error ({panel.lastErrorAt ? `${when.format(panel.lastErrorAt)} UTC` : "unknown time"}): {panel.lastError}
+                </span>
+              ) : (
+                <span>No errors.</span>
+              )}
+            </dd>
+          </div>
+        </dl>
+      </Card>
 
-      <EmailForm setUp={panel.state === "set_up"} initialFrom={panel.from ?? ""} testTo={admin.email} />
-
-      <section className="stack" aria-label="Last results">
-        <h2>Last results</h2>
-        <p>{panel.lastSentAt ? `Last email sent ${when.format(panel.lastSentAt)} UTC.` : "No email has been sent yet."}</p>
-        {panel.lastError ? (
-          <p className="error" data-testid="last-error">
-            Last error ({panel.lastErrorAt ? `${when.format(panel.lastErrorAt)} UTC` : "unknown time"}): {panel.lastError}
-          </p>
-        ) : (
-          <p className="muted">No errors.</p>
-        )}
-      </section>
+      <EmailForm setUp={setUp} initialFrom={panel.from ?? ""} testTo={admin.email} />
     </>
   );
 }

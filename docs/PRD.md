@@ -337,7 +337,8 @@ No typo tolerance, no trending tags in v1.
 - Likes of one post inside a page collapse into one line ("Meera and 2 others liked your post", up to three pictures). Each row can show a snippet (cut at 140 characters). Tapping a row opens the post, the reply, the person, or `/hq/approvals`.
 - `/notifications` shows the alerts, newest first, 30 per page ("Older alerts"). Opening it marks all read (done from the browser by a small server action, so a prefetch never does it). Unread rows have a brand tint.
 - The Alerts tab shows the unread count (capped "99+") and its name says it ("Alerts, 3 unread"). The bar is told the count when the page is drawn, asks again after each move to another screen, and every minute while the tab is visible. The count hides while you are on the Alerts screen.
-- Not yet: alerts hidden for blocked or muted people (those features do not exist), email for alerts.
+- Alerts from people you blocked, who blocked you, or whom you muted are not shown and not counted (session 33). A block also deletes the alerts between the two. A follow request writes a "follow request" alert, and tapping it opens `/privacy/requests`.
+- Not yet: email for alerts.
 
 ### 8.8 Privacy and safety
 
@@ -348,6 +349,16 @@ No typo tolerance, no trending tags in v1.
 - **Mute.** Hides a person (and their reposts) from your home feed, For you and alerts. They aren't told. Manage in `Settings > Privacy > Muted`.
 
 **The one visibility rule (`visibleTo`).** You can see an author's content if it's yours, or if neither of you blocked the other and the author is public or you follow them. Every list of posts, the post page, replies, quotes, bookmarks, feed, search, notifications and analytics recording use it. It is implemented once and never re-implemented.
+
+**Built (session 33).** All of the above, with these exact rules:
+- **Screens.** Settings has a Privacy row (`/privacy`): a Private account switch, then Follow requests, Blocked people and Muted people, each with a count line. `/privacy/requests` lists who is waiting (oldest first) with Approve and Decline; `/privacy/blocked` and `/privacy/muted` list up to 200 people, newest first, each with Unblock or Unmute. On someone else's profile a "..." menu has Mute and Block (Block asks first and says what it does).
+- **Private account.** The switch is on the Privacy screen. Turning it on keeps everyone who already follows. Turning it off approves everyone waiting, removes their requests and the "follow request" alerts, all in one step. A private profile shows the header (name, picture, bio, counts) and a lock line; the posts, replies, follower and following lists and the Mates line are shown only to the owner and followers (`personVisible`). The follower and following counts are plain numbers there, not links.
+- **Follow requests.** Following a private account you do not already follow sends a request (the button says "Requested"; tapping it takes the request back) and a "follow request" alert. Approving makes the person a follower and removes the alert (no extra "followed you" alert); declining removes the request and the alert, the person is not told, and they may ask again. Answering a request nobody made does nothing, and only the account asked can answer. Requests count toward the 30 follows per 10 minutes.
+- **Block.** One step: the block, both follows, both waiting requests and every alert between the two. Neither can follow the other (the action answers "not available"), and the blocked person is not told. Their profile shows "You cannot see this profile." (the blocker's profile shows "You blocked @x." with Unblock). Followers and following lists, people search and suggestions leave the other person out. Unblocking does not bring a follow back. Blocking yourself, someone who is not an active member, or an unknown id is refused.
+- **Mute.** Only the muter is affected. The muted person's posts leave the Home feed (For you and Following) and their alerts are hidden and not counted; their profile, their posts on the post page and search still show. Unmuting brings everything back. No limit applies to mutes and blocks.
+- **The rule.** `src/server/visibility.ts` has the one rule. `personVisible(viewer, person)` is true for yourself, or for an active member who is public or followed by you and with no block either way; `visiblePosts` is that plus "not deleted". `notBlockedWith` and `notMutedBy` are the two smaller pieces used by lists of people, the feed and alerts. Mutes are not part of `personVisible`.
+- **Data.** `follow_requests`, `blocks` and `mutes` (migration 0009), each one row per pair, with no-self checks, cascading delete with the account, and the indexes the lists and the "who blocked me" check need. `profiles.is_private` already existed.
+- Not yet: reposts and quotes of a private account's posts being refused (reposts and quotes do not exist yet; they must use `personVisible` and also check "not private"); the For you ranking skipping muted people (it uses the same feed filter when it arrives).
 
 ### 8.9 Bookmarks
 
@@ -459,7 +470,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/notifications`, `/bookmarks` | Alerts, saved posts | mobile |
 | `/analytics` (`?range=28`) | Your analytics | mobile |
 | `/settings` and `/profile`, `/account`, `/invite`, `/privacy`, `/privacy/requests`, `/privacy/blocked`, `/privacy/muted` | Settings | mobile |
-| `/hq` | Admin overview (members, waiting for approval). Reached from Settings, admin only | **wide** |
+| `/hq` | Admin overview: members, waiting for approval and invite links as number panels, a "Needs you" list (sign-up requests, email) and a summary of the community's look. Reached from Settings, admin only | **wide** |
 | `/hq/branding` | Name, logo, favicon, colour, radius, font (downloaded and kept on our storage), avatar style, live preview | **wide** |
 | `/hq/approvals` | Pending sign-ups | **wide** |
 | `/hq/invites` | Admin link, quota, member links with usage, replace a link | **wide** |

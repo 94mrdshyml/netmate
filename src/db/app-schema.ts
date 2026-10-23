@@ -235,6 +235,69 @@ export const follows = sqliteTable(
 );
 
 /**
+ * Someone asked to follow a private account and is waiting for an answer (docs/PRD.md section 8.8).
+ * One row per pair. Approving turns it into a follow; declining or cancelling deletes it.
+ */
+export const followRequests = sqliteTable(
+  "follow_requests",
+  {
+    requesterId: text("requester_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    targetId: text("target_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [
+    primaryKey({ columns: [t.requesterId, t.targetId] }),
+    check("follow_requests_not_self", sql`${t.requesterId} <> ${t.targetId}`),
+    // "Who is waiting on me", oldest first.
+    index("follow_requests_target_idx").on(t.targetId, t.createdAt, t.requesterId),
+  ],
+);
+
+/** Who blocked whom. One row per pair; the database refuses blocking yourself. */
+export const blocks = sqliteTable(
+  "blocks",
+  {
+    blockerId: text("blocker_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    blockedId: text("blocked_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [
+    primaryKey({ columns: [t.blockerId, t.blockedId] }),
+    check("blocks_not_self", sql`${t.blockerId} <> ${t.blockedId}`),
+    // "Who blocked me" is asked on every list, so it needs its own index; and "whom did I block", newest first.
+    index("blocks_blocked_idx").on(t.blockedId, t.blockerId),
+    index("blocks_blocker_idx").on(t.blockerId, t.createdAt, t.blockedId),
+  ],
+);
+
+/** Who muted whom. One row per pair; the database refuses muting yourself. */
+export const mutes = sqliteTable(
+  "mutes",
+  {
+    muterId: text("muter_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    mutedId: text("muted_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [
+    primaryKey({ columns: [t.muterId, t.mutedId] }),
+    check("mutes_not_self", sql`${t.muterId} <> ${t.mutedId}`),
+    index("mutes_muter_idx").on(t.muterId, t.createdAt, t.mutedId),
+  ],
+);
+
+/**
  * Hosted font files for the chosen family (docs/PRD.md section 5). One row per weight, style and
  * script subset; two rows may share a file when the font is a variable font. The file lives in R2.
  */

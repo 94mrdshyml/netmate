@@ -5,15 +5,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
-import { setFollow } from "@/server/follows";
+import { setFollow, type FollowState } from "@/server/follows";
 import { limitFollow, tooManyMessage } from "@/server/rate-limit";
 import { updateProfile, type EditProfileResult } from "@/server/profiles";
 
 // Every action checks the session itself and never trusts an id from the browser (CLAUDE.md rule 5).
 
-export type FollowActionResult = { ok: true; following: boolean } | { ok: false; message: string };
+export type FollowActionResult = { ok: true; state: FollowState } | { ok: false; message: string };
 
-/** Sets whether the signed-in member follows someone (the wanted state, not a flip). */
+/**
+ * Sets whether the signed-in member follows someone (the wanted state, not a flip). Following a
+ * private account sends a request, and the answer says "requested".
+ */
 export async function setFollowAction(userId: string, following: boolean): Promise<FollowActionResult> {
   const member = await getMember();
   if (!member) redirect("/sign-in");
