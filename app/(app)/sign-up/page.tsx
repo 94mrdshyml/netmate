@@ -1,4 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
@@ -27,7 +28,7 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
             {settings.name} is invite only. This link is wrong or has been turned off. Ask the person who sent it for a new one.
           </p>
         </div>
-        <a href="/sign-in">Already a member? Sign in</a>
+        <Link href="/sign-in">Already a member? Sign in</Link>
       </main>
     );
   }
@@ -39,7 +40,7 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
         <p className="muted">{invite.ownerName} invited you.</p>
       </div>
       <SignUpForm invite={code} />
-      <a href="/sign-in">Already a member? Sign in</a>
+      <Link href="/sign-in">Already a member? Sign in</Link>
     </main>
   );
 }
