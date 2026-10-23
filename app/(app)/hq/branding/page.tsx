@@ -13,7 +13,7 @@ const SAMPLE = { username: "sam_sample", name: "Sam Sample" } as const;
 
 export default async function BrandingPage() {
   await requireAdmin();
-  const { settings } = await getInstanceState();
+  const { settings, fontFaces } = await getInstanceState();
   const samples = Object.fromEntries(
     AVATAR_STYLES.map((style) => [style, `data:image/svg+xml;utf8,${encodeURIComponent(defaultAvatarSvg(style, SAMPLE))}`]),
   );
@@ -29,8 +29,11 @@ export default async function BrandingPage() {
           radius: settings.radius,
           fontFamily: settings.fontFamily,
           avatarStyle: settings.avatarStyle,
+          logoKey: settings.logoKey,
+          faviconKey: settings.faviconKey,
         }}
         avatarSamples={samples}
+        fontHosted={fontFaces.length > 0}
       />
     </>
   );

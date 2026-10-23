@@ -23,7 +23,7 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
   if (!invite || !code) {
     return (
       <main className="column stack auth">
-        <BrandMark name={settings.name} size="lg" />
+        <BrandMark name={settings.name} logoKey={settings.logoKey} size="lg" />
         <div>
           <h1>Invite link not valid</h1>
           <p className="muted">
@@ -37,7 +37,7 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
 
   return (
     <main className="column stack auth">
-      <BrandMark name={settings.name} size="lg" />
+      <BrandMark name={settings.name} logoKey={settings.logoKey} size="lg" />
       <div>
         <h1>Join {settings.name}</h1>
         <p className="muted">{invite.ownerName} invited you.</p>

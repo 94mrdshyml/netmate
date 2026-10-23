@@ -10,7 +10,7 @@ export default async function WaitingPage() {
   const { settings } = await getInstanceState();
   return (
     <main className="column stack auth">
-      <BrandMark name={settings.name} size="lg" />
+      <BrandMark name={settings.name} logoKey={settings.logoKey} size="lg" />
       <div>
         <h1>Waiting for approval</h1>
         <p>

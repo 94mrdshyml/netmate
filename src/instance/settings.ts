@@ -3,6 +3,7 @@
 import { eq } from "drizzle-orm";
 import type { Db } from "@/db";
 import { instance } from "@/db/schema";
+import { readFontFaces, type FontFaceRow } from "@/instance/fonts";
 import { DEFAULT_AVATAR_STYLE, DEFAULT_INSTANCE_NAME, DEFAULT_INVITE_QUOTA, DEFAULT_THEME } from "@/instance/defaults";
 import { RADII, type Radius } from "@/instance/theme";
 
@@ -21,7 +22,8 @@ export type InstanceSettings = {
   linkPreviewsEnabled: boolean;
 };
 
-export type InstanceState = { configured: boolean; settings: InstanceSettings };
+/** `fontFaces` are the hosted files of the chosen font, read with the settings so one cache covers both. */
+export type InstanceState = { configured: boolean; settings: InstanceSettings; fontFaces: FontFaceRow[] };
 
 export const DEFAULT_SETTINGS: InstanceSettings = {
   name: DEFAULT_INSTANCE_NAME,
@@ -44,10 +46,11 @@ const isThemeDefault = (v: string): v is InstanceSettings["themeDefault"] => v =
 /** Reads the instance row. Before setup it returns the defaults with `configured: false`. */
 export async function readInstance(db: Db): Promise<InstanceState> {
   const row = await db.select().from(instance).where(eq(instance.id, "singleton")).get();
-  if (!row) return { configured: false, settings: DEFAULT_SETTINGS };
+  if (!row) return { configured: false, settings: DEFAULT_SETTINGS, fontFaces: [] };
 
   return {
     configured: true,
+    fontFaces: await readFontFaces(db, row.fontFamily),
     settings: {
       name: row.name,
       logoKey: row.logoKey,
