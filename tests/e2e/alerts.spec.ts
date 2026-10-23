@@ -7,6 +7,8 @@ test.describe.configure({ mode: "serial" });
 
 const unique = () => `alerts ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const adminName = `${E2E.admin.firstName} ${E2E.admin.lastName}`;
+/** The post itself on its page (the replies below are posts too, with their own buttons). */
+const thePost = (page: import("@playwright/test").Page) => page.getByRole("article").filter({ hasText: postText }).first();
 const nav = (page: import("@playwright/test").Page) => page.getByRole("navigation", { name: "Main" });
 
 let postText = "";
@@ -20,13 +22,14 @@ test("a new alert shows a count on the Alerts tab, and opening Alerts lists it a
   await page.getByRole("button", { name: "Post", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.getByRole("article").filter({ hasText: postText }).getByRole("link", { name: /^Reply/ }).click();
+  await expect(page).toHaveURL(/\/status\/post_/);
   postUrl = new URL(page.url()).pathname;
 
   // A new member (who joined with the admin's link) likes it, follows the admin, and replies.
   const alice = await signUpMember(browser, "198.18.50.1", { first: "Alice", last: "Admirer" });
   await alice.page.goto(postUrl);
-  await alice.page.getByRole("button", { name: /^Like, / }).click();
-  await expect(alice.page.getByRole("button", { name: /^Unlike, / })).toBeEnabled();
+  await thePost(alice.page).getByRole("button", { name: /^Like, / }).click();
+  await expect(thePost(alice.page).getByRole("button", { name: /^Unlike, / })).toBeEnabled();
   await alice.page.goto(`/${E2E.admin.username}`);
   await alice.page.getByRole("button", { name: `Follow ${adminName}` }).click();
   await expect(alice.page.getByRole("button", { name: `Following ${adminName}. Tap to unfollow` })).toBeEnabled();
@@ -70,8 +73,8 @@ test("a new alert shows a count on the Alerts tab, and opening Alerts lists it a
 test("likes of one post from several people become one line, and an unlike takes its alert back", async ({ browser, page }) => {
   const bob = await signUpMember(browser, "198.18.50.2", { first: "Bob", last: "Bystander" });
   await bob.page.goto(postUrl);
-  await bob.page.getByRole("button", { name: /^Like, / }).click();
-  await expect(bob.page.getByRole("button", { name: /^Unlike, / })).toBeEnabled();
+  await thePost(bob.page).getByRole("button", { name: /^Like, / }).click();
+  await expect(thePost(bob.page).getByRole("button", { name: /^Unlike, / })).toBeEnabled();
 
   await page.goto("/notifications");
   // Bob's like joins Alice's: one line for the post, newest name first.
@@ -79,8 +82,8 @@ test("likes of one post from several people become one line, and an unlike takes
   await expect(page.getByRole("listitem").filter({ hasText: postText })).toHaveCount(1);
 
   // He takes it back and only Alice's remains.
-  await bob.page.getByRole("button", { name: /^Unlike, / }).click();
-  await expect(bob.page.getByRole("button", { name: /^Like, / })).toBeEnabled();
+  await thePost(bob.page).getByRole("button", { name: /^Unlike, / }).click();
+  await expect(thePost(bob.page).getByRole("button", { name: /^Like, / })).toBeEnabled();
   await page.reload();
   await expect(page.getByRole("list", { name: "Alerts" })).toContainText("Alice Admirer liked your post");
   await expect(page.getByRole("list", { name: "Alerts" })).not.toContainText("Bob Bystander and");
