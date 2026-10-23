@@ -1,0 +1,13 @@
+# 30. Invite by email (2026-10-23)
+- Branch / PR: feat/invite-by-email. Cut from fresh main after #49 and #50 merged. Owner request: "we need ability to invite people by email, just enter the email id and an invite gets sent".
+- Done: on the Invite screen a member types an address and "Send invite" emails them, through the shared branded layout, "{inviter} invited you to join {instance}" with a "Join {instance}" button to the member's own link. Without email set up the screen says so (and points the admin to `/hq/email`) instead of showing the field.
+- Decisions:
+  - It uses the member's own link, so the invitee goes through the same welcome screen and the same quota rules as anyone with a shared link. No new invite table, no migration.
+  - Abuse: 10 an hour per member and 2 a day per recipient address, both in the exact D1 limit table (the address is a salted hash there). The member limit is taken before the recipient limit. Bad addresses and the inviter's own address are refused before any limit is used.
+  - Privacy: the address is never stored or logged. A person who already has an account is not emailed and gets the same "Invite sent." answer, so the box cannot be used to test who is a member.
+  - A refused send says "Could not send that email. Try again later, or share your link by hand." to the member; Resend's reason is recorded for `/hq/email` like every other send. Needs a known site address (`BETTER_AUTH_URL` or the request host, via the new `src/server/origin.ts`, which the Invite page now also uses).
+  - `deliver` in `src/server/status-emails.ts` is now exported and returns the send result; the status emails still return nothing, so their tests are unchanged.
+- Code: `src/server/invite-email.ts`, `src/server/origin.ts`, `inviteByEmail` in `src/email/messages.ts`, `limitInviteEmail` in `src/server/rate-limit.ts`, `app/(app)/(member)/invite/{actions.ts,invite-by-email.tsx,page.tsx}`.
+- Tests: `tests/integration/invite-email.test.ts` (17 cases: content and link, trim and lower-case, six bad inputs, own address, not set up, existing member, no site address, member limit, recipient limit across members, no copy of the address in limit keys or recorded state, refused send, hostile name), 2 added to `tests/email/messages.test.tsx`, 1 added to `tests/e2e/hq-email.spec.ts` (note and no field when not set up, link to set up, bad address, sending, field cleared, last send shown, no sideways scroll). It lives in hq-email.spec so no extra sign-ups go through the admin's link (see session 28).
+- Notes: PRD section 6, 7 and 8.11 tables updated. No migration, no package.
+- Open: no "who have I invited" list (the address is not kept on purpose). Next: forgot and reset password, then verification and welcome emails.

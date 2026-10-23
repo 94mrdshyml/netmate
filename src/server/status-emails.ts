@@ -8,7 +8,7 @@ import { profiles, user } from "@/db/schema";
 import { approvedForInvitee, pendingForAdmin, rejectedForInvitee, type Message } from "@/email/messages";
 import { renderEmail } from "@/email/render";
 import { pngLogoUrl, siteUrl } from "@/email/template";
-import type { Transport } from "@/email/transport";
+import type { SendResult, Transport } from "@/email/transport";
 import { readInstance } from "@/instance/settings";
 import { isEmailSetUp, sendEmail } from "@/server/email";
 
@@ -28,9 +28,13 @@ export async function pendingContact(db: Db, userId: string): Promise<Contact | 
   return row ?? null;
 }
 
-async function deliver(db: Db, ctx: MailContext, to: string, build: (name: string) => Message): Promise<void> {
+/**
+ * Renders a message in the instance's brand and sends it. Never throws: a missing set-up, a bad
+ * render or a refused send all come back as `{ ok: false }` for a caller that wants to say so.
+ */
+export async function deliver(db: Db, ctx: MailContext, to: string, build: (name: string) => Message): Promise<SendResult> {
   try {
-    if (!(await isEmailSetUp(db))) return;
+    if (!(await isEmailSetUp(db))) return { ok: false, message: "Email is not set up." };
     const { settings } = await readInstance(db);
     const message = build(settings.name);
     const { html, text } = await renderEmail(
@@ -43,9 +47,10 @@ async function deliver(db: Db, ctx: MailContext, to: string, build: (name: strin
       },
       message.content,
     );
-    await sendEmail(db, ctx.transport, ctx.encryptionKey, { to, subject: message.subject, html, text });
+    return await sendEmail(db, ctx.transport, ctx.encryptionKey, { to, subject: message.subject, html, text });
   } catch {
     // Mail is a courtesy here; the sign-up or the decision has already been saved.
+    return { ok: false, message: "The email could not be sent." };
   }
 }
 
@@ -72,8 +77,10 @@ export async function emailAdminOfPending(db: Db, ctx: MailContext, userId: stri
   }
 }
 
-export const emailApproved = (db: Db, ctx: MailContext, who: Contact) =>
-  deliver(db, ctx, who.email, (name) => approvedForInvitee(name, who.firstName, siteUrl(ctx.origin, "/sign-in")));
+export async function emailApproved(db: Db, ctx: MailContext, who: Contact): Promise<void> {
+  await deliver(db, ctx, who.email, (name) => approvedForInvitee(name, who.firstName, siteUrl(ctx.origin, "/sign-in")));
+}
 
-export const emailRejected = (db: Db, ctx: MailContext, who: Contact) =>
-  deliver(db, ctx, who.email, (name) => rejectedForInvitee(name, who.firstName));
+export async function emailRejected(db: Db, ctx: MailContext, who: Contact): Promise<void> {
+  await deliver(db, ctx, who.email, (name) => rejectedForInvitee(name, who.firstName));
+}
