@@ -27,6 +27,8 @@ export const RESERVED_USERNAMES: ReadonlySet<string> = new Set([
   "waiting",
   "invite",
   "profile",
+  "avatar",
+  "media",
   "account",
   "verify-email",
   "forgot-password",

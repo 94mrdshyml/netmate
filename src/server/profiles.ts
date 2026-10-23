@@ -6,6 +6,7 @@ import type { Db } from "@/db";
 import { follows, profiles, user } from "@/db/schema";
 import { LINK_MAX, normalizeLink } from "@/lib/link";
 import { normalizeUsername } from "@/lib/username";
+import { isAttachable, removePicture } from "@/storage/upload";
 
 export type ProfileView = {
   userId: string;
@@ -15,6 +16,8 @@ export type ProfileView = {
   bio: string;
   link: string | null;
   location: string | null;
+  avatarKey: string | null;
+  bannerKey: string | null;
   joinedAt: number;
   followerCount: number;
   followingCount: number;
@@ -37,6 +40,8 @@ export async function getProfile(db: Db, viewerId: string, username: string): Pr
       bio: profiles.bio,
       link: profiles.link,
       location: profiles.location,
+      avatarKey: profiles.avatarKey,
+      bannerKey: profiles.bannerKey,
       joinedAt: profiles.createdAt,
       followerCount: sql<number>`(select count(*) from ${follows} where ${follows.followeeId} = ${profiles.userId})`,
       followingCount: sql<number>`(select count(*) from ${follows} where ${follows.followerId} = ${profiles.userId})`,
@@ -58,6 +63,8 @@ export async function getProfile(db: Db, viewerId: string, username: string): Pr
     bio: row.bio,
     link: row.link,
     location: row.location,
+    avatarKey: row.avatarKey,
+    bannerKey: row.bannerKey,
     joinedAt: row.joinedAt.getTime(),
     followerCount: row.followerCount,
     followingCount: row.followingCount,
@@ -99,8 +106,13 @@ export type EditProfileResult =
 // Control characters other than newline never belong in a bio.
 const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 
-/** Saves your own first name, last name, bio, city or country, and link. The username never changes. */
-export async function updateProfile(db: Db, userId: string, raw: unknown): Promise<EditProfileResult> {
+/**
+ * Saves your own first name, last name, bio, city or country, link and pictures. The username
+ * never changes. For `avatarKey` and `bannerKey`: leave out to keep the picture, send `null` to
+ * remove it, or send the key from an upload. A key is checked again here (yours, still stored,
+ * really an image) before it is attached, and a replaced picture is deleted afterwards.
+ */
+export async function updateProfile(db: Db, userId: string, raw: unknown, media?: R2Bucket): Promise<EditProfileResult> {
   const parsed = editSchema.safeParse(raw);
   const errors: Record<string, string> = {};
   if (!parsed.success) {
@@ -122,7 +134,20 @@ export async function updateProfile(db: Db, userId: string, raw: unknown): Promi
     if (typeof value === "string" && CONTROL.test(value)) errors[key] ??= "That text has characters we cannot save";
   }
 
+  const pictures: { avatarKey?: string | null; bannerKey?: string | null } = {};
+  for (const [field, kind] of [["avatarKey", "avatar"], ["bannerKey", "banner"]] as const) {
+    const value = fields[field];
+    if (value === undefined) continue;
+    if (value === null) pictures[field] = null;
+    else if (media && (await isAttachable(media, userId, kind, value))) pictures[field] = value as string;
+    else errors[kind] = "That picture is not available. Choose it again.";
+  }
+
   if (!data || Object.keys(errors).length > 0) return { ok: false, code: "invalid", fieldErrors: errors };
+
+  const before = Object.keys(pictures).length > 0
+    ? await db.select({ avatarKey: profiles.avatarKey, bannerKey: profiles.bannerKey }).from(profiles).where(eq(profiles.userId, userId)).get()
+    : undefined;
 
   try {
     // The profile and the display name on the account change together.
@@ -135,12 +160,20 @@ export async function updateProfile(db: Db, userId: string, raw: unknown): Promi
           bio: data.bio,
           location: data.location === "" ? null : data.location,
           link,
+          ...pictures,
         })
         .where(eq(profiles.userId, userId)),
       db.update(user).set({ name: `${data.firstName} ${data.lastName}` }).where(eq(user.id, userId)),
     ]);
   } catch {
     return { ok: false, code: "failed", fieldErrors: {} };
+  }
+
+  // The new pictures are attached; now the replaced ones can go.
+  if (media && before) {
+    for (const field of ["avatarKey", "bannerKey"] as const) {
+      if (field in pictures && before[field] && before[field] !== pictures[field]) await removePicture(media, before[field]);
+    }
   }
   return { ok: true };
 }

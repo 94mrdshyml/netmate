@@ -27,6 +27,8 @@ export default async function EditProfilePage() {
       <h1>Edit profile</h1>
       <EditProfileForm
         username={profile.username}
+        userId={profile.userId}
+        pictures={{ avatarKey: profile.avatarKey, bannerKey: profile.bannerKey }}
         initial={{
           firstName: profile.firstName,
           lastName: profile.lastName,

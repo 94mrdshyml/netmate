@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { relativeTime } from "@/lib/time";
 import type { PostView } from "@/server/posts";
+import { Avatar } from "./avatar";
 import { Icon } from "./icon";
 import { DeleteButton, LikeButton } from "./post-actions";
 
@@ -21,6 +22,10 @@ export function PostCard({
 
   return (
     <article className="post" aria-label={`Post by ${name}`}>
+      <Link href={`/${post.author.username}`} className="post-avatar" tabIndex={-1} aria-hidden="true">
+        <Avatar userId={post.author.userId} avatarKey={post.author.avatarKey} size={40} />
+      </Link>
+      <div className="post-main">
       <header className="post-head">
         <Link href={`/${post.author.username}`} className="author">
           <strong>{name}</strong> <span className="muted">@{post.author.username}</span>
@@ -48,6 +53,7 @@ export function PostCard({
         <LikeButton postId={post.id} liked={post.likedByMe} count={post.likeCount} />
         {post.author.userId === viewerId ? <DeleteButton postId={post.id} goHomeAfter={!linkToPost} /> : null}
       </footer>
+      </div>
     </article>
   );
 }
