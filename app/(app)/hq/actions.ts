@@ -13,6 +13,8 @@ import { saveBrandingForm, type BrandingResult } from "@/instance/branding";
 import { clearInstanceCache } from "@/instance/settings";
 import { isId } from "@/lib/ids";
 import { approvePending, regenerateInvite, rejectPending, setInviteQuota } from "@/server/admin";
+import { emailApproved, emailRejected, pendingContact } from "@/server/status-emails";
+import { mailContext } from "@/server/mail-context";
 
 // Every action checks the admin itself, on the server, each time (CLAUDE.md hard rule 3). The
 // browser sends only the id of the thing to act on; who is asking comes from the session.
@@ -23,7 +25,11 @@ export async function approveAction(formData: FormData): Promise<void> {
   const userId = String(formData.get("userId") ?? "");
   if (!isId("user", userId)) return;
   const { env } = await getCloudflareContext({ async: true });
-  await approvePending(getDb(env.DB), userId);
+  const db = getDb(env.DB);
+  const contact = await pendingContact(db, userId);
+  const result = await approvePending(db, userId);
+  // Only the request that really approved them sends the email, so a repeat click sends nothing.
+  if (result.ok && contact) await emailApproved(db, mailContext(env), contact);
   revalidatePath("/hq", "layout");
 }
 
@@ -33,7 +39,11 @@ export async function rejectAction(formData: FormData): Promise<void> {
   const userId = String(formData.get("userId") ?? "");
   if (!isId("user", userId)) return;
   const { env } = await getCloudflareContext({ async: true });
-  await rejectPending(getDb(env.DB), userId);
+  const db = getDb(env.DB);
+  // The account is deleted, so the address is read first.
+  const contact = await pendingContact(db, userId);
+  const result = await rejectPending(db, userId);
+  if (result.ok && contact) await emailRejected(db, mailContext(env), contact);
   revalidatePath("/hq", "layout");
 }
 
