@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { signUpMember } from "./helpers";
+import { openSignUpForm, signUpMember } from "./helpers";
 
 // Serial: each step uses what the one before made. The invite quota is an instance setting other
 // files depend on, so it is never changed to anything but its default here. The member's five
@@ -20,7 +20,7 @@ async function joinThrough(browser: Browser, link: string, last: string) {
     extraHTTPHeaders: { "cf-connecting-ip": `198.18.41.${++nextVisitor}` },
   });
   const page = await context.newPage();
-  await page.goto(link);
+  await openSignUpForm(page, link);
   const stamp = Date.now().toString(36);
   const email = `hq-${last.toLowerCase()}-${stamp}@example.com`;
   await page.getByLabel("First name").fill("Wanda");

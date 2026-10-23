@@ -1,4 +1,4 @@
-import { expect, type Browser } from "@playwright/test";
+import { expect, type Browser, type Page } from "@playwright/test";
 import { E2E } from "./constants";
 
 /** The admin's invite link, read from the invite page with the stored admin login. */
@@ -9,6 +9,13 @@ export async function adminInviteLink(browser: Browser): Promise<string> {
   const link = await page.getByLabel("Your invite link").inputValue();
   await context.close();
   return link;
+}
+
+/** Opens an invite link and goes past the welcome screen to the sign-up form. */
+export async function openSignUpForm(page: Page, link: string) {
+  await page.goto(link);
+  await page.getByRole("link", { name: /^Join / }).click();
+  await expect(page.getByLabel("First name")).toBeVisible();
 }
 
 let counter = 0;
@@ -26,7 +33,7 @@ export async function signUpMember(browser: Browser, ip: string, names: { first?
     extraHTTPHeaders: { "cf-connecting-ip": ip },
   });
   const page = await context.newPage();
-  await page.goto(link);
+  await openSignUpForm(page, link);
 
   const stamp = `${Date.now().toString(36)}${++counter}`;
   const username = `m_${stamp.slice(-11)}`;

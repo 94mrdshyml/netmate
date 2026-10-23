@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openSignUpForm } from "./helpers";
 
 // Own addresses (the header is ours to set locally), so these tests never use up the
 // limits other tests rely on. Not shared with invite.spec.ts.
@@ -42,7 +43,7 @@ test("the eleventh sign-up try from one address is refused", async ({ browser })
     extraHTTPHeaders: { "cf-connecting-ip": "198.19.7.2" },
   });
   const page = await context.newPage();
-  await page.goto(link);
+  await openSignUpForm(page, link);
 
   // Empty submits are real attempts for the limiter, and cheap (no password hashing).
   for (let i = 1; i <= 10; i++) {
