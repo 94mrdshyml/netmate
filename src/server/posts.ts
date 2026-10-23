@@ -4,7 +4,8 @@
 
 import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import type { Db } from "@/db";
-import { follows, likes, POST_PHOTO_MAX, postMedia, posts, profiles } from "@/db/schema";
+import { follows, likes, POST_PHOTO_MAX, postGifs, postMedia, posts, profiles } from "@/db/schema";
+import { checkGif, type PostGif } from "@/lib/gif";
 import { isId, newId } from "@/lib/ids";
 import { checkPlace } from "@/lib/place";
 import { checkPostText } from "@/lib/post-text";
@@ -23,6 +24,8 @@ export type PostView = {
   parentId: string | null;
   /** Storage keys of the photos, in the order shown. Empty for a text-only post. */
   photos: string[];
+  /** The one GIF it carries (kept at Klipy, never copied), or null. Never together with photos. */
+  gif: PostGif | null;
   /** Where it was posted from, as plain text such as "Berlin, Germany", or null. */
   place: string | null;
   author: { userId: string; username: string; firstName: string; lastName: string; avatarKey: string | null };
@@ -83,7 +86,7 @@ type Row = {
   avatarKey: string | null;
 };
 
-// A post with photos and no words keeps one space as its text (the database wants 1 to 280
+// A post with photos or a GIF and no words keeps one space as its text (the database wants 1 to 280
 // characters); it is never shown.
 const toView = (r: Row): PostView => ({
   id: r.id,
@@ -94,21 +97,31 @@ const toView = (r: Row): PostView => ({
   likedByMe: Boolean(r.liked),
   parentId: r.parentId,
   photos: [],
+  gif: null,
   place: r.place,
   author: { userId: r.userId, username: r.username, firstName: r.firstName, lastName: r.lastName, avatarKey: r.avatarKey },
 });
 
-/** Fills in the photos of every post in one query. */
+/** Fills in the photos and the GIF of every post, one query each. */
 async function withPhotos(db: Db, items: PostView[]): Promise<PostView[]> {
   if (items.length === 0) return items;
-  const rows = await db
-    .select({ postId: postMedia.postId, key: postMedia.key })
-    .from(postMedia)
-    .where(inArray(postMedia.postId, items.map((p) => p.id)))
-    .orderBy(asc(postMedia.postId), asc(postMedia.position));
+  const ids = items.map((p) => p.id);
+  const [rows, gifs] = await Promise.all([
+    db
+      .select({ postId: postMedia.postId, key: postMedia.key })
+      .from(postMedia)
+      .where(inArray(postMedia.postId, ids))
+      .orderBy(asc(postMedia.postId), asc(postMedia.position)),
+    db
+      .select({ postId: postGifs.postId, url: postGifs.url, width: postGifs.width, height: postGifs.height, title: postGifs.title })
+      .from(postGifs)
+      .where(inArray(postGifs.postId, ids)),
+  ]);
   const byPost = new Map<string, string[]>();
   for (const r of rows) byPost.set(r.postId, [...(byPost.get(r.postId) ?? []), r.key]);
-  return items.map((p) => ({ ...p, photos: byPost.get(p.id) ?? [] }));
+  const gifOf = new Map<string, PostGif>();
+  for (const g of gifs) gifOf.set(g.postId, { url: g.url, width: g.width, height: g.height, title: g.title });
+  return items.map((p) => ({ ...p, photos: byPost.get(p.id) ?? [], gif: gifOf.get(p.id) ?? null }));
 }
 
 export async function toPage(db: Db, rows: Row[], limit: number): Promise<Page> {
@@ -205,7 +218,7 @@ export async function listReplies(
 
 export type CreatePostResult =
   | { ok: true; id: string }
-  | { ok: false; code: "empty" | "too_long" | "bad_characters" | "parent_not_found" | "bad_photos" | "place_too_long" | "place_bad_characters" };
+  | { ok: false; code: "empty" | "too_long" | "bad_characters" | "parent_not_found" | "bad_photos" | "bad_gif" | "gif_with_photos" | "place_too_long" | "place_bad_characters" };
 
 const replyCountOf = (parentId: string) =>
   sql`(select count(*) from ${posts} as r where r.parent_id = ${parentId} and r.deleted_at is null)`;
@@ -228,12 +241,17 @@ export async function createPost(
   parentId?: string,
   photoKeys: string[] = [],
   rawPlace?: unknown,
+  rawGif?: unknown,
 ): Promise<CreatePostResult> {
   if (!photoKeysAreValid(authorId, photoKeys)) return { ok: false, code: "bad_photos" };
+  const checkedGif = checkGif(rawGif);
+  if (!checkedGif.ok) return { ok: false, code: "bad_gif" };
+  const gif = checkedGif.gif;
+  if (gif && photoKeys.length > 0) return { ok: false, code: "gif_with_photos" };
   const place = checkPlace(rawPlace);
   if (!place.ok) return { ok: false, code: place.reason === "too_long" ? "place_too_long" : "place_bad_characters" };
-  // Photos can stand in for words; the text is then one space (see toView).
-  const wordless = photoKeys.length > 0 && typeof rawBody === "string" && rawBody.trim() === "";
+  // Photos or a GIF can stand in for words; the text is then one space (see toView).
+  const wordless = (photoKeys.length > 0 || gif !== null) && typeof rawBody === "string" && rawBody.trim() === "";
   const text = wordless ? ({ ok: true, text: " ", length: 1 } as const) : checkPostText(rawBody);
   if (!text.ok) return { ok: false, code: text.reason };
 
@@ -244,13 +262,14 @@ export async function createPost(
   const id = newId("post");
   const insert = db.insert(posts).values({ id, authorId, parentId: parentId ?? null, body: text.text, place: place.place });
   const photos = photoKeys.map((key, position) => ({ postId: id, position, key }));
-  if (parentId === undefined && photos.length === 0) {
+  if (parentId === undefined && photos.length === 0 && !gif) {
     await insert;
   } else {
-    // The post, its photos, and for a reply the parent's count and the parent's author's alert change together.
+    // The post, its photos or GIF, and for a reply the parent's count and the parent's author's alert change together.
     await db.batch([
       insert,
       ...(photos.length > 0 ? [db.insert(postMedia).values(photos)] : []),
+      ...(gif ? [db.insert(postGifs).values({ postId: id, url: gif.url, width: gif.width, height: gif.height, title: gif.title })] : []),
       ...(parentId === undefined
         ? []
         : [db.update(posts).set({ replyCount: replyCountOf(parentId) }).where(eq(posts.id, parentId)), alertOnReply(db, authorId, parentId, id)]),

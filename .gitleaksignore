@@ -3,3 +3,8 @@
 ccf055da0b3f04e9037904b75804077ae78d85f6:tests/integration/email.test.ts:generic-api-key:57
 ccf055da0b3f04e9037904b75804077ae78d85f6:tests/integration/email.test.ts:generic-api-key:75
 ccf055da0b3f04e9037904b75804077ae78d85f6:tests/integration/email.test.ts:generic-api-key:230
+
+# Made-up Klipy keys in the first version of the GIF tests (PR 58). They are test values, not secrets;
+# the next commit builds them at run time. Same case as the Resend ones above.
+fe2a2ac473e722a43e1217cd8316d24370cd69dc:tests/e2e/search-gif.spec.ts:generic-api-key:9
+fe2a2ac473e722a43e1217cd8316d24370cd69dc:tests/integration/post-gif.test.ts:generic-api-key:146
