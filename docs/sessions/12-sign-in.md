@@ -1,0 +1,8 @@
+# 12. Sign-in and sign-out (2026-10-23)
+- Branch / PR: feat/sign-in
+- Done: `/sign-in` (email and password, mobile column) and sign-out. `signInMember` (`src/auth/sign-in.ts`) validates with Zod, checks the password through Better Auth, then the profile status: a Pending account (or one with no profile) has its fresh session deleted and gets the waiting message, but only after the password was right. A wrong password and an unknown email give the same message. `getMember()` (`src/auth/session.ts`) is the one place pages and actions read the signed-in member; a Pending account is never a member. Home now needs a member (else redirects to `/sign-in`), shows `@username` and a Sign out button; `/sign-in` bounces a signed-in member to Home. The deploy was checked first: PR 26 is live, the three Worker secrets work and the admin's setup ran on the live site.
+- Tests: 9 new integration (active sign-in, wrong password equals unknown email, Pending refused with no session left, Pending hidden behind a wrong password, no profile, four malformed inputs) and 4 new e2e at phone width (signed-out redirect, wrong password message, column fit, full sign-in then sign-out with the session really gone).
+- Real finding: Better Auth signs an account in on sign-up, so any later sign-up flow must delete that session for a Pending account (the invite sign-up slice).
+- Decisions: sign-out lives on Home for now; it moves to Settings when Settings exists.
+- Open: no sign-in rate limit yet. PRD section 9 wants the exact D1 limiter for sign-in; it comes with the invite sign-up slice since both need the same table. No forgot-password yet (needs Resend slice).
+- Next: invite links, invite sign-up with the 5-member quota (atomic), the Pending state and admin approvals.
