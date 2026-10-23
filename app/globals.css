@@ -533,6 +533,54 @@ legend.label {
   white-space: nowrap;
 }
 
+/* ---- Search ---- */
+
+.searchbar {
+  margin-bottom: 0;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.search-box .input {
+  min-height: 44px;
+  padding-inline: 42px;
+  appearance: none;
+}
+
+.search-box .input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.search-icon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  display: grid;
+  color: var(--muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: color 0.15s var(--ease);
+}
+
+.search-box:focus-within .search-icon {
+  color: var(--brand-text);
+}
+
+.search-clear {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.list-title {
+  margin: 20px 0 4px;
+  font-size: 1.0625rem;
+}
+
 /* ---- Tabs ---- */
 
 .tabs {

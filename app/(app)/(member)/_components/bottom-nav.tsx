@@ -8,6 +8,7 @@ export function BottomNav({ username }: { username: string }) {
   const pathname = usePathname();
   const items: { href: string; label: string; icon: IconName; active: boolean }[] = [
     { href: "/", label: "Home", icon: "home", active: pathname === "/" },
+    { href: "/search", label: "Search", icon: "search", active: pathname.startsWith("/search") },
     { href: `/${username}`, label: "Profile", icon: "user", active: pathname === `/${username}` },
     { href: "/settings", label: "Settings", icon: "settings", active: pathname.startsWith("/settings") },
   ];
