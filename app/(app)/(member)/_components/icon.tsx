@@ -34,6 +34,13 @@ const PATHS = {
     </>
   ),
   "chevron-right": <polyline points="9 18 15 12 9 6" />,
+  image: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </>
+  ),
   feather: (
     <>
       <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z" />

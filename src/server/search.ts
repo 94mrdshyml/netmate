@@ -37,7 +37,7 @@ export async function searchPosts(
     )
     .orderBy(desc(posts.createdAt), desc(posts.id))
     .limit(limit + 1);
-  return toPage(rows, limit);
+  return toPage(db, rows, limit);
 }
 
 type PersonRow = {

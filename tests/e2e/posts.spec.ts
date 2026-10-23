@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { E2E } from "./constants";
 import { signUpMember } from "./helpers";
+import { solidPng } from "./png";
 
 // Serial: later tests use the posts made by earlier ones.
 test.describe.configure({ mode: "serial" });
@@ -158,4 +159,71 @@ test("a signed-out visitor is sent to sign in from the compose page", async ({ b
   await page.goto("/compose");
   await expect(page).toHaveURL(/\/sign-in$/);
   await context.close();
+});
+
+const pic = (name: string, shade: number) => ({ name, mimeType: "image/png", buffer: solidPng(48, 32, [shade, 110, 79]) });
+
+test("a post can carry pictures, with words or without, and they stay after a reload", async ({ page }) => {
+  await page.goto("/compose");
+  const post = page.getByRole("button", { name: "Post", exact: true });
+  await expect(post).toBeDisabled();
+
+  await page.locator('input[type="file"]').setInputFiles([pic("a.png", 20), pic("b.png", 90)]);
+  await expect(page.getByRole("img", { name: "Picture 2" })).toBeVisible();
+  await expect(page.getByText("Uploading")).toHaveCount(0);
+  // Pictures alone are enough to post.
+  await expect(post).toBeEnabled();
+
+  const text = unique();
+  await page.getByLabel("Your post").fill(text);
+  await post.click();
+  await expect(page).toHaveURL(/\/$/);
+
+  const card = mine(page, text);
+  await expect(card.locator(".post-photos img")).toHaveCount(2);
+  // The pictures load lazily, so give them a moment to arrive.
+  await expect
+    .poll(() => card.locator(".post-photos img").evaluateAll((all) => all.map((i) => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth > 0)))
+    .toEqual([true, true]);
+
+  await page.reload();
+  await expect(mine(page, text).locator(".post-photos img")).toHaveCount(2);
+  // The picture opens in full from its own address, served as an image.
+  const href = await mine(page, text).locator(".post-photos a").first().getAttribute("href");
+  const res = await page.request.get(href!);
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-type"]).toBe("image/png");
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("a post with only a picture shows no text, and four is the most", async ({ page }) => {
+  await page.goto("/compose");
+  await page.locator('input[type="file"]').setInputFiles([pic("1.png", 10), pic("2.png", 20), pic("3.png", 30), pic("4.png", 40), pic("5.png", 50)]);
+  await expect(page.getByRole("img", { name: /^Picture \d$/ })).toHaveCount(4);
+  await expect(page.getByRole("button", { name: /^Add pictures/ })).toBeDisabled();
+
+  await page.getByRole("button", { name: "Remove picture 4" }).click();
+  await page.getByRole("button", { name: "Remove picture 3" }).click();
+  await page.getByRole("button", { name: "Remove picture 2" }).click();
+  await expect(page.getByRole("img", { name: /^Picture \d$/ })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Add pictures" })).toBeEnabled();
+
+  await page.getByRole("button", { name: "Post", exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  const first = page.getByRole("article").first();
+  await expect(first.locator(".post-photos img")).toHaveCount(1);
+  await expect(first.locator(".post-body")).toHaveCount(0);
+});
+
+test("a file that is not a picture is refused and blocks the post until removed", async ({ page }) => {
+  await page.goto("/compose");
+  await page.locator('input[type="file"]').setInputFiles({ name: "fake.png", mimeType: "image/png", buffer: Buffer.from("<script>alert(1)</script>") });
+  await expect(page.getByRole("alert").filter({ hasText: "JPEG, PNG, WebP or GIF" })).toBeVisible();
+  await page.getByLabel("Your post").fill(unique());
+  await expect(page.getByRole("button", { name: "Post", exact: true })).toBeDisabled();
+
+  await page.getByRole("button", { name: "Remove picture 1" }).click();
+  await expect(page.getByRole("button", { name: "Post", exact: true })).toBeEnabled();
 });

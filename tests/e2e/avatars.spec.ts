@@ -137,7 +137,7 @@ test("the upload endpoint needs a session and refuses forms sent from another si
   });
   expect(foreign.status()).toBe(403);
 
-  const badKind = await signedIn.post("/api/upload", { multipart: { kind: "post", file: { name: "a.png", mimeType: "image/png", buffer: PNG } } });
+  const badKind = await signedIn.post("/api/upload", { multipart: { kind: "reel", file: { name: "a.png", mimeType: "image/png", buffer: PNG } } });
   expect(badKind.status()).toBe(400);
   await signedIn.dispose();
 });

@@ -39,6 +39,7 @@ export function sniffImage(bytes: Uint8Array): ImageType | null {
 export const MAX_BYTES = {
   avatar: 2 * 1024 * 1024,
   banner: 5 * 1024 * 1024,
+  post: 5 * 1024 * 1024,
 } as const;
 
 export type ProfilePictureKind = keyof typeof MAX_BYTES;

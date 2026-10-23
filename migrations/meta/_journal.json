@@ -71,6 +71,13 @@
       "when": 1792779281975,
       "tag": "0009_privacy",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1792785249501,
+      "tag": "0010_post_media",
+      "breakpoints": true
     }
   ]
 }
