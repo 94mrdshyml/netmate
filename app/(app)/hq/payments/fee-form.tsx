@@ -39,7 +39,7 @@ export function FeeForm({ feeBp, feeFixedCents }: { feeBp: number; feeFixedCents
         <input id="feeFixed" className="input" inputMode="decimal" autoComplete="off" value={fixed} onChange={(e) => setFixed(e.target.value)} aria-describedby="fee-note" />
       </div>
       <button type="submit" className="btn btn-primary" disabled={pending}>
-        {pending ? "Saving" : "Save"}
+        {pending ? "Saving" : "Save fee"}
       </button>
       <p id="fee-note" className={note?.kind === "error" ? "error" : "hint"} role={note ? (note.kind === "error" ? "alert" : "status") : undefined}>
         {note?.text ?? ""}

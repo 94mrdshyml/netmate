@@ -76,11 +76,11 @@ test("the admin saves the Polar keys, turns subscriptions on and sets a price", 
 
   // Polar's fee: the owner's own rate, checked before it is saved.
   await page.getByLabel("Percent of each payment").fill("25");
-  await page.getByRole("button", { name: "Save", exact: true }).last().click();
+  await page.getByRole("button", { name: "Save fee" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "The most is 20%." })).toBeVisible();
   await page.getByLabel("Percent of each payment").fill("4.50");
   await page.getByLabel("Plus a fixed amount (US dollars)").fill("0.40");
-  await page.getByRole("button", { name: "Save", exact: true }).last().click();
+  await page.getByRole("button", { name: "Save fee" }).click();
   await expect(page.getByText("Saved.").last()).toBeVisible();
 
   // Members now have the two rows in Settings; the admin sets a price.
