@@ -26,6 +26,7 @@ const ICONS: Record<AlertItem["type"], { icon: IconName; filled?: boolean }> = {
   mention: { icon: "at-sign" },
   invite_used: { icon: "user-plus" },
   pending_approval: { icon: "user-check" },
+  subscribe: { icon: "credit-card" },
 };
 
 /** Where tapping the alert goes. A person who is not approved yet has no profile page to open. */
@@ -33,6 +34,7 @@ function hrefFor(item: AlertItem): string | null {
   const actor = item.actors[0];
   if (item.type === "pending_approval") return "/hq/approvals";
   if (item.type === "follow_request") return "/privacy/requests";
+  if (item.type === "subscribe") return "/subscription";
   if (item.post) return `/${item.post.authorUsername}/status/${item.post.id}`;
   return actor?.active ? `/${actor.username}` : null;
 }
@@ -98,7 +100,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
         </ul>
       ) : (
         <EmptyState icon="bell" title="No alerts yet.">
-          Likes, replies and new followers show up here.
+          Likes, replies, new followers and new subscribers show up here.
         </EmptyState>
       )}
 

@@ -504,6 +504,7 @@ export const NOTIFICATION_TYPES = [
   "mention",
   "invite_used",
   "pending_approval",
+  "subscribe",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -532,13 +533,13 @@ export const notifications = sqliteTable(
   (t) => [
     check(
       "notifications_type",
-      sql`${t.type} in ('like', 'repost', 'follow', 'follow_request', 'reply', 'quote', 'mention', 'invite_used', 'pending_approval')`,
+      sql`${t.type} in ('like', 'repost', 'follow', 'follow_request', 'reply', 'quote', 'mention', 'invite_used', 'pending_approval', 'subscribe')`,
     ),
     check("notifications_no_self", sql`${t.recipientId} <> ${t.actorId}`),
     // Alerts about people have no post; alerts about posts always have one.
     check(
       "notifications_post_matches_type",
-      sql`(${t.type} in ('follow', 'follow_request', 'invite_used', 'pending_approval')) = (${t.postId} is null)`,
+      sql`(${t.type} in ('follow', 'follow_request', 'invite_used', 'pending_approval', 'subscribe')) = (${t.postId} is null)`,
     ),
     // The same person doing the same thing alerts once, however often it is sent. Two indexes, because
     // an empty post never counts as equal to another empty post in a unique index.
@@ -662,6 +663,9 @@ export const paymentSettings = sqliteTable(
 export const SUBSCRIPTION_STATUSES = ["incomplete", "incomplete_expired", "trialing", "active", "past_due", "canceled", "unpaid", "paused"] as const;
 export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
 
+/** The states in which a subscriber has paid up. A subscription they stopped keeps one of these until the period ends. */
+export const LIVE_SUBSCRIPTION_STATUSES = ["active", "trialing"] as const satisfies readonly SubscriptionStatus[];
+
 /**
  * The product Polar sells for one member at one price (docs/PRD.md, "Paid subscriptions"). Made when a member first
  * has that price and a subscriber taps Subscribe; reused after that. `mode` keeps test (sandbox) products apart from
@@ -709,6 +713,8 @@ export const subscriptions = sqliteTable(
     /** The price in US cents at which this subscription renews. */
     priceCents: integer("price_cents").notNull(),
     currentPeriodEnd: integer("current_period_end", { mode: "timestamp_ms" }),
+    /** When the creator was told about this subscription. Set once, the first time it is paid up, so repeats never alert twice. */
+    notifiedAt: integer("notified_at", { mode: "timestamp_ms" }),
     polarModifiedAt: integer("polar_modified_at").notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
