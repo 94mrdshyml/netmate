@@ -224,6 +224,8 @@ The username field checks availability as you type (after a short pause). Reserv
 
 **Mentions.** **Built.** `@username` links to that profile and sends that person a "mention" alert (once per post, written in the same `db.batch()` as the post). The name must have the shape of a username (3 to 15 letters, numbers or underscores). It counts only if the person exists, is an active member and has no block either way with the author (`post_mentions`); a name that does not count stays plain text. At most 10 distinct people per post; the rest stay plain text. Nobody is alerted twice for one post: the author of the post a reply answers has the reply alert, and the author of a quoted post has the quote alert (that replaces the mention alert, as 8.7 says). You are never alerted about your own post, though your own name still links. The alert is shown only if the reader may see the post (the usual rule), so a private account cannot make a stranger's alerts appear.
 
+**Typing tags and names (built, session 40).** In the composer (posts, replies and quotes) a `#tag` and an `@name` change colour as they are typed, in the brand text colour, using the same rules as the saved post: a tag needs a letter or number, a name has the shape of a username (3 to 15 characters), the first 10 distinct of each are coloured, and "C#", an email address or a web address are not. A name that nobody has stops being coloured a moment after it is typed (the page asks `/api/mentions?names=` once, after a 0.45 second pause), so the colour means "this will be a link". Typing an `@` opens a list of up to six people (picture, name, @username): with nothing after the `@`, people you follow (latest follow first) and then the newest members; with letters typed, people whose username, first name or last name starts with them, an exact username first and people you follow ahead of others. It appears wherever the cursor is in a name, also in the middle of a post. Arrow keys move, Enter or Tab or a tap picks (the name goes in with a space after it, and Enter never posts while the list is open), Escape closes it. Never yourself, never someone with a block either way, never a member who is not active; a private account can be mentioned. The lists come from `/api/mentions?q=` (signed-in members from this site only, 120 a minute); nothing typed is stored or logged. If the lookup fails the name can still be typed.
+
 **Reply.** From a post's page. Replies are posts with a parent. They show under the post (newest first), on the replier's Replies tab, and raise the parent's reply count. They never appear in the home feed.
 
 **Like.** Idempotent. Notifies the author (not for liking your own post).
@@ -413,6 +415,7 @@ Limits are counted per person, or per IP address for sign-up and sign-in. IPs ar
 | Uploads | 30 per 10 minutes |
 | Link-preview fetches | 20 per 10 minutes |
 | Location suggestions | 40 per minute |
+| Name suggestions | 120 per minute |
 | Analytics reports | 60 per minute |
 | Sign-up | 10 per 10 minutes per IP; 20 per 10 minutes per invite link |
 | Sign-in | 30 per 10 minutes per IP, 10 per 10 minutes per email |
@@ -481,6 +484,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/api/auth/*`, `/api/me`, `/api/upload` | Auth, session probe, upload | n/a |
 | `/api/places?q=` | Place suggestions for the composer (signed-in members, setting on, 40 a minute) | n/a |
 | `/api/link-preview` | `POST {url}`: a link card and its signed token for the composer (signed-in members on this site, setting on, 20 per 10 minutes) | n/a |
+| `/api/mentions?q=` and `?names=` | People to suggest after an `@`, and which typed names are real (signed-in members, 120 a minute) | n/a |
 | `/avatar/[userId]`, `/media/[...key]` | The drawn default picture; stored files from R2 (avatars, banners, posts, the instance logo and favicon, hosted fonts; each only as the type it was stored with; random names, cached for ever). The media subdomain replaces `/media` later | n/a |
 
 `/hq` is admin-only; anyone else gets 404.

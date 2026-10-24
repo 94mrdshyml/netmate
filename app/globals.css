@@ -3280,6 +3280,96 @@ a.quote-card:hover {
   border-radius: 999px;
 }
 
+/* ---- Typing #tags and @names: the coloured copy behind the text box, and the list of people ---- */
+
+.composer-field {
+  position: relative;
+}
+
+/* The copy sits exactly under the text box: the same box, font, padding and wrapping. */
+.composer-backdrop {
+  position: absolute;
+  inset: 0;
+  padding: 8px 10px;
+  overflow: hidden;
+  font: inherit;
+  font-size: 1.125rem;
+  line-height: 1.4;
+  color: var(--fg);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  pointer-events: none;
+}
+
+.reply-box .composer-backdrop {
+  font-size: 1rem;
+}
+
+/* The real box shows nothing of its own text (the copy does), only the caret and the selection. */
+.composer-text-live {
+  position: relative;
+  color: transparent;
+  caret-color: var(--fg);
+  scrollbar-width: none;
+}
+
+.composer-text-live::-webkit-scrollbar {
+  display: none;
+}
+
+.composer-text-live::selection {
+  background: color-mix(in srgb, var(--brand-text) 28%, transparent);
+}
+
+.live-entity {
+  color: var(--brand-text);
+}
+
+.mention-list {
+  margin: 4px 0 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.mention-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.mention-option + .mention-option {
+  border-top: 1px solid var(--line);
+}
+
+.mention-option:hover,
+.mention-option-active {
+  background: var(--surface);
+}
+
+.mention-names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.mention-names strong,
+.mention-names .muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mention-names .muted {
+  font-size: 0.875rem;
+}
+
 /* ---- Link card: the picture, site, title and description of a page, under a post and in the composer ---- */
 
 .link-card {

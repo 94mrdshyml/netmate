@@ -94,3 +94,22 @@ export function parseTagQuery(raw: unknown): string | null {
   if (!tag || Array.from(tag).length > TAG_MAX || !HAS_LETTER_OR_NUMBER.test(tag)) return null;
   return tag.toLowerCase();
 }
+
+/**
+ * The `@name` being typed right at the cursor, for the suggestion list: where its `@` is, and what has
+ * been typed after it (letters, numbers and underscores only, up to the length of a username). Null
+ * when the cursor is not at the end of one: the `@` must start a word (so "me@" is not one), not be
+ * inside a web address, and nothing but name characters may sit between it and the cursor.
+ */
+export function mentionAtCaret(text: string, caret: number): { start: number; prefix: string } | null {
+  if (!Number.isInteger(caret) || caret < 0 || caret > text.length) return null;
+  const before = text.slice(0, caret);
+  const chunk = before.slice(Math.max(before.lastIndexOf(" "), before.lastIndexOf("\n"), before.lastIndexOf("\t")) + 1);
+  if (WEB_ADDRESS.test(chunk)) return null;
+  const match = /@([A-Za-z0-9_]{0,15})$/.exec(chunk);
+  if (!match) return null;
+  const at = chunk.length - match[0].length;
+  const prev = at === 0 ? "" : chunk[at - 1]!;
+  if (prev !== "" && (WORD.test(prev) || prev === "#" || prev === "@")) return null;
+  return { start: before.length - match[0].length, prefix: match[1]!.toLowerCase() };
+}
