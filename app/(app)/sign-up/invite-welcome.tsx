@@ -4,6 +4,7 @@ import { welcomeLine } from "@/lib/welcome-line";
 import type { InviteWelcome } from "@/server/invite-welcome";
 import { Avatar } from "../(member)/_components/avatar";
 import { BrandMark } from "../_components/brand-mark";
+import { JoinButton } from "./join-button";
 
 /**
  * The first thing a visitor sees on an invite link: the instance, who invited them, a few faces
@@ -41,9 +42,7 @@ export function InviteWelcomeScreen({
           <p className="muted">{welcomeLine(welcome.names, welcome.others)}</p>
         </div>
       ) : null}
-      <Link className="btn btn-primary btn-block" href={joinHref}>
-        Join {settings.name}
-      </Link>
+      <JoinButton href={joinHref}>Join {settings.name}</JoinButton>
       <Link href="/sign-in">Already a member? Sign in</Link>
     </main>
   );

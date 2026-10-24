@@ -1,6 +1,7 @@
 // Inviting a person by email (docs/PRD.md section 6): a member types an address and the invitation
 // goes out with their own invite link. The address is used to send and to rate-limit (as a salted
-// hash) and is never stored or logged. Nobody is told whether the address already belongs to a
+// hash) and is never stored or logged. The link also carries it after the "#" (never sent to our server) so
+// the sign-up form opens with the Email box filled in. Nobody is told whether the address already belongs to a
 // member, so this cannot be used to find out who is in the community.
 
 import { eq } from "drizzle-orm";
@@ -10,6 +11,7 @@ import { user } from "@/db/schema";
 import { inviteByEmail } from "@/email/messages";
 import { siteUrl } from "@/email/template";
 import { isEmailSetUp } from "@/server/email";
+import { withEmailHint } from "@/lib/invite-email-hint";
 import { inviteUrl } from "@/server/invites";
 import { limitInviteEmail, tooManyMessage } from "@/server/rate-limit";
 import { deliver, type MailContext } from "@/server/status-emails";
@@ -36,7 +38,8 @@ export async function sendInviteEmail(
 
   if (!(await isEmailSetUp(db))) return fail("not_set_up", "Email is not set up, so share your link by hand.");
   const base = siteUrl(ctx.origin, "");
-  const joinUrl = base ? inviteUrl(base, link.code) : null;
+  // The address goes after the "#" so the sign-up form can fill it in; a browser never sends that part to us.
+  const joinUrl = base ? withEmailHint(inviteUrl(base, link.code), to) : null;
   if (!joinUrl) return fail("failed", "Could not make the invitation. Share your link by hand.");
 
   const limited = await limitInviteEmail(d1, ctx.salt, { userId: inviter.userId, to });
