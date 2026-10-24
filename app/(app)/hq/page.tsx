@@ -1,19 +1,21 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import Link from "next/link";
-import { requireAdmin } from "@/auth/admin";
+import { redirect } from "next/navigation";
+import { requireStaff } from "@/auth/admin";
 import { getDb } from "@/db";
 import { getInstanceState } from "@/instance/request";
 import { countMembers, countPending, listInviteLinks } from "@/server/admin";
 import { isEmailSetUp } from "@/server/email";
-import { Icon, type IconName } from "../(member)/_components/icon";
-import { Card, PageHeader, Pill } from "./hq-ui";
+import { Icon } from "../(member)/_components/icon";
+import { Card, PageHeader, Pill, Stat } from "./hq-ui";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Admin" };
 
 export default async function HqOverviewPage() {
-  await requireAdmin();
+  // A moderator has no overview: their one page is the members list.
+  if ((await requireStaff()).role !== "admin") redirect("/hq/members");
   const { env } = await getCloudflareContext({ async: true });
   const { settings } = await getInstanceState();
   const db = getDb(env.DB);
@@ -123,24 +125,3 @@ export default async function HqOverviewPage() {
 }
 
 /** One number with a plain label. It is a link when there is a page to go to. */
-function Stat({ icon, label, value, note, href }: { icon: IconName; label: string; value: number; note: string; href?: string }) {
-  const body = (
-    <>
-      <span className="hq-stat-top">
-        <span className="hq-stat-label">{label}</span>
-        <span className="hq-tile" aria-hidden="true">
-          <Icon name={icon} size={18} />
-        </span>
-      </span>
-      <span className="hq-stat-value">{value}</span>
-      <span className="hint">{note}</span>
-    </>
-  );
-  return href ? (
-    <Link href={href} className="hq-card hq-stat hq-stat-link">
-      {body}
-    </Link>
-  ) : (
-    <div className="hq-card hq-stat">{body}</div>
-  );
-}

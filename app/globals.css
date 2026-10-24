@@ -2944,6 +2944,99 @@ a.quote-card:hover {
   color: var(--muted);
 }
 
+.hq-section {
+  margin: 8px 0 -4px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* A member in the members list: the person and their buttons on the first line, their numbers under them. */
+.hq-member {
+  align-items: flex-start;
+}
+
+.hq-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px 16px;
+  flex: 1 0 100%;
+  margin: 0;
+  padding-top: 4px;
+}
+
+.hq-counts div {
+  display: flex;
+  flex-direction: column;
+}
+
+.hq-counts dt {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.hq-counts dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hq-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.hq-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  color: var(--fg);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.hq-chip[aria-current="true"] {
+  color: var(--brand-text);
+  border-color: var(--brand);
+}
+
+.hq-more {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0 0;
+}
+
+.hq-table-wrap {
+  overflow-x: auto;
+}
+
+.hq-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.hq-table th,
+.hq-table td {
+  padding: 10px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+
+.hq-table th:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+.hq-table thead th {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
 .hq-initial {
   display: grid;
   place-items: center;

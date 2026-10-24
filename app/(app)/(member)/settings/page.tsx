@@ -21,6 +21,9 @@ const ROWS: Row[] = [
 // Only the admin sees this row. /hq checks the role again on the server every time.
 const ADMIN_ROW: Row = { href: "/hq", title: "Admin panel", sub: "Approvals, invites and how this space looks", icon: "shield" };
 
+// A moderator gets their own row, straight to the members list. /hq checks the role again on the server every time.
+const MODERATOR_ROW: Row = { href: "/hq/members", title: "Moderation", sub: "Members and how the community is doing", icon: "shield" };
+
 // Rows are added here as their screens are built (bookmarks, analytics, privacy, account).
 // The Profile tab in the bottom bar is the one way to your own profile, so it is not a row.
 export default async function SettingsPage() {
@@ -32,7 +35,7 @@ export default async function SettingsPage() {
       <PageHeader title="Settings" back={{ href: "/", label: "Back to Home" }} centered />
 
       <ul className="settings-list" aria-label="Settings">
-        {(member.role === "admin" ? [...ROWS, ADMIN_ROW] : ROWS).map((row) => (
+        {(member.role === "admin" ? [...ROWS, ADMIN_ROW] : member.moderator ? [...ROWS, MODERATOR_ROW] : ROWS).map((row) => (
           <li key={row.href}>
             <Link href={row.href} className="srow">
               <span className="srow-icon">

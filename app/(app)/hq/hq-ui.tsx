@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "../(member)/_components/icon";
 
@@ -70,5 +71,28 @@ export function Initial({ name }: { name: string }) {
     <span className="hq-initial" aria-hidden="true">
       {Array.from(name.trim())[0]?.toUpperCase() ?? ""}
     </span>
+  );
+}
+
+/** A number panel: a label, a big number and one quiet line. A link when `href` is given. */
+export function Stat({ icon, label, value, note, href }: { icon: IconName; label: string; value: number | string; note: string; href?: string }) {
+  const body = (
+    <>
+      <span className="hq-stat-top">
+        <span className="hq-stat-label">{label}</span>
+        <span className="hq-tile" aria-hidden="true">
+          <Icon name={icon} size={18} />
+        </span>
+      </span>
+      <span className="hq-stat-value">{value}</span>
+      <span className="hint">{note}</span>
+    </>
+  );
+  return href ? (
+    <Link href={href} className="hq-card hq-stat hq-stat-link">
+      {body}
+    </Link>
+  ) : (
+    <div className="hq-card hq-stat">{body}</div>
   );
 }

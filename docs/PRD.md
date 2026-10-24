@@ -70,6 +70,7 @@ What makes it Netmate:
 | Role | Can |
 |---|---|
 | **Admin** (exactly one at setup) | everything a member can, plus `/hq` |
+| **Moderator** (owner decision, session 46) | a Member the admin has made a moderator, kept as a flag on the profile (`is_moderator`), not as a new role, so the one-admin rule is untouched. Can open the members list and Activity in `/hq` (no email addresses, no buttons that change anything). The admin alone makes or removes a moderator. Moderators will also be able to remove posts and replies and suspend members once those tools are built (decided, not built yet). Never sees branding, email, keys, invites, approvals, services or demo data |
 | **Member** | use the app, own a personal invite link |
 | **Pending** | signed up through a member link past that member's quota; cannot sign in until approved |
 
@@ -480,6 +481,8 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/hq/approvals` | Pending sign-ups | **wide** |
 | `/hq/invites` | Admin link, quota, member links with usage, replace a link | **wide** |
 | `/hq/email` | Resend key (saved encrypted, never shown again), sender, test email, last send and last error | **wide** |
+| `/hq/members` | Members: search, filter (everyone, moderators, waiting), each person's counts, and the admin's Make or Remove moderator button. Staff (admin or moderator); a moderator sees no emails | **wide** |
+| `/hq/stats` | Activity: totals for people, what they made and how they react, and the last eight weeks. Counts only. Staff | **wide** |
 | `/hq/services` | Optional services: place suggestions on or off; link previews on or off; the Klipy key for GIF search | **wide** |
 | `/api/auth/*`, `/api/me`, `/api/upload` | Auth, session probe, upload | n/a |
 | `/api/places?q=` | Place suggestions for the composer (signed-in members, setting on, 40 a minute) | n/a |
@@ -487,7 +490,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/api/mentions?q=` and `?names=` | People to suggest after an `@`, and which typed names are real (signed-in members, 120 a minute) | n/a |
 | `/avatar/[userId]`, `/media/[...key]` | The drawn default picture; stored files from R2 (avatars, banners, posts, the instance logo and favicon, hosted fonts; each only as the type it was stored with; random names, cached for ever). The media subdomain replaces `/media` later | n/a |
 
-`/hq` is admin-only; anyone else gets 404.
+`/hq` is admin-only; anyone else gets 404. The one exception (owner decision, session 46) is `/hq/members` and `/hq/stats`, which a moderator may also open; `/hq` itself sends a moderator to `/hq/members`, and every other page and action checks for the admin alone.
 
 ## 10. Data
 
@@ -515,7 +518,7 @@ More prefixes are added as their tables are created (posts, invites, notificatio
 | `email_state` | one row: time of the last email sent, the last send error (scrubbed, up to 300 characters) and its time |
 | `instance_secrets` | encrypted Resend key, Resend sender address and Klipy key, one row per name, stored as `v1:<nonce>:<ciphertext>` (AES-256-GCM, key derived from `SETTINGS_ENCRYPTION_KEY`, the name bound into the ciphertext). Separate from `instance` so theme code never reads them |
 | `fonts` | hosted font files: family, weight, style, script subset, unicode range, storage key (a variable font may share one file between rows) |
-| `profiles` | one per user: username (unique, lower case), first and last name, bio, link, location, private flag, avatar and banner keys, `role` (admin or member), `status` (active or pending), `invited_by`, `email_verified_at`, created time |. The database enforces the username rules (3 to 15 characters of a-z, 0-9, underscore), name and bio lengths, role and status values, and **exactly one admin** (a partial unique index). If the inviter is deleted, `invited_by` becomes empty
+| `profiles` | one per user: username (unique, lower case), first and last name, bio, link, location, private flag, avatar and banner keys, `role` (admin or member), `status` (active or pending), `is_moderator` (0 or 1, checked by the database; a flag the admin sets on a member, never on the admin), `invited_by`, `email_verified_at`, created time |. The database enforces the username rules (3 to 15 characters of a-z, 0-9, underscore), name and bio lengths, role and status values, and **exactly one admin** (a partial unique index). If the inviter is deleted, `invited_by` becomes empty
 | `invite_links` | id (`inv_`), member id, long random code (not an id), uses count, created, revoked. At most one active (not revoked) link per member |
 | `invite_uses` | id (`invu_`), invite link, new user (one use per person), time, outcome (`approved` or `pending`) |
 | `posts` | body (up to 280), place (optional, 1 to 60 characters of plain text, checked by the database), author, parent (reply), quoted post (optional; the database refuses a post that is both a reply and a quote; if the original row is removed the quote stays and its card says "not available"), reply/like/repost counts (repost count never negative), created, deleted |
@@ -637,6 +640,8 @@ Worker "netmate"  ── Next.js 16 via @opennextjs/cloudflare
 
 **Demo data (local only).** `bun run db:seed` fills the local database that `bun run dev` uses with 14 invented people and about 90 posts, so the feed, search, alerts and profiles can be seen with something in them. It never touches production: it opens only the local copy of D1 and R2, has no remote option, and refuses to run before `/setup` has made an admin. The people are added next to the admin; the admin follows 9 of them and is followed by 10. Everything goes in through the same server code the app uses (posts, replies, quotes, reposts, likes, saves, follows), so counters, alerts, tags, mentions and search stay true. The data covers every kind of post: plain words, #tags, @mentions, 1 to 4 pictures (flat-colour scenes the script draws and stores in local R2), a GIF (public Klipy pictures; if Klipy ever removes one, that post shows no picture), a place, a link card (example domains, no outside picture), replies, quotes and reposts. One account is private, with four approved followers and one request still waiting. Posts are spread over the last three days, oldest first. Every demo person signs in with `demo-password` and an email like `meera_rao@demo.example.com` (the full list is printed). If the admin has a post, some demo people reply to it by name, so the admin has alerts to look at; if not, those posts are plain posts that greet the admin. Run twice, it says so and changes nothing; to start again, delete `.wrangler/state`, then set up and seed once more. The code lives in `scripts/` and is never imported by the app.
 
+**Members and numbers** (admin and moderators). `/hq/members` lists everyone, newest first, 25 at a time, with a search (name, username, and email for the admin only) and three filters (everyone, moderators, waiting for approval). Each person shows their role, whether the account is private, when they joined and through whose link, and these counts: posts (not replies or quotes), replies, quotes, reposts, pictures, GIFs, link cards, likes given, likes received, followers and following. Removed posts are not counted. `/hq/stats` ("Activity") shows totals for people (members, waiting, moderators, private accounts), for what they made (posts, replies, quotes, pictures, GIFs, link cards, places, removed posts), for how they react (likes, reposts, mentions, follows), and a table of the last eight blocks of seven days (new members, posts, replies, likes). Everything is counts: no page names who liked, reposted or looked at whom, and **saves are left out completely**, even as totals (bookmarks are private). The admin makes or removes a moderator with one button per person; sending the same state twice changes nothing; the admin and someone still waiting cannot be made moderators.
+
 **Performance goal:** first load on a 4G phone under 2 seconds, feed rendered on the server. Latest two versions of Safari on iPhone and Chrome on Android.
 
 **CI (GitHub Actions), required to merge:** install, lint, typecheck, unit, integration, build (OpenNext), end to end, dependency audit, secret scan, and a migration check (apply from empty, and from the previous release).
@@ -726,6 +731,7 @@ Phases 4 to 6 can overlap once phase 2 is done. Phases 1 to 3 give the first usa
 | 15 | Package manager | Bun (changed from pnpm by the owner, 2026-10-22) |
 | 16 | Ids | Stripe-style prefixed ids (`usr_` + 24 base62 characters), replacing UUIDs. Owner request, 2026-10-22 |
 | 17 | Releases | Manual: a Release workflow (workflow_dispatch with a version) tags and creates a GitHub Release with generated notes. release-please was tried and removed on 2026-10-22: GitHub GraphQL errors, default first version 1.0.0, release PRs without CI. Owner decision |
+| 19 | Moderators | Owner decision, session 46: one owner (the only admin, as before) plus moderators, who are members the admin flags. No second admin. A moderator can see the members list and the numbers, and (to be built) remove posts and replies and suspend members; not approve sign-ups, and never settings. Numbers are counts only and leave out saves (bookmarks are private) |
 
 ## 19. Not in v1, and ideas
 

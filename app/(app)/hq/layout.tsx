@@ -1,6 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import Link from "next/link";
-import { requireAdmin } from "@/auth/admin";
+import { requireStaff } from "@/auth/admin";
 import { getDb } from "@/db";
 import { getInstanceState } from "@/instance/request";
 import { countPending } from "@/server/admin";
@@ -16,11 +16,13 @@ import { HqNav } from "./hq-nav";
 export const dynamic = "force-dynamic";
 
 export default async function HqLayout({ children }: { children: React.ReactNode }) {
-  await requireAdmin();
+  const staff = await requireStaff();
+  const isAdmin = staff.role === "admin";
   const { env } = await getCloudflareContext({ async: true });
   const { settings } = await getInstanceState();
   const db = getDb(env.DB);
-  const [pending, emailReady] = await Promise.all([countPending(db), isEmailSetUp(db)]);
+  // The waiting-for-approval count and the email notice are for the admin; a moderator is not shown them.
+  const [pending, emailReady] = isAdmin ? await Promise.all([countPending(db), isEmailSetUp(db)]) : [0, true];
   const initial = Array.from(settings.name.trim())[0] ?? "";
 
   return (
@@ -35,9 +37,9 @@ export default async function HqLayout({ children }: { children: React.ReactNode
               {initial}
             </span>
           )}
-          <p className="hq-title">{settings.name} admin</p>
+          <p className="hq-title">{settings.name} {isAdmin ? "admin" : "moderation"}</p>
         </div>
-        <HqNav pending={pending} />
+        <HqNav pending={pending} isAdmin={isAdmin} />
       </aside>
 
       <div className="hq-content">
