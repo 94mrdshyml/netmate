@@ -3369,3 +3369,75 @@ a.quote-card:hover {
 .mention-names .muted {
   font-size: 0.875rem;
 }
+
+/* ---- Link card: the picture, site, title and description of a page, under a post and in the composer ---- */
+
+.link-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+a.link-card:hover {
+  background: var(--surface);
+}
+
+.link-card-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.91 / 1;
+  object-fit: cover;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.link-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.link-card-site {
+  overflow: hidden;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-card-title,
+.link-card-desc {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.link-card-title {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.link-card-desc {
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.link-card-wait {
+  margin: 8px 0 0;
+  padding: 12px;
+  font-size: 0.875rem;
+  color: var(--muted);
+  border: 1px dashed var(--line-input);
+  border-radius: var(--radius);
+}

@@ -41,6 +41,7 @@ export default async function ComposePage({ searchParams }: { searchParams: Prom
         autoFocus
         places={settings.placesEnabled}
         gifKey={gifKey}
+        linkPreviews={settings.linkPreviewsEnabled}
         placeholder={quoted ? "Add your thoughts" : undefined}
         quoteId={quoted?.id}
         quoteCard={

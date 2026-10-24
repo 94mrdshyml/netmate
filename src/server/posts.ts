@@ -5,8 +5,11 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import type { Db } from "@/db";
 import { alias } from "drizzle-orm/sqlite-core";
-import { bookmarks, follows, likes, POST_PHOTO_MAX, postGifs, postMedia, postMentions, posts, postTags, profiles, reposts } from "@/db/schema";
+import { bookmarks, follows, likes, POST_PHOTO_MAX, postGifs, postLinks, postMedia, postMentions, posts, postTags, profiles, reposts } from "@/db/schema";
 import { checkGif, type PostGif } from "@/lib/gif";
+import { checkLinkCard } from "@/links/card";
+import type { LinkCard } from "@/links/fetch";
+import { firstLink } from "@/lib/post-links";
 import { isId, newId } from "@/lib/ids";
 import { checkPlace } from "@/lib/place";
 import { extractEntities } from "@/lib/post-entities";
@@ -60,6 +63,8 @@ export type PostView = {
    * and a reply can be quoted but not reposted. The server checks again when the button is pressed.
    */
   share: "repost_or_quote" | "quote" | "none";
+  /** The card of the first web address in its text (title, description, picture, site), or null. */
+  link: LinkCard | null;
   /** The post this one quotes, or null for an ordinary post. */
   quote: QuotedView | null;
   /** Set only on an item that is in a list because this person reposted it. */
@@ -143,6 +148,7 @@ const toView = (r: Row): PostView => ({
   likedByMe: Boolean(r.liked),
   tags: [],
   mentions: [],
+  link: null,
   repostCount: r.repostCount,
   repostedByMe: Boolean(r.reposted),
   bookmarkedByMe: Boolean(r.bookmarked),
@@ -172,7 +178,9 @@ async function hydrate(db: Db, viewerId: string, rows: Row[], by: (RepostedBy | 
   // Tags and mentions can only be in text that has a # or an @, so other posts need no query.
   const withHash = [...new Set(items.filter((p) => p.body.includes("#")).map((p) => p.id))];
   const withAt = [...new Set(items.filter((p) => p.body.includes("@")).map((p) => p.id))];
-  const [media, gifs, quoted, tagRows, mentionRows] = await Promise.all([
+  // A card can only belong to a post whose text has a web address.
+  const withLink = [...new Set(items.filter((p) => /https?:\/\/|www\./i.test(p.body)).map((p) => p.id))];
+  const [media, gifs, quoted, tagRows, mentionRows, linkRows] = await Promise.all([
     db
       .select({ postId: postMedia.postId, key: postMedia.key })
       .from(postMedia)
@@ -208,7 +216,15 @@ async function hydrate(db: Db, viewerId: string, rows: Row[], by: (RepostedBy | 
           .from(postMentions)
           .innerJoin(profiles, eq(profiles.userId, postMentions.userId))
           .where(inArray(postMentions.postId, withAt)),
+    withLink.length === 0
+      ? Promise.resolve([])
+      : db
+          .select({ postId: postLinks.postId, url: postLinks.url, title: postLinks.title, description: postLinks.description, image: postLinks.image, site: postLinks.site })
+          .from(postLinks)
+          .where(inArray(postLinks.postId, withLink)),
   ]);
+  const linkOf = new Map<string, LinkCard>();
+  for (const l of linkRows) linkOf.set(l.postId, { url: l.url, title: l.title, description: l.description, image: l.image, site: l.site });
   const tagsOf = new Map<string, string[]>();
   for (const r of tagRows) tagsOf.set(r.postId, [...(tagsOf.get(r.postId) ?? []), r.tag]);
   const mentionsOf = new Map<string, string[]>();
@@ -237,6 +253,7 @@ async function hydrate(db: Db, viewerId: string, rows: Row[], by: (RepostedBy | 
       gif: gifOf.get(p.id) ?? null,
       tags: tagsOf.get(p.id) ?? [],
       mentions: mentionsOf.get(p.id) ?? [],
+      link: linkOf.get(p.id) ?? null,
       quote: quotedId ? (cards.get(quotedId) ?? { available: false }) : null,
     };
   });
@@ -431,7 +448,7 @@ export async function listReplies(
 
 export type CreatePostResult =
   | { ok: true; id: string }
-  | { ok: false; code: "empty" | "too_long" | "bad_characters" | "parent_not_found" | "bad_photos" | "bad_gif" | "gif_with_photos" | "quote_and_reply" | "quote_not_found" | "quote_private" | "place_too_long" | "place_bad_characters" };
+  | { ok: false; code: "empty" | "too_long" | "bad_characters" | "parent_not_found" | "bad_photos" | "bad_gif" | "bad_link" | "gif_with_photos" | "quote_and_reply" | "quote_not_found" | "quote_private" | "place_too_long" | "place_bad_characters" };
 
 const replyCountOf = (parentId: string) =>
   sql`(select count(*) from ${posts} as r where r.parent_id = ${parentId} and r.deleted_at is null)`;
@@ -456,6 +473,7 @@ export async function createPost(
   rawPlace?: unknown,
   rawGif?: unknown,
   quotedId?: string,
+  rawLink?: unknown,
 ): Promise<CreatePostResult> {
   if (!photoKeysAreValid(authorId, photoKeys)) return { ok: false, code: "bad_photos" };
   const checkedGif = checkGif(rawGif);
@@ -499,19 +517,27 @@ export async function createPost(
   // and the author of a quoted post has the quote alert (docs/PRD.md section 8.7). Nor are you alerted about yourself.
   const alertMentioned = mentioned.map((m) => m.userId).filter((u) => u !== authorId && u !== parentAuthorId && u !== quotedAuthorId);
 
+  // A card goes with the first web address in the words, and never with pictures, a GIF or a quote (docs/PRD.md section 8.2).
+  let link: LinkCard | null = null;
+  if (rawLink !== undefined && rawLink !== null) {
+    link = checkLinkCard(rawLink);
+    if (!link || wordless || photoKeys.length > 0 || gif || quoting || firstLink(text.text) !== link.url) return { ok: false, code: "bad_link" };
+  }
+
   const id = newId("post");
   const createdAt = new Date();
   const insert = db
     .insert(posts)
     .values({ id, authorId, parentId: parentId ?? null, quotedPostId: quotedId ?? null, body: text.text, place: place.place, createdAt });
   const photos = photoKeys.map((key, position) => ({ postId: id, position, key }));
-  if (parentId === undefined && photos.length === 0 && !gif && !quoting && tags.length === 0 && mentioned.length === 0) {
+  if (parentId === undefined && photos.length === 0 && !gif && !quoting && !link && tags.length === 0 && mentioned.length === 0) {
     await insert;
   } else {
     // The post, its photos or GIF, its tags and mentions with their alerts, for a quote the author's alert, and for a reply the parent's count and the parent's author's alert change together.
     await db.batch([
       insert,
       ...(photos.length > 0 ? [db.insert(postMedia).values(photos)] : []),
+      ...(link ? [db.insert(postLinks).values({ postId: id, url: link.url, title: link.title, description: link.description, image: link.image, site: link.site })] : []),
       ...(tags.length > 0 ? [db.insert(postTags).values(tags.map((tag) => ({ postId: id, tag, createdAt })))] : []),
       ...(mentioned.length > 0 ? [db.insert(postMentions).values(mentioned.map((m) => ({ postId: id, userId: m.userId })))] : []),
       ...alertMentioned.map((userId) => alertOnMention(db, authorId, userId, id)),

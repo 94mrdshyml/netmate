@@ -293,6 +293,33 @@ export const postMentions = sqliteTable(
   (t) => [primaryKey({ columns: [t.postId, t.userId] }), index("post_mentions_user_idx").on(t.userId)],
 );
 
+/**
+ * The link card of a post (docs/PRD.md section 8.2): the title, description, picture address and site
+ * name of the first web address in its text, as our server read them from that page. The text is plain
+ * text; the picture is an https address that the reader's phone loads from its own site (never copied
+ * to our storage). At most one a post; the database checks every length and the address shapes.
+ */
+export const postLinks = sqliteTable(
+  "post_links",
+  {
+    postId: text("post_id")
+      .primaryKey()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    image: text("image"),
+    site: text("site").notNull(),
+  },
+  (t) => [
+    check("post_links_url", sql`(${t.url} like 'http://%' or ${t.url} like 'https://%') and length(${t.url}) <= 500`),
+    check("post_links_title", sql`length(${t.title}) between 1 and 150`),
+    check("post_links_description", sql`length(${t.description}) <= 300`),
+    check("post_links_image", sql`${t.image} is null or (${t.image} like 'https://%' and length(${t.image}) <= 500)`),
+    check("post_links_site", sql`length(${t.site}) between 1 and 60`),
+  ],
+);
+
 /** One row per person per post. Reposting twice leaves one row. The counter on the post changes in the same batch. */
 export const reposts = sqliteTable(
   "reposts",

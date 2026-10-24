@@ -3,6 +3,19 @@
 
 export const LINK_MAX = 100;
 
+/** A real domain name: at least one dot, letters, digits and hyphens in each part, a letters-only ending, not an address in numbers. */
+export function looksLikeDomain(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  const labels = host.split(".");
+  return (
+    host.length <= 253 &&
+    labels.length >= 2 &&
+    labels.every((l) => l.length <= 63 && (/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(l) || /^xn--[a-z0-9-]+$/.test(l))) &&
+    /^([a-z]{2,}|xn--[a-z0-9-]+)$/.test(labels[labels.length - 1] ?? "") &&
+    !/^\d+(\.\d+){3}$/.test(host)
+  );
+}
+
 export type LinkResult = { ok: true; url: string } | { ok: false; reason: "too_long" | "invalid" };
 
 export function normalizeLink(raw: string): LinkResult {
@@ -19,15 +32,7 @@ export function normalizeLink(raw: string): LinkResult {
   if (url.protocol !== "http:" && url.protocol !== "https:") return { ok: false, reason: "invalid" };
   if (url.username || url.password) return { ok: false, reason: "invalid" };
 
-  // A real domain: at least one dot, letters/digits/hyphens in each part, a letters-only ending.
-  const host = url.hostname.toLowerCase();
-  const labels = host.split(".");
-  const ok =
-    labels.length >= 2 &&
-    labels.every((l) => /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(l) || /^xn--[a-z0-9-]+$/.test(l)) &&
-    /^([a-z]{2,}|xn--[a-z0-9-]+)$/.test(labels[labels.length - 1] ?? "") &&
-    !/^\d+(\.\d+){3}$/.test(host);
-  if (!ok) return { ok: false, reason: "invalid" };
+  if (!looksLikeDomain(url.hostname)) return { ok: false, reason: "invalid" };
 
   return { ok: true, url: url.toString() };
 }
