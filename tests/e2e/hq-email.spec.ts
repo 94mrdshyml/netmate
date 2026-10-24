@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // Serial: each test starts from "email is not set up" and leaves it that way. The Worker runs
 // with ENV=test, so the Resend key is checked and the mail sent by an in-memory fake, never Resend:

@@ -118,7 +118,7 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 - Post text is always rendered as text. Mentions, tags and links are found by parsing, never by injecting HTML. Theme values (colour, font name) are validated so they cannot inject CSS or script.
 - Migrations are forward-only and safe to run on an instance at any older version (expand, then contract across releases). CI checks upgrade from the previous release.
 - Email degrades gracefully with no Resend key: verification skipped, "forgot password" hidden, invite links shared by hand, `/hq` shows a banner.
-- Seed and fake data exist only for local development and tests.
+- Seed and fake data exist only for local development and tests, with one exception decided by the owner (session 45): the admin's own "Demo data" page in `/hq/demo`, which adds and fully removes invented people and posts on a real instance. Those people have no sign-in. Nothing else may put fake data in a real instance.
 
 ## Conventions
 
@@ -128,6 +128,7 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 - **Error handling:** handle failures at every I/O boundary (D1, R2, Resend, fetch). Skip handling only for truly impossible states.
 - **UI:** follow `DESIGN.md`. Flat, no shadows or gradients. One brand colour, used sparingly. Feather icons only. No emoji and no em dashes in interface text. Tap targets at least 44px, safe areas respected. Plain-English copy. Zeros show as zeros, "new" is never a percentage.
 - **Dependencies:** ask before adding any package.
+- **CI minutes are limited** (the free 2000 a month ran out in session 46). Run every check locally first and push once per change, not once per fix; documentation-only pushes skip the slow jobs on their own. Never add a sleep or a wait for a rate limit to a browser test: give the test its own allowance (see `tests/e2e/fixtures.ts`).
 - **Git:** trunk-based. `main` is protected (PR, green CI, linear history, squash merge). Short-lived branches `feat/…`, `fix/…`, `docs/…`, `chore/…`. Conventional commits, also used for PR titles (GitHub builds release notes from merged PR titles). Sign off commits (`git commit -s`) for the DCO. Never use `--no-verify`.
 - **Docs:** if a change alters behaviour, update `docs/PRD.md` in the same PR.
 

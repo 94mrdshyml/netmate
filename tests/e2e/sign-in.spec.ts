@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { E2E } from "./constants";
 
 // These tests start signed out: the project's stored admin session is not used here.

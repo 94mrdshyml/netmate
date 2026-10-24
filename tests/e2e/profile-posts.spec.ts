@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { E2E } from "./constants";
 
 // This spec writes nothing, so it can run at any point in the suite.

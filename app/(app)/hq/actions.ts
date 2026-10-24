@@ -11,6 +11,7 @@ import { limitTestEmail, tooManyMessage } from "@/server/rate-limit";
 import { getInstanceState } from "@/instance/request";
 import { saveBrandingForm, type BrandingResult } from "@/instance/branding";
 import { clearInstanceCache } from "@/instance/settings";
+import { DEMO_STEPS, removeDemo, runDemoStep, type Removed } from "@/demo/seed";
 import { isId } from "@/lib/ids";
 import { setModerator } from "@/server/members";
 import { removeKlipyKey, saveKlipyKey, type SaveKlipyResult } from "@/server/gifs";
@@ -187,6 +188,56 @@ export async function saveLinkPreviewsAction(wanted: unknown): Promise<ServicesR
     revalidatePath("/compose");
   }
   return result;
+}
+
+// ---- Demo data (owner decision, session 45): invented people and posts, added and removed from /hq/demo. ----
+
+export type DemoStepResult = { ok: true; base: number; last: boolean } | { ok: false; message: string };
+
+const SIX_HOURS = 6 * 60 * 60 * 1000;
+
+/**
+ * Runs one step of adding the demo people (0 for the first, then on). One request may only make so many calls to
+ * the database, so the page asks step by step; a step that stopped can be run again. The people it adds have no
+ * sign-in, so nobody can use their accounts.
+ */
+export async function demoStepAction(step: unknown, base: unknown): Promise<DemoStepResult> {
+  await requireAdmin();
+  if (typeof step !== "number" || !Number.isInteger(step) || step < 0 || step >= DEMO_STEPS) {
+    return { ok: false, message: "That step does not exist. Reload the page and try again." };
+  }
+  const now = Date.now();
+  // Step 0 starts the run; the rest carry on from the moment it started.
+  if (step > 0 && (typeof base !== "number" || !Number.isFinite(base) || base > now + 60_000 || base < now - SIX_HOURS)) {
+    return { ok: false, message: "That run is too old to carry on. Press the button again." };
+  }
+  const started = step === 0 ? now : (base as number);
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    await runDemoStep({ db: getDb(env.DB), d1: env.DB, media: env.MEDIA }, step, started);
+  } catch (error) {
+    // Only the reason, never anything a person typed.
+    console.error("demo step failed", step, error instanceof Error ? error.message : "unknown error");
+    return { ok: false, message: `Something went wrong at step ${step + 1} of ${DEMO_STEPS}. Nothing is lost: press the button again to carry on.` };
+  }
+  revalidatePath("/hq/demo");
+  return { ok: true, base: started, last: step === DEMO_STEPS - 1 };
+}
+
+export type RemoveDemoResult = { ok: true; removed: Removed } | { ok: false; message: string };
+
+/** Takes every demo person away, with their posts, pictures, likes and alerts. Real members and their own posts are not touched. */
+export async function removeDemoAction(): Promise<RemoveDemoResult> {
+  await requireAdmin();
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    const removed = await removeDemo({ db: getDb(env.DB), d1: env.DB, media: env.MEDIA });
+    revalidatePath("/hq/demo");
+    return { ok: true, removed };
+  } catch (error) {
+    console.error("removing demo data failed", error instanceof Error ? error.message : "unknown error");
+    return { ok: false, message: "Something went wrong and the demo data may be only partly removed. Press the button again." };
+  }
 }
 
 // ---- Moderators (owner decision, session 46): only the admin makes or removes one. ----

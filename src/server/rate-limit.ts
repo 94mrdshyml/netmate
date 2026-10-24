@@ -96,6 +96,16 @@ export const limitSignUp = (db: D1Database, salt: string, who: { ip: string; inv
 export const limitPost = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.posts, userId, salt, now);
 
+/**
+ * Whose allowance a post is counted against. Browser tests only: when the server was started with ENV exactly
+ * "test" (production never sets it), a test may add a scope (a cookie it sets for itself) so its posts are counted
+ * apart from every other test's, instead of the suite sleeping a minute each time the shared admin hits 10 posts.
+ * With any other ENV the scope is ignored, and so is anything that is not a short plain id.
+ */
+export function postSubject(env: { ENV?: string }, userId: string, scope?: string | null): string {
+  return env.ENV === "test" && scope && /^[0-9A-Za-z-]{1,64}$/.test(scope) ? `${userId}:${scope}` : userId;
+}
+
 export const limitLike = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.likes, userId, salt, now);
 

@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { sendPost } from "./helpers";
 
 // Nothing may be wider than the phone. On a real phone, one wide element makes the browser widen the page's

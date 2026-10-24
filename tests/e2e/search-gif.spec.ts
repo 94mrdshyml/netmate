@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { sendPost } from "./helpers";
 
 // Named so it runs after posts.spec (which sends exactly 10 admin posts a minute in a burst). Serial: each test uses the state the one before left. Klipy is never reached: every request to its

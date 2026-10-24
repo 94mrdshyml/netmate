@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { sendPost } from "./helpers";
 
 // Serial: each test uses the state the one before left. Only two admin posts are made (posts.spec
