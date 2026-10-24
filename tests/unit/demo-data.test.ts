@@ -6,8 +6,8 @@ import { checkPostText } from "@/lib/post-text";
 import { validateUsername } from "@/lib/username";
 import { checkLinkCard } from "@/links/card";
 import { sniffImage } from "@/storage/images";
-import { DEMO_EMAIL_DOMAIN, DEMO_PASSWORD, FOLLOW_ADMIN, GIFS, ITEMS, PEOPLE, PRIVATE_APPROVED, PRIVATE_WAITING } from "../../scripts/demo/data";
-import { SCENES, scenePicture } from "../../scripts/demo/pictures";
+import { DEMO_EMAIL_DOMAIN, DEMO_PASSWORD, FOLLOW_ADMIN, GIFS, ITEMS, PEOPLE, PRIVATE_APPROVED, PRIVATE_WAITING } from "@/demo/data";
+import { SCENES, scenePicture } from "@/demo/pictures";
 
 const names = new Set(PEOPLE.map((p) => p.username));
 const privateNames = new Set(PEOPLE.filter((p) => p.private).map((p) => p.username));
@@ -88,6 +88,15 @@ describe("the demo posts", () => {
       parts.likes += item.likes?.length ?? 0;
       parts.saves += item.saves?.length ?? 0;
       if (privateNames.has(item.as)) parts.privateAuthor++;
+    }
+  });
+
+  it("never repeat the same words from the same person (a step that stopped finds its posts by them)", () => {
+    const seenWords = new Set<string>();
+    for (const item of ITEMS) {
+      const key = `${item.as}|${item.text}`;
+      expect(seenWords.has(key), key).toBe(false);
+      seenWords.add(key);
     }
   });
 
