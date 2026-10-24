@@ -1839,6 +1839,26 @@ textarea.tfield-input {
   text-align: center;
 }
 
+.settings-sections {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* A short plain heading above each group of rows. */
+.settings-heading {
+  margin: 0;
+  padding: 20px 0 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.settings-section:first-child .settings-heading {
+  padding-top: 12px;
+}
+
 .settings-list {
   list-style: none;
   margin: 0 calc(-1 * var(--gx));
@@ -4401,4 +4421,17 @@ a.link-card:hover {
   .hq-crumbs li:not(:first-child):not(:last-child) {
     display: none;
   }
+}
+
+/* Member side, round 2 (session 58): a line of explanation right under a header or tab bar gets room above it. */
+.page-header + .hint,
+.page-header + .lede,
+.tabs + .hint,
+.tabs + .banner,
+.page-header + .banner {
+  margin-top: 16px;
+}
+
+.page-intro {
+  margin-top: 16px;
 }

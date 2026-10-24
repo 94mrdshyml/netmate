@@ -6,12 +6,12 @@ import { formatUsd } from "@/lib/money";
 import { readPaymentSettings } from "@/server/payments";
 import { listMySubscriptions } from "@/server/subscriptions";
 import { EmptyState } from "../_components/empty-state";
-import { PageHeader } from "../_components/page-header";
 import { RenewButton } from "./renew-button";
+import { SubscriptionsHeader } from "./subscriptions-header";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Your subscriptions" };
+export const metadata = { title: "Subscriptions" };
 
 const DAY = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeZone: "UTC" });
 
@@ -26,7 +26,7 @@ export default async function SubscriptionsPage() {
 
   return (
     <main className="column">
-      <PageHeader title="Your subscriptions" back={{ href: "/settings", label: "Back to Settings" }} centered />
+      <SubscriptionsHeader current="/subscriptions" />
       {settings.mode === "sandbox" && settings.enabled ? <p className="banner" role="status">Test mode: no real money moves.</p> : null}
       {!settings.enabled ? (
         <EmptyState icon="credit-card" title="Subscriptions are not turned on here." />

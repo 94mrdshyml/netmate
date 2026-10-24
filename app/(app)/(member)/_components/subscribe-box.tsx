@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { formatUsd } from "@/lib/money";
-import { subscribeAction } from "../subscription/actions";
+import { subscribeAction } from "../subscriptions/actions";
 
 const DAY = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeZone: "UTC" });
 

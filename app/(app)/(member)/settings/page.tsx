@@ -13,63 +13,105 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Settings" };
 
 type Row = { href: string; title: string; sub: string; icon: IconName };
+type Section = { id: string; title: string; rows: Row[] };
 
-const ROWS: Row[] = [
-  { href: "/profile", title: "Edit profile", sub: "Name, bio and photos", icon: "user" },
-  { href: "/invite", title: "Invite people", sub: "Share your link and see who joined", icon: "user-plus" },
-  { href: "/bookmarks", title: "Saved posts", sub: "Posts you kept, only visible to you", icon: "bookmark" },
-  { href: "/reports", title: "Your reports", sub: "Posts you reported and where each case stands", icon: "flag" },
-  { href: "/privacy", title: "Privacy", sub: "Private account, blocked and muted people", icon: "lock" },
-];
+// Settings is a few short lists, each under a plain heading: who you are, what is yours, money, safety, and (for staff) running the space.
+const ACCOUNT: Section = {
+  id: "account",
+  title: "Account",
+  rows: [
+    { href: "/profile", title: "Edit profile", sub: "Name, bio and photos", icon: "user" },
+    { href: "/privacy", title: "Privacy", sub: "Private account, blocked and muted people", icon: "lock" },
+  ],
+};
+
+const YOURS: Section = {
+  id: "yours",
+  title: "Yours",
+  rows: [
+    { href: "/bookmarks", title: "Saved posts", sub: "Posts you kept, only visible to you", icon: "bookmark" },
+    { href: "/invite", title: "Invite people", sub: "Share your link and see who joined", icon: "user-plus" },
+  ],
+};
 
 // Shown only while the owner has subscriptions switched on (/hq/money/setup).
-const SUBSCRIPTION_ROWS: Row[] = [
-  { href: "/subscription", title: "Subscription price", sub: "Charge a monthly price for subscriber posts", icon: "credit-card" },
-  { href: "/subscriptions", title: "Your subscriptions", sub: "The people you pay, and stopping a subscription", icon: "credit-card" },
-];
+const SUBSCRIPTIONS: Section = {
+  id: "subscriptions",
+  title: "Subscriptions",
+  rows: [{ href: "/subscriptions", title: "Subscriptions", sub: "The people you pay, your subscribers and earnings, and your price", icon: "credit-card" }],
+};
+
+const SAFETY: Section = {
+  id: "safety",
+  title: "Safety",
+  rows: [{ href: "/reports", title: "Your reports", sub: "Posts you reported and where each case stands", icon: "flag" }],
+};
 
 // Only the admin sees this row. /hq checks the role again on the server every time.
-const ADMIN_ROW: Row = { href: "/hq", title: "Admin panel", sub: "Approvals, invites and how this space looks", icon: "shield" };
+const ADMIN: Section = {
+  id: "admin",
+  title: "Running this space",
+  rows: [{ href: "/hq", title: "Admin panel", sub: "People, money and how this space looks", icon: "shield" }],
+};
 
 // A moderator gets their own row, straight to the members list. /hq checks the role again on the server every time.
-const MODERATOR_ROW: Row = { href: "/hq/members", title: "Moderation", sub: "Members and how the community is doing", icon: "shield" };
+const MODERATOR: Section = {
+  id: "moderation",
+  title: "Running this space",
+  rows: [{ href: "/hq/members", title: "Moderation", sub: "Members and how the community is doing", icon: "shield" }],
+};
 
-// Rows are added here as their screens are built (bookmarks, analytics, privacy, account).
 // The Profile tab in the bottom bar is the one way to your own profile, so it is not a row.
 export default async function SettingsPage() {
   const member = await getMember();
   if (!member) return null;
   const { env } = await getCloudflareContext({ async: true });
   const paying = (await readPaymentSettings(getDb(env.DB))).enabled;
-  const rows = paying ? [...ROWS.slice(0, 3), ...SUBSCRIPTION_ROWS, ...ROWS.slice(3)] : ROWS;
+  const sections = [ACCOUNT, YOURS, ...(paying ? [SUBSCRIPTIONS] : []), SAFETY, ...(member.role === "admin" ? [ADMIN] : member.moderator ? [MODERATOR] : [])];
 
   return (
     <main className="column">
       <PageHeader title="Settings" back={{ href: "/", label: "Back to Home" }} centered />
 
-      <ul className="settings-list" aria-label="Settings">
-        {(member.role === "admin" ? [...rows, ADMIN_ROW] : member.moderator ? [...rows, MODERATOR_ROW] : rows).map((row) => (
-          <li key={row.href}>
-            <Link href={row.href} className="srow">
-              <span className="srow-icon">
-                <Icon name={row.icon} size={22} />
-              </span>
-              <span className="srow-text">
-                <span className="srow-title">{row.title}</span>
-                <span className="srow-sub">{row.sub}</span>
-              </span>
-              <Icon name="chevron-right" size={18} />
-            </Link>
+      <ul className="settings-sections" aria-label="Settings">
+        {sections.map((section) => (
+          <li key={section.id} className="settings-section">
+            <h2 id={`settings-${section.id}`} className="settings-heading">
+              {section.title}
+            </h2>
+            <ul className="settings-list" aria-labelledby={`settings-${section.id}`}>
+              {section.rows.map((row) => (
+                <li key={row.href}>
+                  <Link href={row.href} className="srow">
+                    <span className="srow-icon">
+                      <Icon name={row.icon} size={22} />
+                    </span>
+                    <span className="srow-text">
+                      <span className="srow-title">{row.title}</span>
+                      <span className="srow-sub">{row.sub}</span>
+                    </span>
+                    <Icon name="chevron-right" size={18} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </li>
         ))}
-        <li>
-          <div className="srow srow-static">
-            <span className="srow-icon" aria-hidden="true" />
-            <span className="srow-text">
-              <span className="srow-title">Dark or light theme</span>
-            </span>
-            <ThemeToggle />
-          </div>
+        <li className="settings-section">
+          <h2 id="settings-look" className="settings-heading">
+            Look
+          </h2>
+          <ul className="settings-list" aria-labelledby="settings-look">
+            <li>
+              <div className="srow srow-static">
+                <span className="srow-icon" aria-hidden="true" />
+                <span className="srow-text">
+                  <span className="srow-title">Dark or light theme</span>
+                </span>
+                <ThemeToggle />
+              </div>
+            </li>
+          </ul>
         </li>
       </ul>
 

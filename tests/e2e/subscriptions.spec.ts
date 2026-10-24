@@ -83,10 +83,15 @@ test("the admin saves the Polar keys, turns subscriptions on and sets a price", 
   await page.getByRole("button", { name: "Save fee" }).click();
   await expect(page.getByText("Saved.").last()).toBeVisible();
 
-  // Members now have the two rows in Settings; the admin sets a price.
+  // Members now have a Subscriptions row in Settings, with three tabs inside; the admin sets a price on My price.
   await page.goto("/settings");
-  await expect(page.getByRole("link", { name: /^Your subscriptions/ })).toBeVisible();
-  await page.getByRole("link", { name: /^Subscription price/ }).click();
+  await page.getByRole("link", { name: /^Subscriptions/ }).click();
+  await expect(page).toHaveURL(/\/subscriptions$/);
+  const tabs = page.getByRole("navigation", { name: "Subscriptions" });
+  await expect(tabs.getByRole("link")).toHaveText(["People I pay", "My subscribers", "My price"]);
+  await expect(tabs.getByRole("link", { name: "People I pay" })).toHaveAttribute("aria-current", "page");
+  await tabs.getByRole("link", { name: "My price" }).click();
+  await expect(page).toHaveURL(/\/subscriptions\/price$/);
   await expect(page.getByText("Test mode: no real money moves.")).toBeVisible();
   await expect(page.getByText(/You earn 50% of each payment/)).toBeVisible();
   await page.getByLabel("Price a month, in US dollars").fill("0.50");
@@ -95,7 +100,11 @@ test("the admin saves the Polar keys, turns subscriptions on and sets a price", 
   await page.getByLabel("Price a month, in US dollars").fill("5");
   await page.getByRole("button", { name: "Save price" }).click();
   await expect(page.getByText(/Your profile now has a Subscribe button/)).toBeVisible();
+  await tabs.getByRole("link", { name: "My subscribers" }).click();
   await expect(page.getByText("Nobody is subscribed to you yet.")).toBeVisible();
+  // The old address leads to the same place.
+  await page.goto("/subscription");
+  await expect(page).toHaveURL(/\/subscriptions\/earnings$/);
 });
 
 test("a member sees the Subscribe button with the price, and where they will pay", async () => {
@@ -162,10 +171,10 @@ test("Polar's signed messages make a subscription, and unsigned ones do nothing"
   const alert = page.getByRole("listitem").filter({ hasText: "Sam Subscriber subscribed to you" });
   await expect(alert).toHaveCount(1);
   await alert.getByRole("link").click();
-  await expect(page).toHaveURL(/\/subscription$/);
+  await expect(page).toHaveURL(/\/subscriptions\/earnings$/);
 
   // The creator sees who subscribed and what they have earned from them: 50% of the $4.25 left after the $0.75 tax is $2.12.
-  await page.goto("/subscription");
+  await page.goto("/subscriptions/earnings");
   await expect(page.getByText("1 person is subscribed to you.")).toBeVisible();
   const person = page.getByRole("listitem").filter({ hasText: "Sam Subscriber" });
   await expect(person).toContainText("Subscribed");
@@ -219,7 +228,7 @@ test("the owner sees where the money went, records a payout, and can take it bac
   await expect(page.locator(".hq-stats")).toContainText("Yours to keep$1.54");
 
   // The member sees it as theirs, with the note.
-  await page.goto("/subscription");
+  await page.goto("/subscriptions/earnings");
   await expect(page.locator(".sub-figures")).toContainText("Paid to you$1.00");
   await expect(page.locator(".sub-figures")).toContainText("Still to be paid$1.12");
   await expect(page.getByRole("list", { name: "Paid to you" })).toContainText("Bank transfer, e2e");
@@ -231,7 +240,7 @@ test("the owner sees where the money went, records a payout, and can take it bac
   await payout.getByRole("button", { name: "Yes, void it" }).click();
   await expect(payout).toContainText("Voided");
   await expect(page.locator(".hq-stats")).toContainText("Members are owed$2.12");
-  await page.goto("/subscription");
+  await page.goto("/subscriptions/earnings");
   await expect(page.locator(".sub-figures")).toContainText("Paid to you$0.00");
 
   // Phone width.
@@ -266,7 +275,7 @@ test("when Polar says it ended, the subscription is gone; then everything is put
   await expect(member.getByText("You are not subscribed to anyone.")).toBeVisible();
 
   // Put back: stop offering, switch off, forget the keys.
-  await page.goto("/subscription");
+  await page.goto("/subscriptions/price");
   await page.getByRole("button", { name: "Stop offering" }).click();
   await expect(page.getByText(/Nobody new can subscribe/)).toBeVisible();
 
@@ -279,7 +288,7 @@ test("when Polar says it ended, the subscription is gone; then everything is put
 
   // With the feature off, members see none of it, and the webhook address does not exist.
   await member.goto("/settings");
-  await expect(member.getByRole("link", { name: /^Your subscriptions/ })).toHaveCount(0);
+  await expect(member.getByRole("link", { name: /^Subscriptions/ })).toHaveCount(0);
   await member.goto(`/${E2E.admin.username}`);
   await expect(member.getByRole("button", { name: /^Subscribe for/ })).toHaveCount(0);
   expect((await polar(page, { type: "x", data: {} })).status()).toBe(404);
