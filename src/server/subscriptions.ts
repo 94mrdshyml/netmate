@@ -6,7 +6,7 @@
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db";
-import { blocks, polarProducts, profiles, subscriptions } from "@/db/schema";
+import { blocks, LIVE_SUBSCRIPTION_STATUSES, polarProducts, profiles, subscriptions } from "@/db/schema";
 import { isId } from "@/lib/ids";
 import { CURRENCY, parsePrice } from "@/lib/money";
 import { polarCall } from "@/payments/polar";
@@ -16,8 +16,7 @@ import { readAccess, readPaymentSettings } from "@/server/payments";
 /** A subscription whose end-of-period message never reached us is trusted for this long past its period, then stops. */
 export const ACCESS_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
 
-/** The states in which a subscriber has paid up. A subscription they stopped keeps one of these until the period ends. */
-const LIVE = ["active", "trialing"] as const;
+const LIVE = LIVE_SUBSCRIPTION_STATUSES;
 
 // ---- what a member charges ----
 

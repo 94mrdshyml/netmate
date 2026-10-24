@@ -23,6 +23,7 @@ const ACTION: Record<NotificationType, string> = {
   mention: "mentioned you",
   invite_used: "joined with your invite link",
   pending_approval: "is waiting for your approval",
+  subscribe: "subscribed to you",
 };
 
 /** What happened, such as "liked your post" ("is waiting" only reads right for one person; only likes and reposts are grouped). */

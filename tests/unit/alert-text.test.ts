@@ -26,10 +26,11 @@ describe("alertSentence", () => {
     expect(alertSentence("quote", ["Meera"], 1)).toBe("Meera quoted your post");
     expect(alertSentence("repost", ["Meera"], 1)).toBe("Meera reposted your post");
     expect(alertSentence("follow_request", ["Meera"], 1)).toBe("Meera asked to follow you");
+    expect(alertSentence("subscribe", ["Meera"], 1)).toBe("Meera subscribed to you");
   });
 
   it("uses no emoji and no em dashes", () => {
-    for (const type of ["like", "follow", "reply", "invite_used", "pending_approval", "mention", "quote", "repost", "follow_request"] as const) {
+    for (const type of ["like", "follow", "reply", "invite_used", "pending_approval", "mention", "quote", "repost", "follow_request", "subscribe"] as const) {
       expect(alertSentence(type, ["Meera"], 1)).not.toMatch(/[—\p{Extended_Pictographic}]/u);
     }
   });
