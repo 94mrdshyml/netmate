@@ -1,0 +1,7 @@
+# 54. Prices include tax (2026-10-24)
+- Branch / PR: feat/tax-inclusive-price. The owner: "the subscription fee should be inclusive of tax (whichever country it is)".
+- Done: every Polar product we make now has its fixed price created with `tax_behavior: "inclusive"` (Polar's price option; values are location, inclusive, exclusive). The subscriber pays exactly the member's price in every country; Polar takes the tax out of it. The member's share is still a percent of Polar's `net_amount` (after discounts, before tax), so tax never takes part in the split. The price page, the Subscribe box and the admin Payments example now say so.
+- Existing products: Polar keeps the tax setting a product was made with, so migration 0021 forgets our stored products (`DELETE FROM polar_products`) and they are made again, tax included, the next time someone subscribes. Subscriptions that already exist are Polar's and keep running on their old product (they were made with Polar's default tax setting).
+- Test: the product request now carries `tax_behavior: "inclusive"`.
+- Not tested against the real Polar. If Polar refuses an inclusive price for this account (for example if tax is not set up there), the Subscribe button shows Polar's message; the fix would be on Polar's side (Settings, tax). The owner should check that one real sandbox subscribe still works.
+- Next: the revenue pages (money in, tax, Polar's fee, what members are owed, what is left, graphs), a payouts ledger, and a creator page with subscribers and earnings.

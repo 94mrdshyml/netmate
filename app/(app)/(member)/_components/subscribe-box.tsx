@@ -46,7 +46,7 @@ export function SubscribeBox({
   return (
     <div className="subscribe-box">
       <p className="hint">
-        {testMode ? "Test mode: no real money moves. " : ""}Subscribe to see the posts {name} shares with subscribers only. You pay on Polar&apos;s secure page, and you can stop any time.
+        {testMode ? "Test mode: no real money moves. " : ""}The price includes any tax. Subscribe to see the posts {name} shares with subscribers only. You pay on Polar&apos;s secure page, and you can stop any time.
       </p>
       <button
         type="button"

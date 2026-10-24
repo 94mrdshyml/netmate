@@ -1,7 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
-import { formatUsd, PRICE_MAX_CENTS, PRICE_MIN_CENTS, splitPreview } from "@/lib/money";
+import { formatUsd, PRICE_MAX_CENTS, PRICE_MIN_CENTS } from "@/lib/money";
 import { mySubscriptionSettings } from "@/server/subscriptions";
 import { EmptyState } from "../_components/empty-state";
 import { PageHeader } from "../_components/page-header";
@@ -29,14 +29,13 @@ export default async function SubscriptionPage() {
     );
   }
 
-  const example = splitPreview(1000, mine.creatorPercent);
   return (
     <main className="column">
       <PageHeader title="Subscription price" back={{ href: "/settings", label: "Back to Settings" }} centered />
       {mine.testMode ? <p className="banner" role="status">Test mode: no real money moves. Payments here are practice ones.</p> : null}
       <p className="hint">
-        Charge a monthly price and others can subscribe to see the posts you share with subscribers only. Choose a price from {formatUsd(PRICE_MIN_CENTS)} to {formatUsd(PRICE_MAX_CENTS)}.
-        You earn {mine.creatorPercent}% of each payment before tax, for example {formatUsd(example.creator)} of {formatUsd(1000)}. Payments are taken by Polar, who also handle sales tax,
+        Charge a monthly price and others can subscribe to see the posts you share with subscribers only. Choose a price from {formatUsd(PRICE_MIN_CENTS)} to {formatUsd(PRICE_MAX_CENTS)}. The price includes any sales tax or VAT, wherever the subscriber lives, so they always pay exactly this.
+        You earn {mine.creatorPercent}% of each payment after the tax is taken out, and the tax depends on where the subscriber lives. Payments are taken by Polar, who also handle sales tax,
         and the person who runs this space pays your share out to you.
       </p>
       <PriceForm initialCents={mine.priceCents} />
