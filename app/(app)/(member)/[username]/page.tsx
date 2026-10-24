@@ -8,6 +8,7 @@ import { displayLink } from "@/lib/link";
 import { currentTime } from "@/lib/time";
 import { getProfile } from "@/server/profiles";
 import { listByAuthor } from "@/server/posts";
+import { subscribeState } from "@/server/subscriptions";
 import { Avatar } from "../_components/avatar";
 import { EmptyState } from "../_components/empty-state";
 import { FollowButton } from "../_components/follow-button";
@@ -15,6 +16,7 @@ import { Icon } from "../_components/icon";
 import { PageHeader } from "../_components/page-header";
 import { PostCard } from "../_components/post-card";
 import { ProfileMenu } from "../_components/profile-menu";
+import { SubscribeBox } from "../_components/subscribe-box";
 import { UnblockButton } from "../privacy/unblock-button";
 
 export const dynamic = "force-dynamic";
@@ -75,6 +77,7 @@ export default async function ProfilePage({
   const now = currentTime();
   const base = `/${profile.username}`;
   const more = profile.mates.total - profile.mates.names.length;
+  const subscribe = profile.isMe ? null : await subscribeState(db, viewer.userId, profile.userId);
   const followState = profile.iFollow ? "following" : profile.requested ? "requested" : "none";
 
   return (
@@ -108,6 +111,10 @@ export default async function ProfilePage({
         </div>
 
         {profile.bio ? <p className="bio">{profile.bio}</p> : null}
+
+        {subscribe && (subscribe.offerCents !== null || subscribe.mine) ? (
+          <SubscribeBox creatorId={profile.userId} name={name} offerCents={subscribe.offerCents} mine={subscribe.mine} testMode={subscribe.testMode} />
+        ) : null}
 
         <ul className="meta muted">
           {profile.location ? (

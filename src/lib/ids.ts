@@ -20,6 +20,8 @@ export const ID_PREFIXES = {
   notification: "ntf",
   report: "rpt",
   reportEvent: "rpe",
+  subscription: "sub",
+  subscriptionPayment: "spay",
 } as const;
 
 export type IdModel = keyof typeof ID_PREFIXES;

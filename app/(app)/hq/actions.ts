@@ -14,7 +14,7 @@ import { clearInstanceCache } from "@/instance/settings";
 import { DEMO_STEPS, removeDemo, runDemoStep, type Removed } from "@/demo/seed";
 import { isId } from "@/lib/ids";
 import { setModerator } from "@/server/members";
-import { removePaymentKeys, savePaymentConnection, savePaymentSplit, testPolar, type SaveResult, type TestResult } from "@/server/payments";
+import { removePaymentKeys, savePaymentConnection, savePaymentSplit, setPaymentsEnabled, testPolar, type SaveResult, type TestResult } from "@/server/payments";
 import { closeCase, reopenCase, startReview, type CaseChange } from "@/server/reports";
 import { removeKlipyKey, saveKlipyKey, type SaveKlipyResult } from "@/server/gifs";
 import { approvePending, regenerateInvite, rejectPending, setInviteQuota, setLinkPreviewsEnabled, setPlacesEnabled } from "@/server/admin";
@@ -309,6 +309,18 @@ export async function savePaymentSplitAction(percent: string): Promise<SaveResul
   const { env } = await getCloudflareContext({ async: true });
   const result = await savePaymentSplit(getDb(env.DB), percent);
   if (result.ok) revalidatePath("/hq/payments");
+  return result;
+}
+
+/** Turns subscriptions on or off for the whole space. Turning on needs both keys saved. */
+export async function setPaymentsEnabledAction(wanted: boolean): Promise<SaveResult> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await setPaymentsEnabled(getDb(env.DB), env.SETTINGS_ENCRYPTION_KEY, wanted);
+  if (result.ok) {
+    revalidatePath("/hq/payments");
+    revalidatePath("/settings");
+  }
   return result;
 }
 

@@ -95,7 +95,7 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
    - Analytics is owner-only and counts-only. No query, page or email ever names who viewed someone.
    - Bookmarks are private. Nobody sees a bookmark count on a post.
    - Never store, log or forward a visitor IP address except as a rate-limit key that expires. Never log emails, passwords, tokens, API keys or reset links.
-   - Readers' browsers make no request to third parties by default. Fonts, avatars and icons are self-hosted. Only GIF search (if enabled) and link-preview pictures reach outside.
+   - Readers' browsers make no request to third parties by default. Fonts, avatars and icons are self-hosted. Only GIF search (if enabled) and link-preview pictures reach outside. One deliberate exception (owner decision, session 51): when a member taps Subscribe on a profile, their browser is sent to Polar's own checkout page (an `https` address on `polar.sh`, checked by the server), and nothing else. Polar is never given a member's name or email by us (the member types their email there), only our random ids.
 3. **Setup and admin.**
    - `/setup` is one-time and atomic: admin, settings and the configured flag are written together or not at all. Once configured it returns 404 for ever. It requires `SETUP_TOKEN` when that decision is on.
    - `/hq` and its actions check the admin role on the server every time. A non-admin gets 404, not 403. One exception, decided by the owner (session 46): `/hq/members` and `/hq/stats` also open for a moderator (a member the admin has flagged), without emails and without any button that changes anything. Every other `/hq` page and action stays admin-only.

@@ -24,6 +24,8 @@ export const LIMITS = {
   reports: { name: "reports", max: 10, windowMs: 60 * MINUTE },
   linkPreviews: { name: "link-previews", max: 20, windowMs: 10 * MINUTE },
   mentions: { name: "mentions", max: 120, windowMs: MINUTE },
+  checkouts: { name: "checkouts", max: 10, windowMs: 60 * MINUTE },
+  subscriptionChanges: { name: "subscription-changes", max: 20, windowMs: 60 * MINUTE },
   polarTest: { name: "polar:test", max: 10, windowMs: 60 * MINUTE },
   testEmail: { name: "email:test", max: 5, windowMs: 60 * MINUTE },
   resetEmail: { name: "reset:email", max: 5, windowMs: 60 * MINUTE },
@@ -141,6 +143,14 @@ export const limitReport = (db: D1Database, salt: string, userId: string, now?: 
 
 export const limitUpload = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.uploads, userId, salt, now);
+
+/** Starting a subscription makes calls to Polar: 10 an hour per person. */
+export const limitCheckout = (db: D1Database, salt: string, userId: string, now?: number) =>
+  takeSlot(db, LIMITS.checkouts, userId, salt, now);
+
+/** Stopping or resuming a subscription also calls Polar: 20 an hour per person. */
+export const limitSubscriptionChange = (db: D1Database, salt: string, userId: string, now?: number) =>
+  takeSlot(db, LIMITS.subscriptionChanges, userId, salt, now);
 
 /** "Test the connection" on /hq/payments: each one is a call to Polar, so 10 an hour for the admin. */
 export const limitPolarTest = (db: D1Database, salt: string, userId: string, now?: number) =>

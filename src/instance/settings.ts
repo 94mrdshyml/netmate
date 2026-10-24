@@ -73,14 +73,19 @@ export async function readInstance(db: Db): Promise<InstanceState> {
 // clears this isolate at once; other isolates catch up within the TTL.
 const TTL_MS = 30_000;
 let cached: { at: number; state: InstanceState } | null = null;
+// Counts the times the cache was cleared. A read that started before a clear may finish after it, holding the
+// settings from before the save; without this it would put them back as the fresh copy for the next 30 seconds.
+let generation = 0;
 
 export async function readInstanceCached(db: Db, now: number = Date.now()): Promise<InstanceState> {
   if (cached && now - cached.at < TTL_MS) return cached.state;
+  const started = generation;
   const state = await readInstance(db);
-  cached = { at: now, state };
+  if (started === generation) cached = { at: now, state };
   return state;
 }
 
 export function clearInstanceCache(): void {
+  generation++;
   cached = null;
 }
