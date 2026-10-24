@@ -2347,10 +2347,13 @@ a.srow:hover > svg {
 .post-reposted {
   display: flex;
   align-items: center;
-  flex: 0 0 100%;
+  /* A whole row, less the indent that lines it up with the name, so it never reaches past the column. */
+  flex: 0 0 calc(100% - 52px);
+  min-width: 0;
   gap: 6px;
   margin: -4px 0 -6px 52px;
   font-size: 0.8125rem;
+  overflow-wrap: anywhere;
   color: var(--muted);
 }
 

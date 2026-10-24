@@ -11,6 +11,7 @@ How the app looks and feels. The product rules are in `CLAUDE.md` and `docs/PRD.
 - Nothing is hard-coded to a brand: name, colour, radius, font and avatar style come from instance settings.
 - Feather icons only, all drawn with one line thickness (1.75), so the set looks like one. No emoji and no em dashes in interface text.
 - Tap targets are at least 44px. Safe areas are respected. One column, 480px at most, centred.
+- Nothing is wider than the phone, however long a word or web address is. One element that sticks out makes a phone browser widen the whole page, so the bottom bar and the compose button are laid out for a screen wider than the real one and are cut off at the edge. An item that fills a row and also has a margin must take the row width minus that margin (`calc(100% - margin)`), never `100%`. The browser test `viewport-fit.spec.ts` measures every main page against the real phone width.
 - Text and controls pass WCAG AA in light and dark, with any brand colour.
 - Motion is small and stops under `prefers-reduced-motion`.
 
