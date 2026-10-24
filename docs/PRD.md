@@ -443,6 +443,7 @@ Limits are counted per person, or per IP address for sign-up and sign-in. IPs ar
 | Reset link requests | also 20 per hour per visitor; trying a link: 10 per 10 minutes per visitor |
 | Invitations by email | 10 an hour per member, and 2 a day to any one address |
 | Test email from `/hq/email` | 5 per hour per admin |
+| Test connection to Polar from `/hq/payments` | 10 per hour per admin |
 
 Reads, search, mutes and blocks are not limited. Exact low-volume limits live in a D1 table; high-volume ones (likes, saves, analytics) use the Workers Rate Limiting binding. Admins who want more protection can add Cloudflare WAF and Turnstile (optional setting after v1).
 
@@ -474,6 +475,23 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 - **Accessibility.** WCAG AA contrast; keyboard and screen-reader usable.
 - Detailed design rules live in `DESIGN.md`.
 
+### 8.14 Paid subscriptions
+
+Owner decision, session 49. A member can charge a monthly price, and mark posts as for subscribers only. Payments are taken by **Polar** (a payment service that also handles sales tax) and arrive in the **instance owner's Polar account**; the owner shares each payment with the member as described below, and pays members out by hand for now (payout automation comes later). It is built in four steps, each its own pull request, and the whole feature is off until the owner connects Polar.
+
+**Built (step 1, session 49): the owner connects Polar.**
+- **`/hq/payments`** (admin only; moderators and members get 404). Choose test mode (Polar's sandbox, where no real money moves) or live mode; paste a Polar access token and a Polar webhook secret; see the webhook address to give Polar (`/api/webhooks/polar`, built in step 2); set the member's share; test the connection. A saved token or secret is stored encrypted in `instance_secrets` like the Resend and Klipy keys, is never shown again (the boxes show "saved"; a blank box keeps what is saved), never goes to any browser and is never logged. "Test the connection" asks Polar for one product with the saved token, is limited to 10 an hour, and says in plain words what Polar refused (a message never repeats the token). Removing the keys asks first.
+- **The split.** One whole percent from 0 to 100, the member's share of each payment. Default 50. It applies to payments made after it is changed (step 2 keeps the percent used on each payment). The page shows the owner's own worked example in dollars: at $10 and 55% the member earns $5.50, the owner's side is $4.50, and roughly what is left after Polar's fee.
+- **Money rules** (`src/lib/money.ts`, used by every later step): whole US cents only, US dollars only; a member's price is $1.00 to $100.00 a month; the member's share of a payment is the percent of the payment **before tax** (net of discounts), rounded down to a cent, so the two shares never add up to more than was paid. Polar collects the sales tax and pays it on, so tax never takes part in the split. **Polar's own fee comes out of the owner's side**, so a member always knows what they earn. **A refund** takes back the member's share in the same proportion (a payment refunded in full earns nothing).
+- **Webhook check** (`src/payments/webhook.ts`): Polar signs every message with the Standard Webhooks scheme (headers `webhook-id`, `webhook-timestamp`, `webhook-signature`; HMAC-SHA256 of `id.timestamp.body`). A message counts only if a signature matches (either key form Polar has used, compared in constant time) and its timestamp is within 5 minutes.
+- **Polar calls** (`src/payments/polar.ts`) use plain `fetch` (no new package), with a timeout, no redirects, and a failure always becomes a plain message.
+- **Data.** `payment_settings` (one row: mode, member's percent; the database checks both) and two new allowed names in `instance_secrets` (`polar_access_token`, `polar_webhook_secret`; migration 0018 rebuilds that table once to widen its check, copying every row).
+
+**Planned (not built yet).**
+1. *Step 2, subscribing:* a member sets a monthly price in Settings; a profile with a price shows Subscribe, which opens Polar's own checkout page (the member types their email there; we send Polar only an id that stands for the member, never their email) and brings them back. Polar's webhooks (signature checked, each handled once) keep a `subscriptions` table and a ledger of payments, one row per Polar order holding the price, the refunded amount, the percent in force and the member's share (recomputed from the order each time, so repeats and late messages are harmless). A subscriber can cancel at the end of their period from Settings. Needs the Subscribe tap to be written into CLAUDE.md rule 2 as the one place a member's browser goes to a third party on purpose.
+2. *Step 3, subscriber-only posts:* a post has an audience, Everyone or Subscribers. The one visibility rule gains one clause: a subscribers post is seen by its author and by people with an active subscription to the author (including one that is cancelled but paid up to the period's end). Everyone else sees a locked card with a Subscribe button instead of the words and pictures; subscriber posts stay out of the feed, search, alerts and reposts for those who cannot see them, and cannot be reposted or quoted. Replies to one follow it. When a subscription ends, its subscriber loses sight of those posts again.
+3. *Step 4, earnings:* each member sees what they have earned and what they have been paid; the owner sees what each member is owed and records a payout by hand (a note and an amount), so the ledger stays honest until payout automation exists.
+
 ## 9. Screens and routes
 
 | Route | Screen | Width |
@@ -503,6 +521,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/hq/members` | Members: search, filter (everyone, moderators, waiting), each person's counts, and the admin's Make or Remove moderator button. Staff (admin or moderator); a moderator sees no emails | **wide** |
 | `/hq/stats` | Activity: totals for people, what they made and how they react, and the last eight weeks. Counts only. Staff | **wide** |
 | `/hq/cases`, `/hq/cases/[caseNo]` | Reports: the list of cases (open, in review, closed; search by case number) and one case with its actions and history. Staff (admin or moderator) | **wide** |
+| `/hq/payments` | Payments: connect Polar (test or live, access token and webhook secret saved locked), the webhook address, how payments are shared, test the connection. Admin only | **wide** |
 | `/hq/services` | Optional services: place suggestions on or off; link previews on or off; the Klipy key for GIF search | **wide** |
 | `/hq/demo` | Demo data: add the demo people and posts in steps, or remove them all (admin only, 404 for anyone else) | **wide** |
 | `/api/auth/*`, `/api/me`, `/api/upload` | Auth, session probe, upload | n/a |
@@ -555,6 +574,7 @@ More prefixes are added as their tables are created (posts, invites, notificatio
 | `blocks`, `mutes` | who blocked or muted whom |
 | `likes`, `reposts`, `bookmarks` | one row per person per post (created time kept; reposts and bookmarks are indexed by person and time for the feed, a profile and the Saved list) |
 | `notifications` | id (`ntf_`), recipient, actor, type, post, created, read time. The database checks the kind, refuses an alert about yourself, requires a post for post alerts and none for person alerts, and allows one alert per actor, kind and post (two partial unique indexes) |
+| `payment_settings` | one row: mode (`sandbox` or `production`) and the member's percent of each payment (0 to 100), both checked by the database. The Polar token and webhook secret are rows of `instance_secrets` |
 | `reports` | id (`rpt_`), case number (unique, 1 or more), the post (kept as empty if its row is ever removed) and a copy of it (author, username, text, picture count, GIF, link card, reply, posted time), reporter, reason, note (up to 500), state (`open`, `reviewing`, `closed`), outcome, staff note (up to 500), who took or closed it, created, updated and closed times. The database checks the reason list, the lengths, the states, that a closed case has an outcome and a closing time (and an unclosed one has neither), and that a person has at most one unclosed case per post |
 | `report_events` | id (`rpe_`), case, who, kind (`filed`, `review_started`, `closed`, `reopened`), detail (the reason, or the outcome), time. Removed with the case |
 | `rate_hits` | one row per allowed limited attempt: key (label plus a salted hash of the IP, email or link, never the raw value) and time in ms; plain row number as id because nothing refers to it; pruned daily |
@@ -633,7 +653,7 @@ Worker "netmate"  ── Next.js 16 via @opennextjs/cloudflare
 ## 13. Security and privacy
 
 - **Setup takeover.** `/setup` requires `SETUP_TOKEN`, is atomic and one-time, and is gone after completion.
-- **Secrets at rest.** Resend and Klipy keys are encrypted in D1 with `SETTINGS_ENCRYPTION_KEY` (a Worker secret), never logged, never shown back in `/hq` after saving. The Resend key never goes to a browser. The Klipy key does go to signed-in members' browsers while GIF search is on, because Klipy puts it in the search address and requires searches from the member's browser. Losing the encryption key means re-entering the keys, not losing data.
+- **Secrets at rest.** Resend, Klipy and Polar (access token, webhook secret) keys are encrypted in D1 with `SETTINGS_ENCRYPTION_KEY` (a Worker secret), never logged, never shown back in `/hq` after saving. The Resend and Polar keys never go to a browser. The Klipy key does go to signed-in members' browsers while GIF search is on, because Klipy puts it in the search address and requires searches from the member's browser. Losing the encryption key means re-entering the keys, not losing data.
 - **Admin surface.** `/hq` and its actions check the admin role on the server every time and return 404 to non-admins.
 - **Invites.** Long random codes, revocable, rate-limited per link and per IP, quota check atomic.
 - **Passwords** are handled only by Better Auth. Never stored or logged by us.
@@ -647,7 +667,7 @@ Worker "netmate"  ── Next.js 16 via @opennextjs/cloudflare
 - **Visibility** has one rule used everywhere (8.8).
 - **Analytics privacy.** Owner only, counts only, no names. The phone cannot name an owner.
 - **Cookies.** Session cookie from Better Auth; a theme cookie.
-- **Third parties.** None for readers by default. Optional: Klipy (GIF search, from the phone), Photon (place suggestions, from the server), sites behind link-preview pictures. Resend sends email from the server.
+- **Third parties.** None for readers by default. Optional: Klipy (GIF search, from the phone), Photon (place suggestions, from the server), sites behind link-preview pictures. Resend sends email from the server. Polar (payments) is called from the server only, with the owner's own token; members' browsers go to Polar only when they tap Subscribe (step 2).
 - **Security policy.** `SECURITY.md` with a private report channel. Dependency and secret scanning in CI.
 
 ## 14. Quality, CI/CD and branching
@@ -759,6 +779,7 @@ Phases 4 to 6 can overlap once phase 2 is done. Phases 1 to 3 give the first usa
 | 18 | Demo data on a real site | Owner decision, session 45: the admin can add and remove demo people and posts from `/hq/demo` on a real instance (an exception to "fake data only for local development and tests"). The demo people have no sign-in, so the exception cannot be used to get into a real site; removing is complete (posts, pictures, alerts, counters) |
 | 19 | Moderators | Owner decision, session 46: one owner (the only admin, as before) plus moderators, who are members the admin flags. No second admin. A moderator can see the members list, the numbers and the report cases, and (to be built) remove posts and replies and suspend members; not approve sign-ups, and never settings. Numbers are counts only and leave out saves (bookmarks are private) |
 | 20 | Reports | Owner decision, session 48: members report a post for one of eleven reasons and each report becomes a case with a number (CASE-000123). The admin and moderators work the cases; the author is never told; a moderator never sees a case about themselves. Staff read a copy of the post taken when it was reported (an exception to `visibleTo`, because the reporter shared that text) |
+| 21 | Paid subscriptions | Owner decision, session 49: Polar takes the payments and they land in the instance owner's Polar account; the owner sets the share the member earns (default 50%) and pays members out by hand until payout automation exists. Posts get an audience, Everyone or Subscribers. Subscribers lose sight of subscriber posts when their subscription ends. The member's share is of the payment before tax; Polar's fee comes out of the owner's side; a refund takes the share back in proportion. Built in four steps; step 1 (connect Polar, the split) is done |
 
 ## 19. Not in v1, and ideas
 
