@@ -1,0 +1,8 @@
+# 59. Invited address fills in the sign-up form (2026-10-24)
+- Branch / PR: fix/invite-email-prefill. The owner: "if invite is made through email, we need to auto populate the email field with the email which was invited to join in the sign up page".
+- Done: the invitation email's link now ends in `#email=<address>`. The sign-up form reads it in the browser, puts it in the Email box if the box is empty, and removes it from the address bar. The welcome screen's Join button (new `JoinButton`) carries the part after the `#` on to the form, because an ordinary link drops it.
+- Why after the `#`: a browser never sends that part to a server, so the address is in no request and no log, which keeps CLAUDE.md rule 2 ("never log emails") and the existing promise that the invited address is never stored. A query string (`?email=`) would have put it in Cloudflare's request logs, so it was not used.
+- Safety: it only fills a box. The address is validated again (Zod, 254 characters), can be changed, and is verified by email when email is set up, as if typed. Anything that is not an address is ignored; text is set as a value, never as HTML.
+- Tests: unit (`invite-email-hint`), integration (the email's link carries the address after the `#`), browser (`invite-prefill.spec.ts`: filled through the welcome screen and directly, lower-cased, still editable, empty for a plain or bad link, and no request held the address).
+- Not done: someone who opens the link with scripts off, or in a new tab with a modified click, still gets a working form but must type the address.
+- Next: subscriber-only posts (step 3), only on the owner's go.

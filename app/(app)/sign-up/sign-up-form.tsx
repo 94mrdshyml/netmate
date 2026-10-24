@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { emailFromHash } from "@/lib/invite-email-hint";
 import { signUpAction } from "./actions";
 
 const FIELDS = [
@@ -15,6 +16,16 @@ export function SignUpForm({ invite }: { invite: string }) {
   const [banner, setBanner] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, start] = useTransition();
+
+  // A person invited by email arrives with their address after the "#" of the link (it never reaches our server).
+  // Fill the Email box once, only if it is still empty, then take the address out of the address bar.
+  useEffect(() => {
+    const address = emailFromHash(window.location.hash);
+    if (!address) return;
+    const box = document.getElementById("email");
+    if (box instanceof HTMLInputElement && box.value === "") box.value = address;
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, []);
 
   return (
     <form

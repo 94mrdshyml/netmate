@@ -56,8 +56,10 @@ describe("inviting by email", () => {
     expect(mail.from).toBe("hello@example.org");
     expect(mail.subject).toContain("Ines Test invited you to join");
     expect(mail.html).toContain("Ines Test invited you to join");
-    expect(mail.html).toContain(`href="https://club.example.org/sign-up?invite=${link.code}"`);
-    expect(mail.text).toContain(`https://club.example.org/sign-up?invite=${link.code}`);
+    // The link carries the invited address after the "#", so the sign-up form can fill it in (a browser never sends that part to us).
+    const hint = `#email=${encodeURIComponent(to)}`;
+    expect(mail.html).toContain(`href="https://club.example.org/sign-up?invite=${link.code}${hint}"`);
+    expect(mail.text).toContain(`https://club.example.org/sign-up?invite=${link.code}${hint}`);
   });
 
   it("trims and lower-cases the address", async () => {
