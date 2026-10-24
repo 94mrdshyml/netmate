@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { removePaymentKeysAction, savePaymentConnectionAction, testPolarAction } from "../actions";
-import { ConfirmButton } from "../confirm-button";
+import { removePaymentKeysAction, savePaymentConnectionAction, testPolarAction } from "../../actions";
+import { ConfirmButton } from "../../confirm-button";
 
 type Note = { kind: "ok" | "error"; text: string };
 

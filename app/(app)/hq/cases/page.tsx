@@ -7,7 +7,7 @@ import { currentTime, relativeTime } from "@/lib/time";
 import { CASE_FILTERS, listCases, type CaseFilter } from "@/server/reports";
 import { EmptyState } from "../../(member)/_components/empty-state";
 import { Icon } from "../../(member)/_components/icon";
-import { Card, PageHeader, Pill } from "../hq-ui";
+import { Card, PageHeader, Pill, Toolbar } from "../hq-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +42,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Promis
       </PageHeader>
 
       <Card id="cases-heading" icon="flag" title="Cases">
+        <Toolbar>
         <form className="hq-inline" role="search" action="/hq/cases" method="get">
           <div className="field hq-inline-field">
             <label htmlFor="case-search">Find a case</label>
@@ -61,6 +62,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Promis
             </Link>
           ))}
         </nav>
+        </Toolbar>
 
         {page.items.length === 0 ? (
           <EmptyState icon="inbox" title={query ? "No case matches." : show === "open" ? "Nothing is waiting." : "Nothing here."}>

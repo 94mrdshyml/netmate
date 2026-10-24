@@ -4,17 +4,38 @@ import { Icon, type IconName } from "../(member)/_components/icon";
 
 // The few building blocks every admin page is made of, so the pages look like one product.
 
-/** The title of a page, one plain line under it, and room on the right for a button. */
-export function PageHeader({ title, children, actions }: { title: string; children?: ReactNode; actions?: ReactNode }) {
+/** The title of a page, one plain line under it, room on the right for a button, and (for a section made of several pages) its tabs. */
+export function PageHeader({ title, children, actions, tabs }: { title: string; children?: ReactNode; actions?: ReactNode; tabs?: ReactNode }) {
   return (
-    <div className="hq-page-head">
-      <div>
-        <h1>{title}</h1>
-        {children ? <p className="hq-lede">{children}</p> : null}
+    <header className="hq-page-top">
+      <div className="hq-page-head">
+        <div>
+          <h1>{title}</h1>
+          {children ? <p className="hq-lede">{children}</p> : null}
+        </div>
+        {actions ? <div className="hq-page-actions">{actions}</div> : null}
       </div>
-      {actions ? <div className="hq-page-actions">{actions}</div> : null}
-    </div>
+      {tabs}
+    </header>
   );
+}
+
+/** The pages of one section as a row of tabs under the title. Plain links: each tab is its own page, so it works without scripts. */
+export function HqTabs({ label, items, current }: { label: string; items: readonly { href: string; label: string }[]; current: string }) {
+  return (
+    <nav className="hq-tabs" aria-label={label}>
+      {items.map((t) => (
+        <Link key={t.href} href={t.href} aria-current={t.href === current ? "page" : undefined}>
+          {t.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+/** The bar above a list: a search field, filter chips and room on the right. One look for every list in the panel. */
+export function Toolbar({ children }: { children: ReactNode }) {
+  return <div className="hq-toolbar">{children}</div>;
 }
 
 /** A flat panel with a hairline edge: an icon and title on top, the content, and an optional footer row. */

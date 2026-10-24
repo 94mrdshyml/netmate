@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { savePaymentSplitAction } from "../actions";
+import { savePaymentSplitAction } from "../../actions";
 
 /** The member's share of each payment, as a whole percent. */
 export function SplitForm({ initial }: { initial: number }) {

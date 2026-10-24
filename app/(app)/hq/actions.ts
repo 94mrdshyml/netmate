@@ -300,7 +300,7 @@ export async function savePaymentConnectionAction(input: { mode: string; accessT
   await requireAdmin();
   const { env } = await getCloudflareContext({ async: true });
   const result = await savePaymentConnection(getDb(env.DB), env.SETTINGS_ENCRYPTION_KEY, input);
-  if (result.ok) revalidatePath("/hq/payments");
+  if (result.ok) revalidatePath("/hq/money/setup");
   return result;
 }
 
@@ -309,7 +309,7 @@ export async function savePaymentSplitAction(percent: string): Promise<SaveResul
   await requireAdmin();
   const { env } = await getCloudflareContext({ async: true });
   const result = await savePaymentSplit(getDb(env.DB), percent);
-  if (result.ok) revalidatePath("/hq/payments");
+  if (result.ok) revalidatePath("/hq/money/setup");
   return result;
 }
 
@@ -319,7 +319,7 @@ export async function setPaymentsEnabledAction(wanted: boolean): Promise<SaveRes
   const { env } = await getCloudflareContext({ async: true });
   const result = await setPaymentsEnabled(getDb(env.DB), env.SETTINGS_ENCRYPTION_KEY, wanted);
   if (result.ok) {
-    revalidatePath("/hq/payments");
+    revalidatePath("/hq/money/setup");
     revalidatePath("/settings");
   }
   return result;
@@ -330,7 +330,7 @@ export async function removePaymentKeysAction(): Promise<{ ok: boolean }> {
   await requireAdmin();
   const { env } = await getCloudflareContext({ async: true });
   const ok = await removePaymentKeys(getDb(env.DB));
-  if (ok) revalidatePath("/hq/payments");
+  if (ok) revalidatePath("/hq/money/setup");
   return { ok };
 }
 
@@ -348,7 +348,7 @@ export async function savePolarFeeAction(percent: string, fixed: string): Promis
   await requireAdmin();
   const { env } = await getCloudflareContext({ async: true });
   const result = await savePolarFee(getDb(env.DB), percent, fixed);
-  if (result.ok) revalidatePath("/hq/payments");
+  if (result.ok) revalidatePath("/hq/money/setup");
   return result;
 }
 
@@ -362,7 +362,7 @@ export async function recordPayoutAction(creatorId: string, amount: string, note
   const { env } = await getCloudflareContext({ async: true });
   const result = await recordPayout(getDb(env.DB), admin.userId, creatorId, amount, note);
   if (!result.ok) return { ok: false, message: result.message };
-  revalidatePath("/hq/revenue");
+  revalidatePath("/hq/money/payouts");
   revalidatePath("/subscription");
   return { ok: true };
 }
@@ -372,6 +372,6 @@ export async function voidPayoutAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const { env } = await getCloudflareContext({ async: true });
   await voidPayout(getDb(env.DB), String(formData.get("id") ?? ""));
-  revalidatePath("/hq/revenue");
+  revalidatePath("/hq/money/payouts");
   revalidatePath("/subscription");
 }

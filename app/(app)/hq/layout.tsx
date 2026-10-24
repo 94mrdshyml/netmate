@@ -10,6 +10,8 @@ import { Icon } from "../(member)/_components/icon";
 import { ThemeToggle } from "../(member)/_components/theme-toggle";
 import { HqBreadcrumbs } from "./hq-breadcrumbs";
 import { HqNav } from "./hq-nav";
+import { HqSearch } from "./hq-search";
+import { HQ_SECTIONS, MONEY_TABS } from "./sections";
 
 // The admin panel: the only wide layout in the app (CLAUDE.md architecture invariants). A side menu
 // on a wide screen, a strip along the top on a phone. The admin check runs here and again in every
@@ -27,6 +29,11 @@ export default async function HqLayout({ children }: { children: React.ReactNode
   // Open report cases the person may handle (a moderator never counts one about themselves).
   const cases = await countOpenCases(db, { userId: staff.userId, isAdmin });
   const initial = Array.from(settings.name.trim())[0] ?? "";
+  // What the quick search may offer: the pages this person can open (and the Money tabs, for the admin).
+  const searchItems = [
+    ...HQ_SECTIONS.filter((s) => isAdmin || s.staff).map((s) => ({ href: s.href, label: s.label, group: s.group, icon: s.icon, keywords: s.keywords ?? "" })),
+    ...(isAdmin ? MONEY_TABS.filter((t) => t.href !== "/hq/money").map((t) => ({ href: t.href, label: t.label, group: "Money", icon: "credit-card" as const, keywords: t.keywords ?? "" })) : []),
+  ];
 
   return (
     <div className="hq">
@@ -49,6 +56,7 @@ export default async function HqLayout({ children }: { children: React.ReactNode
         <header className="hq-top">
           <HqBreadcrumbs />
           <div className="hq-top-actions">
+            <HqSearch items={searchItems} canFindMembers />
             <ThemeToggle />
             <Link href="/settings" className="btn btn-ghost hq-back">
               <Icon name="arrow-left" size={18} />

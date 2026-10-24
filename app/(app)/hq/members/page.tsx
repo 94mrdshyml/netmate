@@ -6,7 +6,7 @@ import { listMembers, MEMBER_FILTERS, siteStats, type MemberFilter, type MemberR
 import { EmptyState } from "../../(member)/_components/empty-state";
 import { Icon } from "../../(member)/_components/icon";
 import { setModeratorAction } from "../actions";
-import { Card, Initial, PageHeader, Pill } from "../hq-ui";
+import { Card, Initial, PageHeader, Pill, Toolbar } from "../hq-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +30,9 @@ const COUNTS: { key: keyof MemberRow["counts"]; label: string }[] = [
   { key: "followers", label: "Followers" },
   { key: "following", label: "Following" },
 ];
+
+/** The few numbers shown on the row itself; the rest are one tap away under "All numbers". */
+const HEADLINE: (keyof MemberRow["counts"])[] = ["posts", "replies", "likesReceived", "followers"];
 
 function href(query: string, show: MemberFilter, after?: string | null) {
   const params = new URLSearchParams();
@@ -71,6 +74,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
           </Pill>
         }
       >
+        <Toolbar>
         <form className="hq-inline" role="search" action="/hq/members" method="get">
           <div className="field hq-inline-field">
             <label htmlFor="member-search">Search members</label>
@@ -90,6 +94,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             </Link>
           ))}
         </nav>
+        </Toolbar>
 
         {page.items.length === 0 ? (
           <EmptyState icon="users" title={query || show !== "all" ? "Nobody matches." : "Nobody has joined yet."}>
@@ -125,14 +130,25 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
                       </form>
                     </div>
                   ) : null}
-                  <dl className="hq-counts" aria-label={`What ${name} has made`}>
-                    {COUNTS.map((c) => (
+                  <dl className="hq-headline" aria-label={`The main numbers for ${name}`}>
+                    {COUNTS.filter((c) => HEADLINE.includes(c.key)).map((c) => (
                       <div key={c.key}>
                         <dt>{c.label}</dt>
                         <dd>{m.counts[c.key]}</dd>
                       </div>
                     ))}
                   </dl>
+                  <details className="hq-details">
+                    <summary>All numbers</summary>
+                    <ul className="hq-counts" aria-label={`What ${name} has made`}>
+                      {COUNTS.map((c) => (
+                        <li key={c.key}>
+                          <span className="hq-count-label">{c.label}</span>
+                          <strong>{m.counts[c.key]}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
                 </li>
               );
             })}

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { formatUsd } from "@/lib/money";
-import { recordPayoutAction } from "../actions";
+import { recordPayoutAction } from "../../actions";
 
 /** Records that the owner paid a member. The amount starts as everything owed and can never be more than that. */
 export function PayoutForm({ creatorId, name, owedCents }: { creatorId: string; name: string; owedCents: number }) {
