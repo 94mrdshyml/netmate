@@ -32,10 +32,13 @@ export async function signUpMember(browser: Browser, ip: string, names: { first?
     storageState: { cookies: [], origins: [] },
     extraHTTPHeaders: { "cf-connecting-ip": ip },
   });
+  const stamp = `${Date.now().toString(36)}${++counter}`;
+  // This sign-up counts against its own link allowance, not the admin link's shared 20 per 10 minutes (the server
+  // honours the cookie only when started with ENV "test"). rate-limit.spec.ts does not set it and tests the real limit.
+  await context.addCookies([{ name: "e2e_scope", value: `su-${stamp}`, domain: new URL(link).hostname, path: "/" }]);
   const page = await context.newPage();
   await openSignUpForm(page, link);
 
-  const stamp = `${Date.now().toString(36)}${++counter}`;
   const username = `m_${stamp.slice(-11)}`;
   await page.getByLabel("First name").fill(names.first ?? "Other");
   await page.getByLabel("Last name").fill(names.last ?? "Member");

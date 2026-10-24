@@ -6,6 +6,7 @@ import type { IconName } from "../(member)/_components/icon";
 export const HQ_SECTIONS: readonly { href: string; label: string; icon: IconName; group: string; staff?: true }[] = [
   { href: "/hq", label: "Overview", icon: "grid", group: "General" },
   { href: "/hq/stats", label: "Activity", icon: "bar-chart", group: "General", staff: true },
+  { href: "/hq/cases", label: "Reports", icon: "flag", group: "People", staff: true },
   { href: "/hq/approvals", label: "Approvals", icon: "user-check", group: "People" },
   { href: "/hq/invites", label: "Invites", icon: "user-plus", group: "People" },
   { href: "/hq/members", label: "Members", icon: "users", group: "People", staff: true },

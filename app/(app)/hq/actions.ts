@@ -2,7 +2,7 @@
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/auth/admin";
+import { requireAdmin, requireStaff } from "@/auth/admin";
 import { getDb } from "@/db";
 import { transportFor } from "@/email/transport";
 import { pngLogoUrl } from "@/email/template";
@@ -14,6 +14,7 @@ import { clearInstanceCache } from "@/instance/settings";
 import { DEMO_STEPS, removeDemo, runDemoStep, type Removed } from "@/demo/seed";
 import { isId } from "@/lib/ids";
 import { setModerator } from "@/server/members";
+import { closeCase, reopenCase, startReview, type CaseChange } from "@/server/reports";
 import { removeKlipyKey, saveKlipyKey, type SaveKlipyResult } from "@/server/gifs";
 import { approvePending, regenerateInvite, rejectPending, setInviteQuota, setLinkPreviewsEnabled, setPlacesEnabled } from "@/server/admin";
 import { emailApproved, emailRejected, pendingContact } from "@/server/status-emails";
@@ -248,4 +249,44 @@ export async function setModeratorAction(formData: FormData): Promise<void> {
   const { env } = await getCloudflareContext({ async: true });
   await setModerator(getDb(env.DB), String(formData.get("userId") ?? ""), formData.get("wanted") === "1");
   revalidatePath("/hq/members");
+}
+
+// ---- Report cases (owner decision, session 48): the admin and the moderators work them. ----
+
+export type CaseActionResult = { ok: true } | { ok: false; message: string };
+
+const CASE_MESSAGES = {
+  not_found: "That case is not available.",
+  bad_outcome: "Choose how it ended.",
+  note_too_long: "Keep the note to 500 characters or fewer.",
+  bad_note: "That note has characters we cannot use.",
+} as const;
+
+async function staffAndDb() {
+  const member = await requireStaff();
+  const { env } = await getCloudflareContext({ async: true });
+  return { staff: { userId: member.userId, isAdmin: member.role === "admin" }, db: getDb(env.DB) };
+}
+
+function finish(result: CaseChange): CaseActionResult {
+  revalidatePath("/hq", "layout");
+  return result.ok ? { ok: true } : { ok: false, message: CASE_MESSAGES[result.code] };
+}
+
+/** Takes an open case. Taking one that is already taken changes nothing. */
+export async function startReviewAction(caseNo: number): Promise<CaseActionResult> {
+  const { staff, db } = await staffAndDb();
+  return finish(await startReview(db, staff, caseNo));
+}
+
+/** Closes a case with how it ended and an optional note. Closing one that is already closed changes nothing. */
+export async function closeCaseAction(caseNo: number, outcome: string, note: string): Promise<CaseActionResult> {
+  const { staff, db } = await staffAndDb();
+  return finish(await closeCase(db, staff, caseNo, outcome, note));
+}
+
+/** Opens a closed case again. */
+export async function reopenCaseAction(caseNo: number): Promise<CaseActionResult> {
+  const { staff, db } = await staffAndDb();
+  return finish(await reopenCase(db, staff, caseNo));
 }

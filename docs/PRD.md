@@ -70,7 +70,7 @@ What makes it Netmate:
 | Role | Can |
 |---|---|
 | **Admin** (exactly one at setup) | everything a member can, plus `/hq` |
-| **Moderator** (owner decision, session 46) | a Member the admin has made a moderator, kept as a flag on the profile (`is_moderator`), not as a new role, so the one-admin rule is untouched. Can open the members list and Activity in `/hq` (no email addresses, no buttons that change anything). The admin alone makes or removes a moderator. Moderators will also be able to remove posts and replies and suspend members once those tools are built (decided, not built yet). Never sees branding, email, keys, invites, approvals, services or demo data |
+| **Moderator** (owner decision, session 46) | a Member the admin has made a moderator, kept as a flag on the profile (`is_moderator`), not as a new role, so the one-admin rule is untouched. Can open the members list and Activity in `/hq` (no email addresses, no buttons that change anything) and work the report cases (`/hq/cases`). The admin alone makes or removes a moderator. Moderators will also be able to remove posts and replies and suspend members once those tools are built (decided, not built yet). Never sees branding, email, keys, invites, approvals, services or demo data |
 | **Member** | use the app, own a personal invite link |
 | **Pending** | signed up through a member link past that member's quota; cannot sign in until approved |
 
@@ -365,6 +365,21 @@ No typo tolerance, no trending tags in v1.
 - **Data.** `follow_requests`, `blocks` and `mutes` (migration 0009), each one row per pair, with no-self checks, cascading delete with the account, and the indexes the lists and the "who blocked me" check need. `profiles.is_private` already existed.
 - Reposts and quotes of a private account's posts are refused (session 36: they use the visibility rule and also check "not private"). Not yet: the For you ranking skipping muted people (it uses the same feed filter when it arrives).
 
+### 8.8a Reporting a post
+
+Owner decision, session 48. Any member can report a post or reply they can see. Each report is one **case** with a number people can read out and search for.
+
+- **Where.** The "..." under every post that is not yours (your own posts keep Delete post). It offers **Report post**, which opens `/report/[postId]`. The page shows the post, a list of reasons, an optional note and Send report. A post you cannot see, a post that is gone and your own post are all 404 there.
+- **Reasons (one list, `src/lib/report-categories.ts`).** Spam; Bullying or harassment; Hate; Threats or violence; Sexual content; Self-harm; False information; Pretending to be someone; Private information; Something illegal; Something else. Each reason has a short hint line under it. "Something else" needs a note. The note is optional otherwise, up to 500 characters, no control characters. The database checks the reason list too.
+- **The case number.** Every report makes one case, shown as `CASE-000123` (six digits at least; more when needed). The number is one more than the highest so far, worked out inside the insert itself, so two reports at the same moment cannot share a number. Staff can find a case by typing the number in any usual spelling (`CASE-000123`, `case 123`, `123`). The row's own id is `rpt_`.
+- **One live case per person per post.** Reporting a post you already have an open or in-review case on gives you the same case back ("You already reported this"). After it is closed you may report again and get a new case. The database enforces this with a partial unique index, so two taps at once make one case.
+- **What the case keeps.** A copy of the post as it was reported (text, how many pictures, whether it has a GIF or a link card, whether it is a reply, when it was posted, who wrote it), the reason, the note, who reported, the state, how it ended, staff's note and the dates. If the author later deletes the post the case still reads the same. This copy is the one place staff read a post without the `visibleTo` rule, because the reporter chose to share exactly this text; staff cannot open the live post from a case.
+- **Who is told what.** The person who wrote the post is never told, and nothing in the app shows them a report exists. The reporter sees only their own cases in `Settings > Your reports` (`/reports`): case number, reason, the post's first words, and Waiting, Being looked at, or Closed with how it ended. They never see staff's note. The form says that the people who look after the space can see who sent it, and the author cannot.
+- **Limit.** 10 reports an hour per person (the exact D1 table).
+- **Working a case (`/hq/cases`, `/hq/cases/[caseNo]`).** The admin and the moderators. The list has Open, In review and Closed tabs, a search by case number or words from the post, and a count of open cases in the menu. A case page shows the post as reported, the reason, the reporter's words, who reported, the other cases on the same post, and its history. Actions, each sending the state wanted so a repeat changes nothing: **Take this case** (open to in review), **Close case** with how it ended (No action needed, Handled, Same as another case) and an optional staff note, and **Open this case again**. Each change and its history entry are written in one batch; two staff pressing at once make one change and one entry. "Post removed" is already allowed by the database and arrives with the removal tools.
+- **No judging your own case.** A moderator never sees a case about their own post or one they reported (the list, the count and the page all leave it out; the page is a 404). The admin sees everything, because the admin is the owner.
+- **Not built yet.** Removing a post or reply from a case, suspending a member, and telling the reporter by alert or email. Those come with the next admin round.
+
 ### 8.9 Bookmarks
 
 **Built.** The bookmark icon under each post saves it privately (the wanted state, not a flip; 60 saves a minute). `/bookmarks`, titled "Saved posts" and linked from Settings, lists them, newest saved first, paged. Posts you can no longer see (deleted, author went private, blocked) are skipped. Nobody sees your list or a bookmark count on a post. The author sees only a total of saves in their own analytics.
@@ -415,6 +430,7 @@ Limits are counted per person, or per IP address for sign-up and sign-in. IPs ar
 | Follows | 30 per 10 minutes |
 | Uploads | 30 per 10 minutes |
 | Link-preview fetches | 20 per 10 minutes |
+| Reports | 10 per hour |
 | Location suggestions | 40 per minute |
 | Name suggestions | 120 per minute |
 | Analytics reports | 60 per minute |
@@ -439,6 +455,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | Analytics | your analytics |
 | Edit profile | name, bio, city, link, photos |
 | Dark or light theme | a button that flips light and dark (a person who has not chosen follows their phone) |
+| Your reports | the reports you made and where each case stands |
 | Privacy | private account, follow requests, blocked, muted |
 | Account | email, password, delete account |
 | Log out | signs out |
@@ -473,6 +490,8 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/[username]/status/[id]` | Post and replies | mobile |
 | `/[username]/followers`, `/following` | People lists | mobile |
 | `/search?q=` | People and posts; suggestions when empty | mobile |
+| `/report/[postId]` | Report a post: reason, optional note, then the case number | mobile |
+| `/reports` | Your reports and where each case stands | mobile |
 | `/notifications`, `/bookmarks` | Alerts, saved posts (built) | mobile |
 | `/analytics` (`?range=28`) | Your analytics | mobile |
 | `/settings` and `/profile`, `/account`, `/invite`, `/privacy`, `/privacy/requests`, `/privacy/blocked`, `/privacy/muted` | Settings | mobile |
@@ -483,6 +502,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/hq/email` | Resend key (saved encrypted, never shown again), sender, test email, last send and last error | **wide** |
 | `/hq/members` | Members: search, filter (everyone, moderators, waiting), each person's counts, and the admin's Make or Remove moderator button. Staff (admin or moderator); a moderator sees no emails | **wide** |
 | `/hq/stats` | Activity: totals for people, what they made and how they react, and the last eight weeks. Counts only. Staff | **wide** |
+| `/hq/cases`, `/hq/cases/[caseNo]` | Reports: the list of cases (open, in review, closed; search by case number) and one case with its actions and history. Staff (admin or moderator) | **wide** |
 | `/hq/services` | Optional services: place suggestions on or off; link previews on or off; the Klipy key for GIF search | **wide** |
 | `/hq/demo` | Demo data: add the demo people and posts in steps, or remove them all (admin only, 404 for anyone else) | **wide** |
 | `/api/auth/*`, `/api/me`, `/api/upload` | Auth, session probe, upload | n/a |
@@ -491,7 +511,7 @@ Reads, search, mutes and blocks are not limited. Exact low-volume limits live in
 | `/api/mentions?q=` and `?names=` | People to suggest after an `@`, and which typed names are real (signed-in members, 120 a minute) | n/a |
 | `/avatar/[userId]`, `/media/[...key]` | The drawn default picture; stored files from R2 (avatars, banners, posts, the instance logo and favicon, hosted fonts; each only as the type it was stored with; random names, cached for ever). The media subdomain replaces `/media` later | n/a |
 
-`/hq` is admin-only; anyone else gets 404. The one exception (owner decision, session 46) is `/hq/members` and `/hq/stats`, which a moderator may also open; `/hq` itself sends a moderator to `/hq/members`, and every other page and action checks for the admin alone.
+`/hq` is admin-only; anyone else gets 404. The one exception (owner decision, session 46) is `/hq/members`, `/hq/stats` and `/hq/cases` (with a case's page), which a moderator may also open; `/hq` itself sends a moderator to `/hq/members`, and every other page and action checks for the admin alone.
 
 ## 10. Data
 
@@ -509,6 +529,8 @@ All data is on Cloudflare D1. Times are integer milliseconds UTC. Yes/no is 0/1.
 | `invu_` | invite use |
 | `post_` | post or reply |
 | `ntf_` | notification (alert) |
+| `rpt_` | report case |
+| `rpe_` | report case history entry |
 
 More prefixes are added as their tables are created (posts, invites, notifications and so on). Invite link codes are a separate, longer random value, not an id.
 
@@ -533,6 +555,8 @@ More prefixes are added as their tables are created (posts, invites, notificatio
 | `blocks`, `mutes` | who blocked or muted whom |
 | `likes`, `reposts`, `bookmarks` | one row per person per post (created time kept; reposts and bookmarks are indexed by person and time for the feed, a profile and the Saved list) |
 | `notifications` | id (`ntf_`), recipient, actor, type, post, created, read time. The database checks the kind, refuses an alert about yourself, requires a post for post alerts and none for person alerts, and allows one alert per actor, kind and post (two partial unique indexes) |
+| `reports` | id (`rpt_`), case number (unique, 1 or more), the post (kept as empty if its row is ever removed) and a copy of it (author, username, text, picture count, GIF, link card, reply, posted time), reporter, reason, note (up to 500), state (`open`, `reviewing`, `closed`), outcome, staff note (up to 500), who took or closed it, created, updated and closed times. The database checks the reason list, the lengths, the states, that a closed case has an outcome and a closing time (and an unclosed one has neither), and that a person has at most one unclosed case per post |
+| `report_events` | id (`rpe_`), case, who, kind (`filed`, `review_started`, `closed`, `reopened`), detail (the reason, or the outcome), time. Removed with the case |
 | `rate_hits` | one row per allowed limited attempt: key (label plus a salted hash of the IP, email or link, never the raw value) and time in ms; plain row number as id because nothing refers to it; pruned daily |
 | `analytics_events` | append-only: owner, viewer, kind, post, day, time. Unique per person per thing per day for the six view/tap kinds; follows and unfollows never squashed |
 
@@ -733,10 +757,11 @@ Phases 4 to 6 can overlap once phase 2 is done. Phases 1 to 3 give the first usa
 | 16 | Ids | Stripe-style prefixed ids (`usr_` + 24 base62 characters), replacing UUIDs. Owner request, 2026-10-22 |
 | 17 | Releases | Manual: a Release workflow (workflow_dispatch with a version) tags and creates a GitHub Release with generated notes. release-please was tried and removed on 2026-10-22: GitHub GraphQL errors, default first version 1.0.0, release PRs without CI. Owner decision |
 | 18 | Demo data on a real site | Owner decision, session 45: the admin can add and remove demo people and posts from `/hq/demo` on a real instance (an exception to "fake data only for local development and tests"). The demo people have no sign-in, so the exception cannot be used to get into a real site; removing is complete (posts, pictures, alerts, counters) |
-| 19 | Moderators | Owner decision, session 46: one owner (the only admin, as before) plus moderators, who are members the admin flags. No second admin. A moderator can see the members list and the numbers, and (to be built) remove posts and replies and suspend members; not approve sign-ups, and never settings. Numbers are counts only and leave out saves (bookmarks are private) |
+| 19 | Moderators | Owner decision, session 46: one owner (the only admin, as before) plus moderators, who are members the admin flags. No second admin. A moderator can see the members list, the numbers and the report cases, and (to be built) remove posts and replies and suspend members; not approve sign-ups, and never settings. Numbers are counts only and leave out saves (bookmarks are private) |
+| 20 | Reports | Owner decision, session 48: members report a post for one of eleven reasons and each report becomes a case with a number (CASE-000123). The admin and moderators work the cases; the author is never told; a moderator never sees a case about themselves. Staff read a copy of the post taken when it was reported (an exception to `visibleTo`, because the reporter shared that text) |
 
 ## 19. Not in v1, and ideas
 
-**Not in v1:** federation, direct messages, video, polls, lists, verified badges, ads, native apps, multiple admins, email-domain rules and open sign-up modes, per-member quota overrides, trending hashtags, typo-tolerant search, a Likes tab on profiles, a moderation reports queue, member data export, instance-to-instance migration tooling, "not interested" on posts, topic interests, uptime monitoring and error reporting setup.
+**Not in v1:** federation, direct messages, video, polls, lists, verified badges, ads, native apps, multiple admins, email-domain rules and open sign-up modes, per-member quota overrides, trending hashtags, typo-tolerant search, a Likes tab on profiles, member data export, instance-to-instance migration tooling, "not interested" on posts, topic interests, uptime monitoring and error reporting setup.
 
 **Ideas (not decided):** follower growth tips in analytics, copying link-card pictures into our own storage with a "remove preview" button, a "why am I seeing this" explanation on For you, hosting our own place suggestions, quote counts in the ranking, Turnstile on sign-up.

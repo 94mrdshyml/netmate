@@ -38,6 +38,8 @@ export const RESERVED_USERNAMES: ReadonlySet<string> = new Set([
   "about",
   "terms",
   "privacy",
+  "report",
+  "reports",
 ]);
 
 export type UsernameResult =

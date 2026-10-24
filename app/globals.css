@@ -3537,3 +3537,262 @@ a.link-card:hover {
   border: 1px dashed var(--line-input);
   border-radius: var(--radius);
 }
+
+/* ---- Reporting a post, and the cases staff work (docs/PRD.md, "Reporting a post") ---- */
+
+.case-id {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.report-post {
+  margin: 12px 0 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
+}
+
+.report-post p {
+  margin: 0;
+}
+
+.report-post-body {
+  margin-top: 6px !important;
+  white-space: pre-wrap;
+}
+
+.report-form {
+  display: grid;
+  gap: 20px;
+  padding-bottom: 24px;
+}
+
+.report-options {
+  display: grid;
+  gap: 8px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.report-options legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.report-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-input);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease);
+}
+
+.report-option input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--brand-text);
+}
+
+.report-option:has(input:checked) {
+  border: 2px solid var(--brand-text);
+  padding: 9px 11px;
+}
+
+.report-option:has(input:focus-visible) {
+  outline: 2px solid var(--brand-text);
+  outline-offset: 2px;
+}
+
+.report-option-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.report-option-title {
+  font-weight: 500;
+}
+
+.report-option-hint {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.report-done {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 24px 0;
+}
+
+.report-done h2,
+.report-done p {
+  margin: 0;
+}
+
+.report-done svg {
+  color: var(--brand-text);
+}
+
+.report-done-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* A member's own reports */
+.case-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.case-row {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+
+.case-row p {
+  margin: 0;
+}
+
+.case-row-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.case-state {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.case-state-live {
+  color: var(--brand-text);
+  font-weight: 500;
+}
+
+.case-row-kind {
+  margin-top: 2px !important;
+  font-weight: 500;
+}
+
+.case-row-excerpt {
+  margin-top: 2px !important;
+  color: var(--muted);
+}
+
+.case-row-when {
+  margin-top: 4px !important;
+  font-size: 0.875rem;
+}
+
+/* Staff: one case */
+.case-link {
+  color: inherit;
+}
+
+.case-post {
+  display: grid;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+
+.case-post p {
+  margin: 0;
+}
+
+.case-post-body {
+  white-space: pre-wrap;
+}
+
+.case-facts {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+
+.case-facts dt {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.case-facts dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.case-others {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.case-actions {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+
+.case-close {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+}
+
+.case-close .field {
+  width: 100%;
+}
+
+.case-outcomes {
+  display: grid;
+  gap: 4px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.case-outcomes legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.case-outcome {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.case-outcome input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--brand-text);
+}
+
+.case-history {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}

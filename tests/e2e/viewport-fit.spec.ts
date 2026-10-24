@@ -23,6 +23,8 @@ async function wideThings(page: Page, width: number) {
 }
 
 test("a repost line and a long web address never make the page wider than the phone", async ({ page }) => {
+  // About 40 page loads at three widths: 9 seconds alone, but over 20 when it shares the machine with the rest of the suite.
+  test.setTimeout(60_000);
   const stamp = unique();
   const text = `${stamp} https://example.com/${"a".repeat(80)}`;
   await page.goto("/compose");

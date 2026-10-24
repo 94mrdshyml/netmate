@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { LIMITS, clientIp, limitPost, limitSignIn, limitSignUp, postSubject, pruneRateHits, takeSlot, tooManyMessage } from "@/server/rate-limit";
+import { LIMITS, clientIp, limitPost, limitSignIn, limitSignUp, postSubject, pruneRateHits, scopedSubject, takeSlot, tooManyMessage } from "@/server/rate-limit";
 
 const SALT = "test-salt-for-rate-limits";
 const MIN = 60_000;
@@ -177,5 +177,18 @@ describe("a test's own posting allowance", () => {
     for (const scope of [undefined, null, "", "a b", "a/b", "a:b", "x".repeat(65), "<script>", "é"]) {
       expect(postSubject({ ENV: "test" }, who, scope), String(scope)).toBe(who);
     }
+  });
+});
+
+describe("a test's own sign-up allowance on a shared invite link", () => {
+  it("counts sign-ups by scope in test mode, and ignores the scope everywhere else", async () => {
+    const link = "inv_scopedlinkaaaaaaaaaaaaaa";
+    const take = (subject: string, at: number) => limitSignUp(env.DB, SALT, { ip: `ip-${at}-${subject}`, inviteLinkId: subject }, at);
+    // Twenty sign-ups fill the link's allowance in one scope; the twenty-first is refused; another scope is untouched.
+    for (let i = 0; i < 20; i++) expect(await take(scopedSubject({ ENV: "test" }, link, "one"), T0 + i)).toEqual({ ok: true });
+    expect(await take(scopedSubject({ ENV: "test" }, link, "one"), T0 + 30)).toMatchObject({ ok: false });
+    expect(await take(scopedSubject({ ENV: "test" }, link, "two"), T0 + 30)).toEqual({ ok: true });
+    // On a real site (any other ENV) the scope does nothing: it is the link that is counted.
+    for (const real of [{}, { ENV: "production" }, { ENV: "Test" }]) expect(scopedSubject(real, link, "two")).toBe(link);
   });
 });
