@@ -148,6 +148,13 @@
       "when": 1792834952382,
       "tag": "0020_subscribe_alert",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1792835784060,
+      "tag": "0021_tax_inclusive_products",
+      "breakpoints": true
     }
   ]
 }

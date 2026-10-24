@@ -471,7 +471,7 @@ describe("subscribing", () => {
       name: `Subscription to @${creator.username}`,
       recurring_interval: "month",
       visibility: "private",
-      prices: [{ amount_type: "fixed", price_currency: "usd", price_amount: 550 }],
+      prices: [{ amount_type: "fixed", price_currency: "usd", price_amount: 550, tax_behavior: "inclusive" }],
     });
     expect(calls[1]?.body).toMatchObject({
       products: ["prod-uuid-1"],
