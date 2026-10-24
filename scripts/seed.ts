@@ -1,7 +1,8 @@
-// bun run db:seed: fills the LOCAL database with demo people and posts (see scripts/demo/).
+// bun run db:seed: fills the LOCAL database with demo people and posts (see src/demo/).
 //
-// DEV AND TEST ONLY. It opens the local copy of D1 and R2 that `bun run dev` uses (.wrangler/state), through
-// Wrangler's local bindings. It has no way to reach production: there is no remote option, and no network call.
+// LOCAL ONLY. It opens the local copy of D1 and R2 that `bun run dev` uses (.wrangler/state), through
+// Wrangler's local bindings. It has no way to reach a real site: there is no remote option, and no network call.
+// (A real site gets its demo people from the admin's /hq/demo page instead.)
 // Run `bun run dev` once and finish /setup first, because the demo people are added next to your admin.
 //
 //   bun run db:seed                              the database `bun run dev` uses
@@ -10,8 +11,8 @@
 import { getPlatformProxy } from "wrangler";
 import { createAuth } from "@/auth";
 import { getDb } from "@/db";
-import { DEMO_EMAIL_DOMAIN, DEMO_PASSWORD, PEOPLE } from "./demo/data";
-import { seedDemo } from "./demo/seed";
+import { DEMO_EMAIL_DOMAIN, DEMO_PASSWORD, PEOPLE } from "@/demo/data";
+import { seedDemo } from "@/demo/seed";
 
 type LocalEnv = { DB: D1Database; MEDIA: R2Bucket; AUTH_SECRET?: string };
 

@@ -118,7 +118,7 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 - Post text is always rendered as text. Mentions, tags and links are found by parsing, never by injecting HTML. Theme values (colour, font name) are validated so they cannot inject CSS or script.
 - Migrations are forward-only and safe to run on an instance at any older version (expand, then contract across releases). CI checks upgrade from the previous release.
 - Email degrades gracefully with no Resend key: verification skipped, "forgot password" hidden, invite links shared by hand, `/hq` shows a banner.
-- Seed and fake data exist only for local development and tests.
+- Seed and fake data exist only for local development and tests, with one exception decided by the owner (session 45): the admin's own "Demo data" page in `/hq/demo`, which adds and fully removes invented people and posts on a real instance. Those people have no sign-in. Nothing else may put fake data in a real instance.
 
 ## Conventions
 

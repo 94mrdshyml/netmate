@@ -9,8 +9,8 @@ import { isAttachable } from "@/storage/upload";
 import { listAlerts } from "@/server/notifications";
 import { createPost, getPost, listByAuthor, listFeed } from "@/server/posts";
 import { searchPosts } from "@/server/search";
-import { DEMO_EMAIL_DOMAIN, DEMO_PASSWORD, ITEMS, PEOPLE } from "../../scripts/demo/data";
-import { seedDemo } from "../../scripts/demo/seed";
+import { DEMO_EMAIL_DOMAIN, DEMO_PASSWORD, ITEMS, PEOPLE } from "@/demo/data";
+import { DEMO_STEPS, demoStatus, removeDemo, runDemoStep, seedDemo } from "@/demo/seed";
 
 const db = () => getDb(env.DB);
 const secret = (env as unknown as { AUTH_SECRET: string }).AUTH_SECRET;
@@ -137,5 +137,69 @@ describe("the demo seed", () => {
     expect(await count("select count(*) as n from profiles where role = 'admin'")).toBe(1);
     expect(await count("select count(*) as n from invite_links")).toBe(0);
     expect(await db().select().from(instance).all()).toHaveLength(0);
+  });
+
+  it("can run a step twice without making anything twice", async () => {
+    const before = await count("select count(*) as n from posts");
+    const likes = await count("select count(*) as n from likes");
+    for (const step of [0, 1, 3, DEMO_STEPS - 1]) await runDemoStep({ db: db(), d1: env.DB, media: env.MEDIA }, step, NOW);
+    expect(await count("select count(*) as n from posts")).toBe(before);
+    expect(await count("select count(*) as n from likes")).toBe(likes);
+    expect(await count("select count(*) as n from user where email like ?", `%@${DEMO_EMAIL_DOMAIN}`)).toBe(PEOPLE.length);
+    await expect(runDemoStep({ db: db(), d1: env.DB, media: env.MEDIA }, DEMO_STEPS, NOW)).rejects.toThrow(/no such step/);
+    await expect(runDemoStep({ db: db(), d1: env.DB, media: env.MEDIA }, -1, NOW)).rejects.toThrow(/no such step/);
+  });
+
+  it("reports how much demo data there is", async () => {
+    expect(await demoStatus(db())).toEqual({ people: PEOPLE.length, posts: ITEMS.length });
+  });
+
+  it("takes it all away: people, posts, pictures, alerts and the counts on what stays", async () => {
+    const adminLikesBefore = await count("select like_count as n from posts where id = ?", adminPostId);
+    // A real member's reply to a demo post cannot outlive that post.
+    const demoPost = (await env.DB.prepare("select id from posts where author_id != ? and parent_id is null order by created_at limit 1").bind(adminId).first<{ id: string }>())!.id;
+    const real = await createPost(db(), adminId, "Thank you, this is lovely.", demoPost);
+    expect(real.ok).toBe(true);
+    expect(await count("select count(*) as n from notifications where recipient_id = ? and actor_id != ?", adminId, adminId)).toBeGreaterThan(5);
+    expect((await env.MEDIA.list({ prefix: "posts/" })).objects.length).toBeGreaterThan(20);
+
+    const removed = await removeDemo({ db: db(), d1: env.DB, media: env.MEDIA });
+    expect(removed.people).toBe(PEOPLE.length);
+    expect(removed.posts).toBe(ITEMS.length);
+    expect(removed.pictures).toBeGreaterThan(20);
+
+    expect(await count("select count(*) as n from user where email like ?", `%@${DEMO_EMAIL_DOMAIN}`)).toBe(0);
+    expect(await count("select count(*) as n from profiles where role != 'admin'")).toBe(0);
+    expect(await count("select count(*) as n from posts")).toBe(1);
+    for (const table of ["post_media", "post_tags", "post_mentions", "post_gifs", "post_links", "likes", "bookmarks", "reposts", "follows", "follow_requests", "notifications"]) {
+      expect(await count(`select count(*) as n from ${table}`), table).toBe(0);
+    }
+    expect((await env.MEDIA.list({ prefix: "posts/" })).objects.length).toBe(0);
+    // The admin's own post is still there, and its reply count is true again.
+    const mine = await getPost(db(), adminId, adminPostId);
+    expect(mine?.replyCount).toBe(0);
+    expect(mine?.likeCount).toBe(adminLikesBefore);
+    // Search no longer finds anything of theirs, and the feed is just the admin's post.
+    expect((await searchPosts(db(), adminId, "sourdough")).items).toHaveLength(0);
+    expect((await listFeed(db(), adminId, { scope: "all", limit: 20 })).items.map((p) => p.id)).toEqual([adminPostId]);
+    expect(await demoStatus(db())).toEqual({ people: 0, posts: 0 });
+    // Taking away what is not there is fine.
+    expect(await removeDemo({ db: db(), d1: env.DB, media: env.MEDIA })).toEqual({ people: 0, posts: 0, pictures: 0 });
+  });
+
+  it("adds the people with no sign-in at all when it is done from the admin page, and in steps", async () => {
+    // As the admin page does it: no password, one step at a time.
+    for (let step = 0; step < DEMO_STEPS; step++) await runDemoStep({ db: db(), d1: env.DB, media: env.MEDIA }, step, NOW);
+    expect(await demoStatus(db())).toEqual({ people: PEOPLE.length, posts: ITEMS.length });
+    expect(await count("select count(*) as n from account where user_id in (select id from user where email like ?)", `%@${DEMO_EMAIL_DOMAIN}`)).toBe(0);
+    const signedIn = await signInMember(auth(), db(), { email: `meera_rao@${DEMO_EMAIL_DOMAIN}`, password: DEMO_PASSWORD });
+    expect(signedIn.ok).toBe(false);
+    // Quotes and replies found their posts through the steps too.
+    expect(await count("select count(*) as n from posts where quoted_post_id is not null")).toBeGreaterThan(3);
+    expect(await count("select count(*) as n from posts where parent_id = ?", adminPostId)).toBeGreaterThanOrEqual(2);
+    expect(await count("select count(*) as n from posts p join posts q on q.id = p.parent_id where p.created_at <= q.created_at")).toBe(0);
+    // And it all goes again.
+    await removeDemo({ db: db(), d1: env.DB, media: env.MEDIA });
+    expect(await demoStatus(db())).toEqual({ people: 0, posts: 0 });
   });
 });
