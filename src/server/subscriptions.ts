@@ -187,7 +187,8 @@ async function productFor(db: Db, access: Access, creator: { userId: string; use
       // Private: it is for our checkout only and should not be listed on the owner's public Polar page.
       visibility: "private",
       metadata: { [META_CREATOR]: creator.userId },
-      prices: [{ amount_type: "fixed", price_currency: CURRENCY, price_amount: priceCents }],
+      // The price is what the subscriber pays, whatever country they are in: Polar takes the tax out of it, not on top.
+      prices: [{ amount_type: "fixed", price_currency: CURRENCY, price_amount: priceCents, tax_behavior: "inclusive" }],
     },
   });
   if (!made.ok) return { ok: false as const, message: made.message };
