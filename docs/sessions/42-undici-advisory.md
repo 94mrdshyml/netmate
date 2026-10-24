@@ -1,0 +1,7 @@
+# 42. Dependency audit: undici advisory (2026-10-24)
+- Branch / PR: fix/undici-advisory. The Dependency audit job started failing on every PR and on main: a new high advisory (GHSA-xjj6-f33q-929c, plus two moderate ones) for `undici` 7.18 to 7.30.0. Found while watching the link-previews PR; it is not caused by that change.
+- Cause: `miniflare` (the local Workers runtime used by wrangler, the integration tests and the e2e preview) pins `undici` 7.29.1 exactly. It is a dev and test tool; the deployed Worker does not ship it.
+- Fix: an override in `package.json` pins `undici` to 7.30.1, the patched version, the same way `zod` and `glob` are pinned. The lockfile was edited by hand for the three lines this touches (overrides, the `undici` entry, and the nested copy for `@dotenvx/dotenvx` that now shares 7.30.1), because a plain `bun install` also rewrote about a hundred unrelated lines. `bun install --frozen-lockfile` passes and leaves the file unchanged.
+- Check: `bun audit --audit-level=high` (the CI command) now exits 0; three moderate findings remain (DiceBear, esbuild dev server), below the CI line. Typecheck, unit tests (913), integration tests (535), the Workers build and the theme browser tests pass on the new version.
+- Owner: please read the override. `@dotenvx/dotenvx` asked for undici 6.x and now gets 7.30.1; it is only used by the OpenNext build tooling, and the build passed.
+- Next: when the miniflare/wrangler pins move past undici 7.30.1 the override can go.
