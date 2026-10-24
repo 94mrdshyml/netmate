@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { setAutoRenewAction } from "../subscription/actions";
+import { setAutoRenewAction } from "./actions";
 
 /** Stop renewing (asks first) or start renewing again. Sends the state wanted, so pressing twice changes nothing. */
 export function RenewButton({ subscriptionId, name, stopped }: { subscriptionId: string; name: string; stopped: boolean }) {

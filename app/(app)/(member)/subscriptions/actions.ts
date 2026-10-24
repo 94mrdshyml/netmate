@@ -23,7 +23,8 @@ export async function setPriceAction(input: string): Promise<PriceResult> {
   if (!(await readPaymentSettings(db)).enabled) return { ok: false, message: "Subscriptions are not turned on here." };
   const result = await setSubscriptionPrice(db, member.userId, input);
   if (result.ok) {
-    revalidatePath("/subscription");
+    revalidatePath("/subscriptions/earnings");
+    revalidatePath("/subscriptions/price");
     revalidatePath(`/${member.username}`);
   }
   return result;
@@ -35,7 +36,8 @@ export async function clearPriceAction(): Promise<PriceResult> {
   if (!member) redirect("/sign-in");
   const { env } = await getCloudflareContext({ async: true });
   const result = await clearSubscriptionPrice(getDb(env.DB), member.userId);
-  revalidatePath("/subscription");
+  revalidatePath("/subscriptions/earnings");
+  revalidatePath("/subscriptions/price");
   revalidatePath(`/${member.username}`);
   return result;
 }

@@ -363,7 +363,7 @@ export async function recordPayoutAction(creatorId: string, amount: string, note
   const result = await recordPayout(getDb(env.DB), admin.userId, creatorId, amount, note);
   if (!result.ok) return { ok: false, message: result.message };
   revalidatePath("/hq/money/payouts");
-  revalidatePath("/subscription");
+  revalidatePath("/subscriptions/earnings");
   return { ok: true };
 }
 
@@ -373,5 +373,5 @@ export async function voidPayoutAction(formData: FormData): Promise<void> {
   const { env } = await getCloudflareContext({ async: true });
   await voidPayout(getDb(env.DB), String(formData.get("id") ?? ""));
   revalidatePath("/hq/money/payouts");
-  revalidatePath("/subscription");
+  revalidatePath("/subscriptions/earnings");
 }

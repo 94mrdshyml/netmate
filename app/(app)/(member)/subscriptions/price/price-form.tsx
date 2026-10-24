@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { clearPriceAction, setPriceAction } from "./actions";
+import { clearPriceAction, setPriceAction } from "../actions";
 
 /** The monthly price a member charges, in dollars. */
 export function PriceForm({ initialCents }: { initialCents: number | null }) {
