@@ -14,7 +14,8 @@ import { clearInstanceCache } from "@/instance/settings";
 import { DEMO_STEPS, removeDemo, runDemoStep, type Removed } from "@/demo/seed";
 import { isId } from "@/lib/ids";
 import { setModerator } from "@/server/members";
-import { removePaymentKeys, savePaymentConnection, savePaymentSplit, setPaymentsEnabled, testPolar, type SaveResult, type TestResult } from "@/server/payments";
+import { removePaymentKeys, savePaymentConnection, savePaymentSplit, savePolarFee, setPaymentsEnabled, testPolar, type SaveResult, type TestResult } from "@/server/payments";
+import { recordPayout, voidPayout } from "@/server/revenue";
 import { closeCase, reopenCase, startReview, type CaseChange } from "@/server/reports";
 import { removeKlipyKey, saveKlipyKey, type SaveKlipyResult } from "@/server/gifs";
 import { approvePending, regenerateInvite, rejectPending, setInviteQuota, setLinkPreviewsEnabled, setPlacesEnabled } from "@/server/admin";
@@ -340,4 +341,37 @@ export async function testPolarAction(): Promise<TestResult> {
   const limited = await limitPolarTest(env.DB, env.AUTH_SECRET, admin.userId);
   if (!limited.ok) return { ok: false, message: tooManyMessage(limited.retryAfterSeconds) };
   return testPolar(getDb(env.DB), env.SETTINGS_ENCRYPTION_KEY);
+}
+
+/** Saves Polar's fee as entered from the owner's Polar plan, for the owner's estimate of what is left. */
+export async function savePolarFeeAction(percent: string, fixed: string): Promise<SaveResult> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await savePolarFee(getDb(env.DB), percent, fixed);
+  if (result.ok) revalidatePath("/hq/payments");
+  return result;
+}
+
+// ---- Revenue (owner decision, session 54): the owner records payouts to members by hand. Admin only. ----
+
+export type PayoutActionResult = { ok: true } | { ok: false; message: string };
+
+/** Records that the owner paid a member. Never more than they are owed. */
+export async function recordPayoutAction(creatorId: string, amount: string, note: string): Promise<PayoutActionResult> {
+  const admin = await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await recordPayout(getDb(env.DB), admin.userId, creatorId, amount, note);
+  if (!result.ok) return { ok: false, message: result.message };
+  revalidatePath("/hq/revenue");
+  revalidatePath("/subscription");
+  return { ok: true };
+}
+
+/** Takes back a payout recorded by mistake (it stays on record as voided). */
+export async function voidPayoutAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  await voidPayout(getDb(env.DB), String(formData.get("id") ?? ""));
+  revalidatePath("/hq/revenue");
+  revalidatePath("/subscription");
 }

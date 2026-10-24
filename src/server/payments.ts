@@ -7,7 +7,7 @@ import { eq, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { Db } from "@/db";
 import { instanceSecrets, paymentSettings } from "@/db/schema";
-import { isPercent } from "@/lib/money";
+import { DEFAULT_FEE, FEE_FIXED_MAX_CENTS, isPercent, parseDollars, parsePercentToBp } from "@/lib/money";
 import { decryptSecret, encryptSecret } from "@/lib/secrets";
 import { isPolarMode, polarCall, type PolarMode } from "@/payments/polar";
 
@@ -16,15 +16,15 @@ const WEBHOOK = "polar_webhook_secret";
 
 const NO_KEY = "This server cannot store keys safely yet. Ask whoever runs it to set SETTINGS_ENCRYPTION_KEY.";
 
-export type PaymentSettings = { enabled: boolean; mode: PolarMode; creatorPercent: number };
+export type PaymentSettings = { enabled: boolean; mode: PolarMode; creatorPercent: number; feeBp: number; feeFixedCents: number };
 
-export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = { enabled: false, mode: "sandbox", creatorPercent: 50 };
+export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = { enabled: false, mode: "sandbox", creatorPercent: 50, ...DEFAULT_FEE };
 
 /** The saved settings, or the defaults when nothing has been saved. */
 export async function readPaymentSettings(db: Db): Promise<PaymentSettings> {
   const row = await db.select().from(paymentSettings).where(eq(paymentSettings.id, "singleton")).get();
   if (!row) return DEFAULT_PAYMENT_SETTINGS;
-  return { enabled: row.enabled, mode: isPolarMode(row.mode) ? row.mode : "sandbox", creatorPercent: row.creatorPercent };
+  return { enabled: row.enabled, mode: isPolarMode(row.mode) ? row.mode : "sandbox", creatorPercent: row.creatorPercent, feeBp: row.feeBp, feeFixedCents: row.feeFixedCents };
 }
 
 export type PaymentPanel = PaymentSettings & {
@@ -118,6 +118,26 @@ export async function savePaymentSplit(db: Db, creatorPercent: unknown): Promise
       .insert(paymentSettings)
       .values({ id: "singleton", creatorPercent: n })
       .onConflictDoUpdate({ target: paymentSettings.id, set: { creatorPercent: n, updatedAt: new Date() } });
+  } catch {
+    return { ok: false, message: "Could not save. Try again." };
+  }
+  return { ok: true };
+}
+
+/**
+ * Saves Polar's fee as the owner enters it from their Polar plan: a percent (like "4.5") and a fixed amount in dollars
+ * (like "0.40"). It is only used for the owner's own estimate of what is left; it applies to payments seen after the change.
+ */
+export async function savePolarFee(db: Db, percent: unknown, fixed: unknown): Promise<SaveResult> {
+  const pct = parsePercentToBp(percent);
+  if (!pct.ok) return { ok: false, message: pct.message };
+  const fix = parseDollars(fixed, 0, FEE_FIXED_MAX_CENTS);
+  if (!fix.ok) return { ok: false, message: fix.message };
+  try {
+    await db
+      .insert(paymentSettings)
+      .values({ id: "singleton", feeBp: pct.bp, feeFixedCents: fix.cents })
+      .onConflictDoUpdate({ target: paymentSettings.id, set: { feeBp: pct.bp, feeFixedCents: fix.cents, updatedAt: new Date() } });
   } catch {
     return { ok: false, message: "Could not save. Try again." };
   }

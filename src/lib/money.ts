@@ -53,9 +53,39 @@ export function splitPreview(priceCents: number, creatorPercent: number): { crea
 }
 
 /**
- * A rough guess of Polar's fee on one payment, for the owner's information only (Polar's published rate is
- * 4% plus 40 cents, and 0.5% more on subscriptions; newer accounts may pay a different rate). Never used to pay anyone.
+ * Our estimate of Polar's fee on one payment: a percent in hundredths (450 is 4.50%) of the payment before tax, plus a
+ * fixed amount in cents, rounded to the nearest cent. Polar's published rate is 4% plus 40 cents, and 0.5% more on
+ * subscriptions; the owner sets the figures from their own Polar plan. Only ever used for the owner's own numbers, never to pay anyone.
  */
-export function estimatePolarFeeCents(priceCents: number): number {
-  return Math.round(Math.max(0, priceCents) * 0.045) + 40;
+export function polarFeeCents(netCents: number, feeBp: number, fixedCents: number): number {
+  const base = Math.max(0, Math.trunc(netCents));
+  return Math.round((base * Math.max(0, feeBp)) / 10_000) + Math.max(0, Math.trunc(fixedCents));
+}
+
+export const FEE_BP_MAX = 2000;
+export const FEE_FIXED_MAX_CENTS = 500;
+
+/** The fee a fresh instance starts with: 4.50% plus 40 cents. */
+export const DEFAULT_FEE = { feeBp: 450, feeFixedCents: 40 } as const;
+
+/** "4.5", "4.50" or "4.5%" to hundredths of a percent (450), up to 20%. */
+export function parsePercentToBp(raw: unknown): { ok: true; bp: number } | { ok: false; message: string } {
+  const text = typeof raw === "string" ? raw.trim().replace(/\s*%$/, "") : "";
+  const match = /^(\d{1,2})(?:\.(\d{1,2}))?$/.exec(text);
+  if (!match) return { ok: false, message: "Use a percent like 4.5." };
+  const bp = Number(match[1]) * 100 + Number((match[2] ?? "").padEnd(2, "0") || "0");
+  if (bp > FEE_BP_MAX) return { ok: false, message: `The most is ${FEE_BP_MAX / 100}%.` };
+  return { ok: true, bp };
+}
+
+/** A dollar amount typed by a person ("12", "12.5", "$12.50") in whole cents, between `min` and `max` cents. */
+export function parseDollars(raw: unknown, min: number, max: number): PriceResult {
+  const text = typeof raw === "string" ? raw.trim().replace(/^\$\s*/, "") : "";
+  if (text === "") return { ok: false, message: "Enter an amount." };
+  const match = /^(\d{1,7})(?:\.(\d{1,2}))?$/.exec(text);
+  if (!match) return { ok: false, message: "Use dollars and cents, like 25 or 25.50." };
+  const cents = Number(match[1]) * 100 + Number((match[2] ?? "").padEnd(2, "0") || "0");
+  if (cents < min) return { ok: false, message: `The smallest amount is ${formatUsd(min)}.` };
+  if (cents > max) return { ok: false, message: `The largest amount is ${formatUsd(max)}.` };
+  return { ok: true, cents };
 }

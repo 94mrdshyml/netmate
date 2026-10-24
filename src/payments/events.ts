@@ -37,8 +37,13 @@ export const orderData = z.object({
   created_at: when,
   modified_at: when.nullable(),
   status: z.enum(ORDER_STATUSES),
+  /** After discounts and tax: what the split is worked out on. */
   net_amount: z.number().int().min(0),
+  /** What the subscriber paid, tax included. */
+  total_amount: z.number().int().min(0),
+  tax_amount: z.number().int().min(0),
   refunded_amount: z.number().int().min(0),
+  refunded_tax_amount: z.number().int().min(0),
   currency: z.string().min(1).max(10),
   billing_reason: z.string().max(60),
   subscription_id: z.string().max(100).nullable(),

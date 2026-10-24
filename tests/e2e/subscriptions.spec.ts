@@ -74,6 +74,15 @@ test("the admin saves the Polar keys, turns subscriptions on and sets a price", 
   await toggle.click();
   await expect(page.getByText("Subscriptions are on.")).toBeVisible();
 
+  // Polar's fee: the owner's own rate, checked before it is saved.
+  await page.getByLabel("Percent of each payment").fill("25");
+  await page.getByRole("button", { name: "Save fee" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "The most is 20%." })).toBeVisible();
+  await page.getByLabel("Percent of each payment").fill("4.50");
+  await page.getByLabel("Plus a fixed amount (US dollars)").fill("0.40");
+  await page.getByRole("button", { name: "Save fee" }).click();
+  await expect(page.getByText("Saved.").last()).toBeVisible();
+
   // Members now have the two rows in Settings; the admin sets a price.
   await page.goto("/settings");
   await expect(page.getByRole("link", { name: /^Your subscriptions/ })).toBeVisible();
@@ -128,8 +137,11 @@ test("Polar's signed messages make a subscription, and unsigned ones do nothing"
     modified_at: new Date().toISOString(),
     status: "paid",
     paid: true,
-    net_amount: 500,
+    net_amount: 425,
+    total_amount: 500,
+    tax_amount: 75,
     refunded_amount: 0,
+    refunded_tax_amount: 0,
     currency: "usd",
     billing_reason: "subscription_create",
     subscription_id: "e2e-sub-1",
@@ -152,9 +164,80 @@ test("Polar's signed messages make a subscription, and unsigned ones do nothing"
   await alert.getByRole("link").click();
   await expect(page).toHaveURL(/\/subscription$/);
 
-  // The creator sees a number, not a name.
+  // The creator sees who subscribed and what they have earned from them: 50% of the $4.25 left after the $0.75 tax is $2.12.
+  await page.goto("/subscription");
   await expect(page.getByText("1 person is subscribed to you.")).toBeVisible();
-  await expect(page.getByText("Sam Subscriber")).toHaveCount(0);
+  const person = page.getByRole("listitem").filter({ hasText: "Sam Subscriber" });
+  await expect(person).toContainText("Subscribed");
+  await expect(person).toContainText("$5.00 a month");
+  await expect(person).toContainText("You have earned $2.12 from them.");
+  await expect(page.getByRole("img", { name: /What you earned each month/ })).toBeVisible();
+  await expect(page.locator(".sub-figures")).toContainText("Earned in total$2.12");
+  await expect(page.locator(".sub-figures")).toContainText("Still to be paid$2.12");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(412);
+});
+
+test("the owner sees where the money went, records a payout, and can take it back", async ({ page }) => {
+  await page.goto("/hq/revenue");
+  await expect(page.getByRole("heading", { name: "Revenue", level: 1 })).toBeVisible();
+  await expect(page.getByText(/Test mode: these are practice payments/)).toBeVisible();
+
+  // $5.00 collected, $0.75 tax, Polar's fee 4.50% of $4.25 (19 cents) plus 40 cents = $0.59, member $2.12, owner keeps $1.54.
+  const stats = page.locator(".hq-stats");
+  await expect(stats).toContainText("Collected$5.00");
+  await expect(stats).toContainText("Reaches you$3.66");
+  await expect(stats).toContainText("Members are owed$2.12");
+  await expect(stats).toContainText("Yours to keep$1.54");
+  const ledger = page.getByRole("table", { name: "From what was collected to what you keep" });
+  await expect(ledger.getByRole("row", { name: /^Tax/ })).toContainText("$0.75");
+  await expect(ledger.getByRole("row", { name: /^Polar's fee/ })).toContainText("$0.59");
+  await expect(ledger.getByRole("row", { name: /^Yours to keep/ })).toContainText("$1.54");
+  // The graph says it in words too, and the month table has the numbers.
+  await expect(page.getByRole("img", { name: /^Of \$5\.00 collected: tax \$0\.75, polar's fee \$0\.59, members \$2\.12, yours \$1\.54\./i })).toBeVisible();
+  await expect(page.getByRole("img", { name: /^Collected each month:/ })).toBeVisible();
+  await expect(page.getByRole("table").filter({ hasText: "Polar's fee" }).last()).toContainText("$5.00");
+
+  // A member with a balance has a payout form; asking for more than is owed is refused.
+  const row = page.getByRole("listitem").filter({ hasText: "Riya Sen" }).first();
+  await expect(row).toContainText("$2.12 owed");
+  await expect(row).toContainText("1 subscriber");
+  const form = row.getByRole("form", { name: "Record a payout to Riya Sen" });
+  await form.getByLabel("Amount paid (US dollars)").fill("2.13");
+  await form.getByRole("button", { name: "Record payout" }).click();
+  await expect(form.getByRole("alert")).toContainText("That is more than they are owed ($2.12).");
+
+  await form.getByLabel("Amount paid (US dollars)").fill("1.00");
+  await form.getByLabel("Note (optional)").fill("Bank transfer, e2e");
+  await form.getByRole("button", { name: "Record payout" }).click();
+  await expect(row).toContainText("$1.12 owed");
+  await expect(page.getByRole("list", { name: "Recorded payouts" })).toContainText("$1.00 to Riya Sen");
+  await expect(page.getByRole("list", { name: "Recorded payouts" })).toContainText("Bank transfer, e2e");
+  await expect(page.locator(".hq-stats")).toContainText("Members are owed$1.12");
+  // The yours-to-keep number does not move: a payout is money that was already the member's.
+  await expect(page.locator(".hq-stats")).toContainText("Yours to keep$1.54");
+
+  // The member sees it as theirs, with the note.
+  await page.goto("/subscription");
+  await expect(page.locator(".sub-figures")).toContainText("Paid to you$1.00");
+  await expect(page.locator(".sub-figures")).toContainText("Still to be paid$1.12");
+  await expect(page.getByRole("list", { name: "Paid to you" })).toContainText("Bank transfer, e2e");
+
+  // Taking it back asks first, keeps the record, and gives the balance back.
+  await page.goto("/hq/revenue");
+  const payout = page.getByRole("list", { name: "Recorded payouts" }).getByRole("listitem").first();
+  await payout.getByRole("button", { name: "Void" }).click();
+  await payout.getByRole("button", { name: "Yes, void it" }).click();
+  await expect(payout).toContainText("Voided");
+  await expect(page.locator(".hq-stats")).toContainText("Members are owed$2.12");
+  await page.goto("/subscription");
+  await expect(page.locator(".sub-figures")).toContainText("Paid to you$0.00");
+
+  // Phone width.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/hq/revenue");
+  await expect(page.getByRole("heading", { name: "Revenue", level: 1 })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.setViewportSize({ width: 412, height: 915 });
 });
 
 test("a subscriber can see and stop their subscription, which asks first", async () => {

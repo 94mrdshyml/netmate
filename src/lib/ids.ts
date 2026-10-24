@@ -22,6 +22,7 @@ export const ID_PREFIXES = {
   reportEvent: "rpe",
   subscription: "sub",
   subscriptionPayment: "spay",
+  payout: "pay",
 } as const;
 
 export type IdModel = keyof typeof ID_PREFIXES;

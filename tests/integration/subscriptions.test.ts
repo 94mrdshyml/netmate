@@ -103,7 +103,7 @@ function orderData(o: { id?: string; polarSub?: string | null; status?: string; 
 }
 const orderEvent = (type: string, data: ReturnType<typeof orderData>) => ({ type, timestamp: iso(T0), data });
 
-const send = (event: unknown, percent = 55, mode: "sandbox" | "production" = "sandbox") => handlePolarEvent(db(), mode, event, percent);
+const send = (event: unknown, percent = 55, mode: "sandbox" | "production" = "sandbox", fee = { feeBp: 450, feeFixedCents: 40 }) => handlePolarEvent(db(), mode, event, { splitPercent: percent, ...fee });
 const subRow = async (polar = "sub-1") => env.DB.prepare("select * from subscriptions where polar_id = ?").bind(polar).first<Record<string, unknown>>();
 const payRow = async (order: string) => env.DB.prepare("select * from subscription_payments where polar_order_id = ?").bind(order).first<Record<string, unknown>>();
 
