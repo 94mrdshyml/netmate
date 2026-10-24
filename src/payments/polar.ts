@@ -39,8 +39,10 @@ export async function polarCall<T = unknown>(
       headers: { Authorization: `Bearer ${token}`, Accept: "application/json", ...(init.json !== undefined ? { "Content-Type": "application/json" } : {}) },
       body: init.json !== undefined ? JSON.stringify(init.json) : undefined,
       signal: AbortSignal.timeout(init.timeoutMs ?? 8000),
-      redirect: "error",
+      // Cloudflare's fetch has no "error" mode ("manual" and "follow" only), so a redirect is taken by hand and refused.
+      redirect: "manual",
     });
+    if (res.status >= 300 && res.status < 400) return { ok: false, status: res.status, message: "Polar sent us somewhere else, which it should not. Check that the mode (test or live) is the right one." };
     const body = (await res.json().catch(() => null)) as T | null;
     if (!res.ok) return { ok: false, status: res.status, message: polarMessage(res.status, body, token) };
     return { ok: true, status: res.status, body: body as T };

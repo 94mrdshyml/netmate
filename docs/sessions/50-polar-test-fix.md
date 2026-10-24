@@ -1,0 +1,6 @@
+# 50. Fix: "Test the connection" always failed (2026-10-24)
+- Branch / PR: fix/polar-test-connection. The owner saved a token and secret on `/hq/payments` and "Test the connection" failed.
+- Cause (mine, from session 49): the Polar client asked `fetch` for `redirect: "error"`. Cloudflare's fetch does not have that mode (only "follow" and "manual"), so every call was refused by the runtime before it left the server, and my code turned that into the message "Could not reach Polar". It would have failed with any token. My tests missed it because they replaced `fetch` with a fake that accepts anything.
+- Fix: `redirect: "manual"`, and any 3xx answer is refused with a plain message (the token is never sent on to another address). `src/payments/polar.ts`.
+- Tests: a new integration test builds a real `Request` in the Workers runtime from exactly what the client passes, so any setting that the real fetch refuses fails the test (I checked it fails with the old code and passes with the fix), and a test that a redirect is refused after one call.
+- Lesson for later steps: tests of code that calls an outside service must run the request through the real Workers `Request` as well as a fake `fetch`. Step 2 (checkout, webhooks) will do that for every Polar call.
