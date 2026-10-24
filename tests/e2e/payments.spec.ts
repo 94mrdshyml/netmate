@@ -10,9 +10,10 @@ const SECRET = `whsec_${"fakesecret".repeat(3)}`;
 
 test("the admin sets how payments are shared, and sees what it means in dollars", async ({ page }) => {
   await page.goto("/hq");
-  await page.getByRole("link", { name: "Payments" }).click();
-  await expect(page).toHaveURL(/\/hq\/payments$/);
-  await expect(page.getByRole("heading", { name: "Payments", level: 1 })).toBeVisible();
+  await page.getByRole("navigation", { name: "Admin" }).getByRole("link", { name: "Money" }).click();
+  await page.getByRole("navigation", { name: "Money" }).getByRole("link", { name: "Polar setup" }).click();
+  await expect(page).toHaveURL(/\/hq\/money\/setup$/);
+  await expect(page.getByRole("heading", { name: "Money", level: 1 })).toBeVisible();
 
   const box = page.getByLabel("Percent the member earns");
   await box.fill("55");
@@ -32,7 +33,7 @@ test("the admin sets how payments are shared, and sees what it means in dollars"
 });
 
 test("the Polar keys are saved locked, never shown again, and can be removed", async ({ page }) => {
-  await page.goto("/hq/payments");
+  await page.goto("/hq/money/setup");
   await expect(page.getByText("Not connected")).toBeVisible();
   // The webhook address is ours, ready to copy.
   await expect(page.getByLabel("Webhook address to give Polar")).toHaveValue(/\/api\/webhooks\/polar$/);
@@ -67,8 +68,8 @@ test("the Polar keys are saved locked, never shown again, and can be removed", a
 
 test("the page fits a phone, and the split goes back to its default", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/hq/payments");
-  await expect(page.getByRole("heading", { name: "Payments", level: 1 })).toBeVisible();
+  await page.goto("/hq/money/setup");
+  await expect(page.getByRole("heading", { name: "Money", level: 1 })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   for (const control of [page.getByLabel("Percent the member earns"), page.getByRole("button", { name: "Save", exact: true }).first()]) {
     expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44);

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { setPaymentsEnabledAction } from "../actions";
+import { setPaymentsEnabledAction } from "../../actions";
 
 /** The on and off switch for subscriptions. It saves as soon as it is pressed; turning it on needs the keys saved. */
 export function EnabledSwitch({ enabled, ready }: { enabled: boolean; ready: boolean }) {

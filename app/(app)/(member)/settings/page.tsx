@@ -22,7 +22,7 @@ const ROWS: Row[] = [
   { href: "/privacy", title: "Privacy", sub: "Private account, blocked and muted people", icon: "lock" },
 ];
 
-// Shown only while the owner has subscriptions switched on (/hq/payments).
+// Shown only while the owner has subscriptions switched on (/hq/money/setup).
 const SUBSCRIPTION_ROWS: Row[] = [
   { href: "/subscription", title: "Subscription price", sub: "Charge a monthly price for subscriber posts", icon: "credit-card" },
   { href: "/subscriptions", title: "Your subscriptions", sub: "The people you pay, and stopping a subscription", icon: "credit-card" },

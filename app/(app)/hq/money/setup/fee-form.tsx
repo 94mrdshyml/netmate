@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { savePolarFeeAction } from "../actions";
+import { savePolarFeeAction } from "../../actions";
 
-/** Polar's fee as it stands in the owner's Polar plan, used only for the owner's estimate on the Revenue page. */
+/** Polar's fee as it stands in the owner's Polar plan, used only for the owner's estimate on the Money overview. */
 export function FeeForm({ feeBp, feeFixedCents }: { feeBp: number; feeFixedCents: number }) {
   const router = useRouter();
   const [percent, setPercent] = useState((feeBp / 100).toFixed(2));

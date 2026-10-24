@@ -63,7 +63,7 @@ test.afterAll(async () => {
 test("the admin saves the Polar keys, turns subscriptions on and sets a price", async ({ page }) => {
   adminId = await userIdOn(page, E2E.admin.username);
 
-  await page.goto("/hq/payments");
+  await page.goto("/hq/money/setup");
   await page.getByLabel("Polar access token").fill(TOKEN);
   await page.getByLabel("Polar webhook secret").fill(SECRET);
   await page.getByRole("button", { name: "Save", exact: true }).first().click();
@@ -178,8 +178,8 @@ test("Polar's signed messages make a subscription, and unsigned ones do nothing"
 });
 
 test("the owner sees where the money went, records a payout, and can take it back", async ({ page }) => {
-  await page.goto("/hq/revenue");
-  await expect(page.getByRole("heading", { name: "Revenue", level: 1 })).toBeVisible();
+  await page.goto("/hq/money");
+  await expect(page.getByRole("heading", { name: "Money", level: 1 })).toBeVisible();
   await expect(page.getByText(/Test mode: these are practice payments/)).toBeVisible();
 
   // $5.00 collected, $0.75 tax, Polar's fee 4.50% of $4.25 (19 cents) plus 40 cents = $0.59, member $2.12, owner keeps $1.54.
@@ -197,7 +197,9 @@ test("the owner sees where the money went, records a payout, and can take it bac
   await expect(page.getByRole("img", { name: /^Collected each month:/ })).toBeVisible();
   await expect(page.getByRole("table").filter({ hasText: "Polar's fee" }).last()).toContainText("$5.00");
 
-  // A member with a balance has a payout form; asking for more than is owed is refused.
+  // A member with a balance has a payout form (on the Members and payouts tab); asking for more than is owed is refused.
+  await page.getByRole("navigation", { name: "Money" }).getByRole("link", { name: "Members and payouts" }).click();
+  await expect(page).toHaveURL(/\/hq\/money\/payouts$/);
   const row = page.getByRole("listitem").filter({ hasText: "Riya Sen" }).first();
   await expect(row).toContainText("$2.12 owed");
   await expect(row).toContainText("1 subscriber");
@@ -223,7 +225,7 @@ test("the owner sees where the money went, records a payout, and can take it bac
   await expect(page.getByRole("list", { name: "Paid to you" })).toContainText("Bank transfer, e2e");
 
   // Taking it back asks first, keeps the record, and gives the balance back.
-  await page.goto("/hq/revenue");
+  await page.goto("/hq/money/payouts");
   const payout = page.getByRole("list", { name: "Recorded payouts" }).getByRole("listitem").first();
   await payout.getByRole("button", { name: "Void" }).click();
   await payout.getByRole("button", { name: "Yes, void it" }).click();
@@ -234,8 +236,8 @@ test("the owner sees where the money went, records a payout, and can take it bac
 
   // Phone width.
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/hq/revenue");
-  await expect(page.getByRole("heading", { name: "Revenue", level: 1 })).toBeVisible();
+  await page.goto("/hq/money");
+  await expect(page.getByRole("heading", { name: "Money", level: 1 })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.setViewportSize({ width: 412, height: 915 });
 });
@@ -268,7 +270,7 @@ test("when Polar says it ended, the subscription is gone; then everything is put
   await page.getByRole("button", { name: "Stop offering" }).click();
   await expect(page.getByText(/Nobody new can subscribe/)).toBeVisible();
 
-  await page.goto("/hq/payments");
+  await page.goto("/hq/money/setup");
   await page.getByRole("switch", { name: "Members can offer subscriptions" }).click();
   await expect(page.getByText("Subscriptions are off.")).toBeVisible();
   await page.getByRole("button", { name: "Remove the keys" }).click();

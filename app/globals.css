@@ -2956,6 +2956,7 @@ a.quote-card:hover {
 }
 
 .hq-counts {
+  list-style: none;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
   gap: 8px 16px;
@@ -2964,17 +2965,20 @@ a.quote-card:hover {
   padding-top: 4px;
 }
 
-.hq-counts div {
+.hq-counts div,
+.hq-counts li {
   display: flex;
   flex-direction: column;
 }
 
-.hq-counts dt {
+.hq-counts dt,
+.hq-count-label {
   font-size: 0.8125rem;
   color: var(--muted);
 }
 
-.hq-counts dd {
+.hq-counts dd,
+.hq-counts strong {
   margin: 0;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -4005,4 +4009,396 @@ a.link-card:hover {
   font-size: 1.25rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* ---- Admin panel, round 2 (session 56): page tops with tabs, one toolbar for every list, quick search, tidier tables. All flat. ---- */
+
+.hq-page-top {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* The pages of one section, as tabs under the title. The current one has a short brand bar, like the tabs in the app. */
+.hq-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--line);
+}
+
+.hq-tabs a {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color 0.15s var(--ease);
+}
+
+.hq-tabs a:hover,
+.hq-tabs a[aria-current="page"] {
+  color: var(--fg);
+}
+
+.hq-tabs a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  bottom: -1px;
+  left: 14px;
+  height: 2px;
+  background: var(--brand);
+  border-radius: 2px 2px 0 0;
+}
+
+/* The bar above a list: the search on the left, the filter chips beside it. It carries its own padding because the list under it runs edge to edge. */
+.hq-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.hq-toolbar .hq-inline {
+  flex: 1 1 340px;
+}
+
+.hq-toolbar .hq-filters {
+  flex: none;
+  margin: 0;
+}
+
+.hq-toolbar .hq-inline-field {
+  flex: 1 1 220px;
+  max-width: 420px;
+}
+
+/* A smaller chip: still 44px to tap, but lighter on the page. */
+.hq-chip {
+  transition:
+    color 0.15s var(--ease),
+    border-color 0.15s var(--ease),
+    background-color 0.15s var(--ease);
+}
+
+.hq-chip:hover {
+  background: var(--surface);
+}
+
+.hq-chip[aria-current="true"] {
+  background: var(--brand-soft);
+}
+
+/* A person's row: the main numbers sit on the row, the rest fold away. */
+.hq-headline {
+  display: flex;
+  gap: 20px;
+  margin: 0;
+}
+
+.hq-headline div {
+  display: flex;
+  flex-direction: column;
+  min-width: 56px;
+}
+
+.hq-headline dt {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.hq-headline dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hq-details {
+  flex: 1 0 100%;
+}
+
+.hq-details summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.hq-details summary:hover {
+  color: var(--brand-text);
+}
+
+.hq-details[open] summary {
+  color: var(--fg);
+}
+
+/* Rows answer to the pointer, so a long list is easy to follow. */
+.hq-item {
+  transition: background-color 0.15s var(--ease);
+}
+
+.hq-item:hover {
+  background: var(--surface);
+}
+
+/* Tables: a header that stays put while the page scrolls inside its panel, quiet rules and a row that lights up. */
+.hq-table-wrap {
+  max-height: 560px;
+  overflow: auto;
+}
+
+.hq-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-block: 12px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.hq-table tbody tr {
+  transition: background-color 0.15s var(--ease);
+}
+
+.hq-table tbody tr:hover {
+  background: var(--surface);
+}
+
+.hq-table tbody tr:last-child th,
+.hq-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Number panels: the label on top, the figure big and steady. */
+.hq-stat-value {
+  font-size: 1.75rem;
+}
+
+/* Quick search: a button in the top strip that opens a small box with the pages in it. */
+.hq-search-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  color: var(--muted);
+  font: inherit;
+  background: var(--bg);
+  border: 1px solid var(--line-input);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    color 0.15s var(--ease),
+    background-color 0.15s var(--ease);
+}
+
+.hq-search-button:hover {
+  color: var(--fg);
+  background: var(--surface);
+}
+
+.hq-search-text {
+  min-width: 140px;
+  text-align: left;
+}
+
+.hq-kbd {
+  padding: 1px 7px;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  border: 1px solid var(--line-input);
+  border-radius: 6px;
+}
+
+.hq-cmd {
+  position: fixed;
+  top: 12vh;
+  width: min(560px, calc(100% - 32px));
+  max-height: 70dvh;
+  margin-inline: auto;
+  padding: 0;
+  overflow: hidden;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line-input);
+  border-radius: var(--radius);
+}
+
+.hq-cmd::backdrop {
+  background: color-mix(in srgb, var(--fg) 40%, transparent);
+}
+
+.hq-cmd-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 8px 0 16px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+
+.hq-cmd-box input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  color: var(--fg);
+  font: inherit;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.hq-cmd-list {
+  max-height: calc(70dvh - 57px);
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.hq-cmd-list a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 12px;
+  color: var(--fg);
+  text-decoration: none;
+  border-radius: var(--radius);
+}
+
+.hq-cmd-list a:hover,
+.hq-cmd-list a:focus-visible {
+  background: var(--surface-hover);
+  outline: 0;
+}
+
+.hq-cmd-list svg {
+  flex: none;
+  color: var(--muted);
+}
+
+.hq-cmd-label {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.hq-cmd-group {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.hq-cmd-empty {
+  padding: 16px 12px;
+  color: var(--muted);
+}
+
+@media (max-width: 899px) {
+  /* On a phone the search is just its icon, and the tabs reach the screen edge. */
+  .hq-search-text,
+  .hq-kbd {
+    display: none;
+  }
+
+  .hq-search-button {
+    justify-content: center;
+    width: 44px;
+    padding: 0;
+  }
+
+  .hq-tabs {
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+
+  .hq-headline {
+    flex: 1 0 100%;
+  }
+
+  .hq-toolbar {
+    padding: 12px 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hq-tabs a,
+  .hq-chip,
+  .hq-item,
+  .hq-table tbody tr,
+  .hq-search-button {
+    transition: none;
+  }
+}
+
+/* Round 2, second pass: spacing inside panels, field widths, the phone's number panels and breadcrumbs. */
+
+.hq-card-body:not(:has(> .hq-list)) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* A text box does not need the whole width of a wide panel. */
+.hq-card-body .field {
+  max-width: 640px;
+}
+
+.hq-cmd-box input[type="search"]::-webkit-search-cancel-button {
+  display: none;
+}
+
+.hq-crumbs {
+  min-width: 0;
+}
+
+.hq-crumbs ol {
+  flex-wrap: nowrap;
+}
+
+.hq-crumbs li {
+  white-space: nowrap;
+}
+
+@media (max-width: 899px) {
+  /* Four number panels in two columns instead of four tall ones. */
+  .hq-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .hq-stat {
+    padding: 14px;
+  }
+
+  .hq-stat-value {
+    font-size: 1.375rem;
+  }
+
+  .hq-stat-top .hq-tile {
+    display: none;
+  }
+
+  .hq-crumbs li:not(:first-child):not(:last-child) {
+    display: none;
+  }
 }
