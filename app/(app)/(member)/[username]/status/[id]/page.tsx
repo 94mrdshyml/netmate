@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
+import { getInstanceState } from "@/instance/request";
 import { currentTime } from "@/lib/time";
 import { readKlipyKey } from "@/server/gifs";
 import { getPost, listReplies } from "@/server/posts";
@@ -30,6 +31,7 @@ export default async function PostPage({
   const { cursor } = await searchParams;
   const { env } = await getCloudflareContext({ async: true });
   const db = getDb(env.DB);
+  const { settings } = await getInstanceState();
 
   const post = await getPost(db, member.userId, id);
   // A post that is missing, hidden or under a different username is simply not found.
@@ -49,6 +51,7 @@ export default async function PostPage({
           placeholder="Write your reply"
           submitLabel="Reply"
           gifKey={gifKey}
+          linkPreviews={settings.linkPreviewsEnabled}
           leading={<Avatar userId={member.userId} avatarKey={member.avatarKey} size={40} />}
         />
       </section>

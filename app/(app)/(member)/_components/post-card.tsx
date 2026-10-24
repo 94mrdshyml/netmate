@@ -4,6 +4,7 @@ import type { PostView } from "@/server/posts";
 import { Avatar } from "./avatar";
 import { Icon } from "./icon";
 import { BookmarkButton, LikeButton, PostMenu, RepostButton } from "./post-actions";
+import { LinkCardView } from "./link-card";
 import { PostBody } from "./post-body";
 import { PostGif } from "./post-gif";
 import { PostPhotos } from "./post-photos";
@@ -54,6 +55,7 @@ export function PostCard({
             <PostBody text={post.body} tags={post.tags} mentions={post.mentions} />
           </p>
         ) : null}
+        {post.link ? <LinkCardView card={post.link} /> : null}
         <PostPhotos keys={post.photos} name={name} />
         {post.gif ? <PostGif gif={post.gif} /> : null}
         {post.quote ? <QuoteCard quote={post.quote} now={now} /> : null}

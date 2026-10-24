@@ -21,6 +21,7 @@ export const LIMITS = {
   follows: { name: "follows", max: 30, windowMs: 10 * MINUTE },
   uploads: { name: "uploads", max: 30, windowMs: 10 * MINUTE },
   places: { name: "places", max: 40, windowMs: MINUTE },
+  linkPreviews: { name: "link-previews", max: 20, windowMs: 10 * MINUTE },
   testEmail: { name: "email:test", max: 5, windowMs: 60 * MINUTE },
   resetEmail: { name: "reset:email", max: 5, windowMs: 60 * MINUTE },
   resetIp: { name: "reset:ip", max: 20, windowMs: 60 * MINUTE },
@@ -109,6 +110,10 @@ export const limitFollow = (db: D1Database, salt: string, userId: string, now?: 
 /** Place suggestions (docs/PRD.md section 8.11): 40 a minute per person, so typing is free but a loop is not. */
 export const limitPlaces = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.places, userId, salt, now);
+
+/** Link previews (docs/PRD.md section 8.2): 20 page fetches per 10 minutes per person, since each one makes our server visit a stranger's site. */
+export const limitLinkPreview = (db: D1Database, salt: string, userId: string, now?: number) =>
+  takeSlot(db, LIMITS.linkPreviews, userId, salt, now);
 
 export const limitUpload = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.uploads, userId, salt, now);

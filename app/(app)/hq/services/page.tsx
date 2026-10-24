@@ -5,6 +5,7 @@ import { getInstanceState } from "@/instance/request";
 import { gifPanel } from "@/server/gifs";
 import { Card, PageHeader, Pill } from "../hq-ui";
 import { GifForm } from "./gif-form";
+import { LinkPreviewsSwitch } from "./link-previews-switch";
 import { PlacesSwitch } from "./places-switch";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,22 @@ export default async function ServicesPage() {
           Suggestions come from OpenStreetMap through the free Photon service. This server asks Photon, never your members&apos; phones, so
           Photon sees the words someone types but not who they are. Only towns, regions and countries are suggested, never streets. A place is
           plain text, never coordinates. If Photon is slow or down, members can still type the place themselves.
+        </p>
+      </Card>
+
+      <Card
+        id="links-heading"
+        icon="link"
+        title="Link previews"
+        description="A web address in a post gets a card with the page's picture, title and description."
+        aside={settings.linkPreviewsEnabled ? <Pill icon="check-circle">On</Pill> : <Pill>Off</Pill>}
+      >
+        <LinkPreviewsSwitch enabled={settings.linkPreviewsEnabled} />
+        <p className="hint">
+          When someone pastes a link, this server visits that page once, not anyone&apos;s phone, and keeps its title, description and
+          picture address with the post. The visit refuses private and internal addresses, follows at most three redirects, waits at most three
+          seconds and reads at most 512 KB. The one catch: the card&apos;s picture is loaded by each reader&apos;s own phone from the linked site, with no
+          referrer, so that site can see the reader&apos;s address. Nothing else is shared. Members get 20 previews every 10 minutes.
         </p>
       </Card>
 

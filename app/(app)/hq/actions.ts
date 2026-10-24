@@ -13,7 +13,7 @@ import { saveBrandingForm, type BrandingResult } from "@/instance/branding";
 import { clearInstanceCache } from "@/instance/settings";
 import { isId } from "@/lib/ids";
 import { removeKlipyKey, saveKlipyKey, type SaveKlipyResult } from "@/server/gifs";
-import { approvePending, regenerateInvite, rejectPending, setInviteQuota, setPlacesEnabled } from "@/server/admin";
+import { approvePending, regenerateInvite, rejectPending, setInviteQuota, setLinkPreviewsEnabled, setPlacesEnabled } from "@/server/admin";
 import { emailApproved, emailRejected, pendingContact } from "@/server/status-emails";
 import { mailContext } from "@/server/mail-context";
 
@@ -173,4 +173,17 @@ export async function removeKlipyKeyAction(): Promise<{ ok: boolean }> {
     revalidatePath("/compose");
   }
   return { ok };
+}
+
+/** Turns link previews on or off. Clears the settings cache so the composer follows at once. */
+export async function saveLinkPreviewsAction(wanted: unknown): Promise<ServicesResult> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await setLinkPreviewsEnabled(getDb(env.DB), wanted);
+  if (result.ok) {
+    clearInstanceCache();
+    revalidatePath("/hq/services");
+    revalidatePath("/compose");
+  }
+  return result;
 }

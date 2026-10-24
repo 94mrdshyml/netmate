@@ -6,6 +6,9 @@ import { redirect } from "next/navigation";
 import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
 import { readInstance } from "@/instance/settings";
+import { firstLink } from "@/lib/post-links";
+import type { LinkCard } from "@/links/fetch";
+import { verifyLinkCard } from "@/links/token";
 import { setBookmark } from "@/server/bookmarks";
 import { createPost, deletePost, setLike, setRepost } from "@/server/posts";
 import { limitLike, limitPost, limitRepost, limitSave, tooManyMessage } from "@/server/rate-limit";
@@ -28,12 +31,13 @@ const MESSAGES = {
   quote_and_reply: "A post can be a reply or a quote, not both.",
   quote_not_found: "That post is not available any more.",
   quote_private: "Posts from a private account cannot be quoted.",
+  bad_link: "That link preview could not be used. Remove it and try again.",
 } as const;
 
 export type CreatePostActionResult = { ok: true } | { ok: false; message: string };
 
 /** Posts (then goes Home), or replies when `parentId` is given (then stays, so the page can show the reply). */
-export async function createPostAction(input: { body: string; parentId?: string; photos?: string[]; place?: string; gif?: unknown; quote?: string }): Promise<CreatePostActionResult> {
+export async function createPostAction(input: { body: string; parentId?: string; photos?: string[]; place?: string; gif?: unknown; quote?: string; linkToken?: string }): Promise<CreatePostActionResult> {
   const member = await getMember();
   if (!member) redirect("/sign-in");
   const { env } = await getCloudflareContext({ async: true });
@@ -53,7 +57,28 @@ export async function createPostAction(input: { body: string; parentId?: string;
   // A GIF is only taken while the admin has GIF search on. The address itself is checked in createPost.
   if (input?.gif != null && !(await readInstance(getDb(env.DB))).settings.gifsEnabled) return { ok: false, message: MESSAGES.gif_off };
 
-  const result = await createPost(getDb(env.DB), member.userId, input?.body, input?.parentId, photos, input?.place, input?.gif, typeof input?.quote === "string" ? input.quote : undefined);
+  // A link card travels as a signed token from the preview route. It is used only if it is ours, for this member, not
+  // expired, previews are still on, and it still fits the post (its address is the first one in the words, and there are no
+  // pictures, GIF or quote). Otherwise the post is made without it; it never fails because of a card.
+  let link: LinkCard | null = null;
+  if (typeof input?.linkToken === "string" && photos.length === 0 && input?.gif == null && typeof input?.quote !== "string") {
+    if ((await readInstance(getDb(env.DB))).settings.linkPreviewsEnabled) {
+      const card = await verifyLinkCard(input.linkToken, member.userId, env.AUTH_SECRET);
+      if (card && typeof input.body === "string" && firstLink(input.body) === card.url) link = card;
+    }
+  }
+
+  const result = await createPost(
+    getDb(env.DB),
+    member.userId,
+    input?.body,
+    input?.parentId,
+    photos,
+    input?.place,
+    input?.gif,
+    typeof input?.quote === "string" ? input.quote : undefined,
+    link ?? undefined,
+  );
   if (!result.ok) return { ok: false, message: MESSAGES[result.code] };
 
   revalidatePath("/");

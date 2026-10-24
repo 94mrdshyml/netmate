@@ -7,6 +7,8 @@ import { POST_MAX, countCharacters } from "@/lib/post-text";
 import { createPostAction } from "../posts/actions";
 import { GifPicker } from "./gif-picker";
 import { Icon } from "./icon";
+import { LinkCardView } from "./link-card";
+import { useLinkPreview } from "./use-link-preview";
 import { PlacePicker } from "./place-picker";
 
 const PHOTO_MAX = 4;
@@ -49,6 +51,7 @@ export function Composer({
   gifKey = null,
   quoteId,
   quoteCard,
+  linkPreviews = false,
 }: {
   parentId?: string;
   placeholder?: string;
@@ -63,6 +66,8 @@ export function Composer({
   /** Quoting this post: its card sits under the text. A quote may carry its own pictures or GIF like any post. */
   quoteId?: string;
   quoteCard?: ReactNode;
+  /** Show a card for the first web address in the words (the admin has link previews on). Not with pictures, a GIF or a quote. */
+  linkPreviews?: boolean;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -87,7 +92,9 @@ export function Composer({
   const failed = photos.some((p) => p.error !== null);
   const hasWords = text.trim().length > 0;
   const hasPhotos = photos.length > 0;
-  const blocked = pending || uploading || failed || (!hasWords && !hasPhotos && !gif && !quoteId) || used > POST_MAX;
+  const preview = useLinkPreview(text, linkPreviews && !hasPhotos && !gif && !quoteId);
+  // The Post button waits a moment for a card that is on its way (it is a few seconds at most), so a quick post is not left without one.
+  const blocked = pending || uploading || failed || preview.loading || (!hasWords && !hasPhotos && !gif && !quoteId) || used > POST_MAX;
 
   async function addPhotos(files: FileList | null) {
     const room = PHOTO_MAX - photos.length;
@@ -135,6 +142,7 @@ export function Composer({
             place: place ?? undefined,
             gif: gif ?? undefined,
             quote: quoteId,
+            linkToken: preview.card ? (preview.token ?? undefined) : undefined,
           });
           if (result.ok) {
             // A reply stays on the page: clear the box and show it. (A new post goes Home instead.)
@@ -143,6 +151,7 @@ export function Composer({
             setPhotos([]);
             setPlace(null);
             setGif(null);
+            preview.reset();
             router.refresh();
           } else {
             setError(result.message);
@@ -170,6 +179,18 @@ export function Composer({
             rows={parentId ? 2 : 6}
             autoFocus={autoFocus}
           />
+          {preview.loading ? (
+            <p className="link-card-wait" role="status">
+              Getting a preview of the link
+            </p>
+          ) : null}
+          {preview.card ? (
+            <LinkCardView card={preview.card} plain>
+              <button type="button" className="composer-photo-remove" aria-label="Remove link preview" onClick={preview.dismiss}>
+                <Icon name="x" size={16} />
+              </button>
+            </LinkCardView>
+          ) : null}
           {hasPhotos ? (
             <ul className={`composer-photos n${photos.length}`} aria-label="Pictures in this post">
               {photos.map((p, i) => (
