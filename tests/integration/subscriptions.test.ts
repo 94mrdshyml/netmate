@@ -460,7 +460,7 @@ describe("subscribing", () => {
   }
   const go = (viewerId: string, creatorId: unknown) => startCheckout(db(), KEY, { subscriberId: viewerId, creatorId, siteName: "Green Valley", origin: ORIGIN });
 
-  it("makes the member's product once, then a checkout that carries only our ids and no email", async () => {
+  it("makes the member's product once, then a checkout filled in with the subscriber's own name and email and carrying our ids", async () => {
     const { creator, viewer } = await pair("5.50");
     const calls = fakePolar();
     expect(await go(viewer.id, creator.id)).toEqual({ ok: true, url: "https://sandbox.polar.sh/checkout/abc" });
@@ -480,10 +480,14 @@ describe("subscribing", () => {
       success_url: `${ORIGIN}/subscribe/done?creator=${creator.username}&checkout_id={CHECKOUT_ID}`,
       return_url: `${ORIGIN}/${creator.username}`,
     });
-    const sent = JSON.stringify(calls.map((c) => c.body));
-    expect(sent).not.toContain("example.com");
-    expect(sent).not.toContain("customer_email");
-    expect(sent).not.toContain("Person"); // no names
+    // Polar's page opens filled in with the subscriber's own details, so they can check them and change them there.
+    expect(calls[1]?.body).toMatchObject({ customer_name: expect.stringMatching(/^Sub\d+ Person$/), customer_email: expect.stringMatching(/^sb\d+@example\.com$/) });
+    expect(calls[1]?.body?.customer_email).toBe((await env.DB.prepare("select email from user where id = ?").bind(viewer.id).first<{ email: string }>())?.email);
+    // Nothing about the creator beyond their id goes to Polar, and nothing is sent when making the product.
+    const creatorEmail = (await env.DB.prepare("select email from user where id = ?").bind(creator.id).first<{ email: string }>())?.email;
+    expect(JSON.stringify(calls.map((c) => c.body))).not.toContain(creatorEmail);
+    expect(JSON.stringify(calls[0]?.body)).not.toContain("customer");
+    expect(JSON.stringify(calls[0]?.body)).not.toContain(viewer.id);
 
     // A second subscriber reuses the product.
     const other = await person();

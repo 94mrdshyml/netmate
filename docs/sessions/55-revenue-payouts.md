@@ -6,5 +6,5 @@
 - Migration 0022 (hand-written, forward-only): `payouts` table, new payment and settings columns with checks, backfill for rows that already exist, and a clean-up that makes every stored share a whole number.
 - Bug found by the tests: dividing bound numbers in SQL gave 357.5 cents (D1 can bind a JS number as a decimal). Every share and fee calculation in SQL now casts to an integer.
 - Tests: unit (fee, percent and dollar parsing), integration (revenue ledger, refunds, mode isolation, atomic payouts, voiding, member earnings; payments and subscriptions updated), e2e (owner sees the split, records and voids a payout; creator sees subscribers and earnings). Checked the screens at 1280px and phone width.
-- Not done / notes: payouts are recorded by hand (no payout automation yet). Merge PR for the checkout pre-fill first; the two touch the same docs lines but not the same code.
+- Not done / notes: payouts are recorded by hand (no payout automation yet). The checkout pre-fill (PR 76) is already merged.
 - Next: step 3, subscriber-only posts (only on the owner's go). Owner should run one real sandbox Subscribe after the tax-inclusive deploy and check the revenue page against Polar's dashboard.
