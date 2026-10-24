@@ -15,7 +15,7 @@ const ts = String(NOW / 1000);
 const body = JSON.stringify({ type: "order.paid", data: { id: "x" } });
 const raw = crypto.getRandomValues(new Uint8Array(24));
 const newStyle = `whsec_${b64(raw)}`; // the key is the decoded part after the prefix
-const oldStyle = "whsec_thisIsAnOlderStyleSecretThatIsNotBase64!";
+const oldStyle = `whsec_${"older style!".repeat(3)}`; // not base64, so only the plain bytes can be its key
 
 describe("verifyWebhook", () => {
   it("accepts a newer secret, signed with the decoded key", async () => {
@@ -86,7 +86,7 @@ describe("polarMessage", () => {
   });
 
   it("never repeats the token, and keeps it short", () => {
-    const token = "polar_oat_SECRETSECRETSECRET";
+    const token = `polar_oat_${"secret".repeat(3)}`;
     const text = polarMessage(400, { detail: `token ${token} is wrong ${"x".repeat(500)}` }, token);
     expect(text).not.toContain(token);
     expect(text).toContain("[removed]");

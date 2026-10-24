@@ -6,8 +6,9 @@ import { paymentPanel, readAccess, readPaymentSettings, removePaymentKeys, saveP
 
 const db = () => getDb(env.DB);
 const KEY = "k".repeat(40);
-const TOKEN = "polar_oat_AbCdEfGhIjKlMnOpQrStUvWx";
-const SECRET = "whsec_ZmFrZXNlY3JldGZvcnRlc3RzMTIzNDU2Nzg5MA==";
+// Made-up keys, built from repeated words so that no key-shaped text sits in the file (the secret scan would flag it).
+const TOKEN = `polar_oat_${"faketoken".repeat(3)}`;
+const SECRET = `whsec_${"fakesecret".repeat(3)}`;
 const rows = async () => (await env.DB.prepare("select name, value from instance_secrets where name like 'polar_%' order by name").all<{ name: string; value: string }>()).results;
 
 afterEach(async () => {
@@ -44,7 +45,7 @@ describe("the Polar connection", () => {
     expect(await savePaymentConnection(db(), KEY, { mode: "production", accessToken: "", webhookSecret: "  " })).toEqual({ ok: true });
     expect(await readAccess(db(), KEY)).toEqual({ mode: "production", token: TOKEN, webhookSecret: SECRET });
 
-    const newer = "polar_oat_ZzZzZzZzZzZzZzZzZzZzZzZz";
+    const newer = `polar_oat_${"newertoken".repeat(3)}`;
     await savePaymentConnection(db(), KEY, { mode: "production", accessToken: newer });
     expect(await readAccess(db(), KEY)).toEqual({ mode: "production", token: newer, webhookSecret: SECRET });
   });
