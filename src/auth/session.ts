@@ -16,6 +16,8 @@ export type Member = {
   lastName: string;
   avatarKey: string | null;
   role: "admin" | "member";
+  /** Made a moderator by the admin. Never true for the admin. */
+  moderator: boolean;
 };
 
 /** The active member behind this request's session cookie, or null. A Pending account is never a member. */
@@ -37,5 +39,6 @@ export async function getMember(): Promise<Member | null> {
     lastName: profile.lastName,
     avatarKey: profile.avatarKey,
     role: profile.role as Member["role"],
+    moderator: profile.role !== "admin" && profile.isModerator,
   };
 }

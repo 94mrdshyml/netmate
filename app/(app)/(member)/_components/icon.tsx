@@ -199,6 +199,13 @@ const PATHS = {
       <rect x="3" y="14" width="7" height="7" />
     </>
   ),
+  "bar-chart": (
+    <>
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </>
+  ),
   droplet: <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />,
   mail: (
     <>

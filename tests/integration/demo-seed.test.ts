@@ -25,7 +25,8 @@ let result: Awaited<ReturnType<typeof seedDemo>>;
 const run = (now = NOW) =>
   seedDemo({ db: db(), d1: env.DB, media: env.MEDIA, hash: async (p) => (await auth().$context).password.hash(p), password: DEMO_PASSWORD, now });
 
-describe("the demo seed", () => {
+// Seeding makes about a thousand database calls, so on a busy machine it can pass the default 5 seconds.
+describe("the demo seed", { timeout: 60_000 }, () => {
   it("needs an admin first, and says so", async () => {
     await expect(run(NOW)).rejects.toThrow(/Finish \/setup first/);
     expect(await count("select count(*) as n from user")).toBe(0);

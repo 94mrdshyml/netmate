@@ -97,7 +97,7 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
    - Readers' browsers make no request to third parties by default. Fonts, avatars and icons are self-hosted. Only GIF search (if enabled) and link-preview pictures reach outside.
 3. **Setup and admin.**
    - `/setup` is one-time and atomic: admin, settings and the configured flag are written together or not at all. Once configured it returns 404 for ever. It requires `SETUP_TOKEN` when that decision is on.
-   - `/hq` and its actions check the admin role on the server every time. A non-admin gets 404, not 403.
+   - `/hq` and its actions check the admin role on the server every time. A non-admin gets 404, not 403. One exception, decided by the owner (session 46): `/hq/members` and `/hq/stats` also open for a moderator (a member the admin has flagged), without emails and without any button that changes anything. Every other `/hq` page and action stays admin-only.
    - Secrets (Resend key, Klipy key) are encrypted in D1 with `SETTINGS_ENCRYPTION_KEY`, are never shown back in `/hq` after saving, and are never logged. The Resend key never goes to any browser. The one exception is the Klipy key (owner decision, session 34): Klipy puts the key in the address of every search and requires searches to come from the member's own browser, so while GIF search is on, signed-in members' browsers are given that key (and only that key). It is never logged, never emailed and never sent to a signed-out visitor.
 4. **One visibility rule.** `visibleTo` decides who sees what. Every list of posts, the post page, replies, quotes, bookmarks, the feed, search, notifications and analytics recording use it. Never re-implement it.
 5. **Every server action checks the session itself.** Never trust a user id from the client.
@@ -123,7 +123,7 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 ## Conventions
 
 - **IDs:** Stripe-style, `{prefix}_{24 base62 chars}` such as `usr_3kT9xQ0mYb7LpA2vNc8RzEd1`, made only by `newId()` in `src/lib/ids.ts` (never `crypto.randomUUID()`). Add the prefix to `ID_PREFIXES` in the same change that adds a table, and to the table in `docs/PRD.md` section 10. Better Auth gets its ids from the same function and throws for a model with no prefix. Times are integer milliseconds UTC. Yes/no is 0/1. Enums are text with a check. Feed cursors are `(milliseconds, id)`.
-- **Roles:** Admin (one at setup), Member, Pending (cannot sign in). Another member's private resource returns 404, never 403.
+- **Roles:** Admin (exactly one, made at setup), Member, Pending (cannot sign in). A Moderator is a Member with a flag set by the admin, never a second admin. Another member's private resource returns 404, never 403.
 - **Validation:** Zod at every boundary. Verify webhook signatures and make handlers idempotent.
 - **Error handling:** handle failures at every I/O boundary (D1, R2, Resend, fetch). Skip handling only for truly impossible states.
 - **UI:** follow `DESIGN.md`. Flat, no shadows or gradients. One brand colour, used sparingly. Feather icons only. No emoji and no em dashes in interface text. Tap targets at least 44px, safe areas respected. Plain-English copy. Zeros show as zeros, "new" is never a percentage.

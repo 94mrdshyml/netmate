@@ -358,14 +358,14 @@ test("a new link replaces a leaked one at once", async ({ page, browser }) => {
 });
 
 test("only the admin can open /hq, and everyone else gets a plain not found", async ({ browser }) => {
-  for (const path of ["/hq", "/hq/approvals", "/hq/invites"]) {
+  for (const path of ["/hq", "/hq/approvals", "/hq/invites", "/hq/members", "/hq/stats"]) {
     const asMember = await memberPage.goto(path);
     expect(asMember?.status(), `member ${path}`).toBe(404);
   }
 
   const anonymous = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const page = await anonymous.newPage();
-  for (const path of ["/hq", "/hq/approvals", "/hq/invites"]) {
+  for (const path of ["/hq", "/hq/approvals", "/hq/invites", "/hq/members", "/hq/stats"]) {
     const res = await page.goto(path);
     expect(res?.status(), `signed out ${path}`).toBe(404);
   }
@@ -374,6 +374,7 @@ test("only the admin can open /hq, and everyone else gets a plain not found", as
   // Only the admin has the Settings row.
   await memberPage.goto("/settings");
   await expect(memberPage.getByRole("link", { name: "Admin panel" })).toHaveCount(0);
+  await expect(memberPage.getByRole("link", { name: "Moderation" })).toHaveCount(0);
 });
 
 test("the admin has an Admin panel row in Settings, and the panel is usable on a phone", async ({ page }) => {
@@ -386,4 +387,49 @@ test("the admin has an Admin panel row in Settings, and the panel is usable on a
   await page.goto("/hq/invites");
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(overflow).toBe(false);
+});
+
+test("the admin makes a member a moderator, who gets the members list and the numbers and nothing else, and it can be taken back", async ({ page }) => {
+  await page.goto("/hq/members");
+  await page.getByLabel("Search members").fill("Hosta");
+  await page.getByRole("button", { name: "Search" }).click();
+  const row = page.getByRole("listitem").filter({ hasText: memberName });
+  await expect(row).toBeVisible();
+  // The admin sees the email and the person's numbers.
+  await expect(row).toContainText("@example.com");
+  await expect(row.locator("dl")).toContainText("Likes received");
+  await row.getByRole("button", { name: `Make ${memberName} a moderator` }).click();
+  await expect(row.getByText("Moderator", { exact: true })).toBeVisible();
+
+  try {
+    await memberPage.setViewportSize({ width: 412, height: 915 });
+    await memberPage.goto("/settings");
+    await memberPage.getByRole("link", { name: "Moderation" }).click();
+    await expect(memberPage).toHaveURL(/\/hq\/members$/);
+    await expect(memberPage.getByRole("heading", { name: "Members", level: 1 })).toBeVisible();
+    // A moderator sees no email addresses and has no buttons to make moderators.
+    await expect(memberPage.getByText(/@example\.com/)).toHaveCount(0);
+    await expect(memberPage.getByRole("button", { name: /moderator/i })).toHaveCount(0);
+    // Measured against the phone's real width, not the page's own idea of it.
+    expect(await memberPage.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(412);
+    expect((await memberPage.goto("/hq/stats"))?.status()).toBe(200);
+    await expect(memberPage.getByRole("heading", { name: "Activity", level: 1 })).toBeVisible();
+    // /hq itself leads a moderator to the list, and every other admin page is still not found.
+    await memberPage.goto("/hq");
+    await expect(memberPage).toHaveURL(/\/hq\/members$/);
+    for (const path of ["/hq/approvals", "/hq/invites", "/hq/branding", "/hq/email", "/hq/services"]) {
+      expect((await memberPage.goto(path))?.status(), path).toBe(404);
+    }
+  } finally {
+    await page.goto("/hq/members");
+    await page.getByLabel("Search members").fill("Hosta");
+    await page.getByRole("button", { name: "Search" }).click();
+    await row.getByRole("button", { name: `Remove ${memberName} as a moderator` }).click();
+    await expect(row.getByRole("button", { name: `Make ${memberName} a moderator` })).toBeVisible();
+  }
+
+  // Taken back: the member is an ordinary member again.
+  expect((await memberPage.goto("/hq/members"))?.status()).toBe(404);
+  await memberPage.goto("/settings");
+  await expect(memberPage.getByRole("link", { name: "Moderation" })).toHaveCount(0);
 });

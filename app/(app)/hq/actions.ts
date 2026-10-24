@@ -13,6 +13,7 @@ import { saveBrandingForm, type BrandingResult } from "@/instance/branding";
 import { clearInstanceCache } from "@/instance/settings";
 import { DEMO_STEPS, removeDemo, runDemoStep, type Removed } from "@/demo/seed";
 import { isId } from "@/lib/ids";
+import { setModerator } from "@/server/members";
 import { removeKlipyKey, saveKlipyKey, type SaveKlipyResult } from "@/server/gifs";
 import { approvePending, regenerateInvite, rejectPending, setInviteQuota, setLinkPreviewsEnabled, setPlacesEnabled } from "@/server/admin";
 import { emailApproved, emailRejected, pendingContact } from "@/server/status-emails";
@@ -237,4 +238,14 @@ export async function removeDemoAction(): Promise<RemoveDemoResult> {
     console.error("removing demo data failed", error instanceof Error ? error.message : "unknown error");
     return { ok: false, message: "Something went wrong and the demo data may be only partly removed. Press the button again." };
   }
+}
+
+// ---- Moderators (owner decision, session 46): only the admin makes or removes one. ----
+
+/** Makes a member a moderator (`wanted` is "1") or takes it back. Sending the same thing twice changes nothing. */
+export async function setModeratorAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  await setModerator(getDb(env.DB), String(formData.get("userId") ?? ""), formData.get("wanted") === "1");
+  revalidatePath("/hq/members");
 }

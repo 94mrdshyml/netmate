@@ -77,6 +77,11 @@ export const profiles = sqliteTable(
     bannerKey: text("banner_key"),
     role: text("role").notNull().default("member"),
     status: text("status").notNull().default("active"),
+    /**
+     * A member the admin made a moderator (owner decision, session 46). The role stays "member", so the
+     * one-admin rule is untouched. 0 or 1 (a CHECK added by hand in migration 0016, as drizzle would rebuild the table).
+     */
+    isModerator: integer("is_moderator", { mode: "boolean" }).notNull().default(false),
     /** Who invited this person. Kept as null if that person is deleted. */
     invitedBy: text("invited_by").references(() => user.id, { onDelete: "set null" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
