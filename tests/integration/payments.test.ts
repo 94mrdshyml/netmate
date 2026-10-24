@@ -19,8 +19,8 @@ afterEach(async () => {
 
 describe("the Polar connection", () => {
   it("starts with nothing saved and test mode", async () => {
-    expect(await readPaymentSettings(db())).toEqual({ mode: "sandbox", creatorPercent: 50 });
-    expect(await paymentPanel(db(), KEY)).toEqual({ mode: "sandbox", creatorPercent: 50, hasToken: false, hasWebhookSecret: false, readable: true });
+    expect(await readPaymentSettings(db())).toEqual({ enabled: false, mode: "sandbox", creatorPercent: 50 });
+    expect(await paymentPanel(db(), KEY)).toEqual({ enabled: false, mode: "sandbox", creatorPercent: 50, hasToken: false, hasWebhookSecret: false, readable: true });
     expect(await readAccess(db(), KEY)).toBeNull();
   });
 
@@ -35,7 +35,7 @@ describe("the Polar connection", () => {
       expect(r.value).not.toContain(SECRET);
     }
     const panel = await paymentPanel(db(), KEY);
-    expect(panel).toEqual({ mode: "production", creatorPercent: 50, hasToken: true, hasWebhookSecret: true, readable: true });
+    expect(panel).toEqual({ enabled: false, mode: "production", creatorPercent: 50, hasToken: true, hasWebhookSecret: true, readable: true });
     expect(JSON.stringify(panel)).not.toContain(TOKEN);
     expect(await readAccess(db(), KEY)).toEqual({ mode: "production", token: TOKEN, webhookSecret: SECRET });
   });
@@ -103,7 +103,7 @@ describe("the split", () => {
     await savePaymentConnection(db(), KEY, { mode: "production" });
     for (const [input, percent] of [["55", 55], [" 0 ", 0], ["100", 100], [45, 45]] as const) {
       expect(await savePaymentSplit(db(), input)).toEqual({ ok: true });
-      expect(await readPaymentSettings(db())).toEqual({ mode: "production", creatorPercent: percent });
+      expect(await readPaymentSettings(db())).toEqual({ enabled: false, mode: "production", creatorPercent: percent });
     }
   });
 

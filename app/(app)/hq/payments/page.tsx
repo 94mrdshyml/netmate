@@ -8,6 +8,7 @@ import { siteOrigin } from "@/server/origin";
 import { CopyButton } from "../copy-button";
 import { Card, PageHeader, Pill } from "../hq-ui";
 import { ConnectionForm } from "./connection-form";
+import { EnabledSwitch } from "./enabled-switch";
 import { SplitForm } from "./split-form";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +55,21 @@ export default async function PaymentsPage() {
             In Polar, open Settings, then Webhooks, add this address, tick the subscription, order and refund events, and paste the secret Polar shows you into the box above. Make the access token in Polar under Settings, then Developers, with the permissions for products, checkouts, subscriptions, orders and customers.
           </p>
         </div>
+      </Card>
+
+      <Card
+        id="switch-heading"
+        icon="credit-card"
+        title="Subscriptions"
+        description="Off until you turn it on. Members then see a Subscription price row in Settings, and a Subscribe button on profiles that have a price."
+        aside={panel.enabled ? <Pill icon="check-circle">On</Pill> : <Pill>Off</Pill>}
+      >
+        <EnabledSwitch enabled={panel.enabled} ready={connected && panel.readable} />
+        <p className="hint">
+          {panel.mode === "sandbox"
+            ? "You are in test mode: payments are practice ones and no real money moves. Switching between test and live turns subscriptions off, and the people who subscribed in test mode are not subscribers in live mode."
+            : "You are in live mode: real money moves. Switching between test and live turns subscriptions off."}
+        </p>
       </Card>
 
       <Card

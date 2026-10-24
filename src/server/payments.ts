@@ -3,7 +3,7 @@
 // never shown back in /hq and never go to a browser. Money from members goes to the owner's Polar account; this module
 // only holds the settings and checks the connection.
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { Db } from "@/db";
 import { instanceSecrets, paymentSettings } from "@/db/schema";
@@ -16,15 +16,15 @@ const WEBHOOK = "polar_webhook_secret";
 
 const NO_KEY = "This server cannot store keys safely yet. Ask whoever runs it to set SETTINGS_ENCRYPTION_KEY.";
 
-export type PaymentSettings = { mode: PolarMode; creatorPercent: number };
+export type PaymentSettings = { enabled: boolean; mode: PolarMode; creatorPercent: number };
 
-export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = { mode: "sandbox", creatorPercent: 50 };
+export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = { enabled: false, mode: "sandbox", creatorPercent: 50 };
 
 /** The saved settings, or the defaults when nothing has been saved. */
 export async function readPaymentSettings(db: Db): Promise<PaymentSettings> {
   const row = await db.select().from(paymentSettings).where(eq(paymentSettings.id, "singleton")).get();
   if (!row) return DEFAULT_PAYMENT_SETTINGS;
-  return { mode: isPolarMode(row.mode) ? row.mode : "sandbox", creatorPercent: row.creatorPercent };
+  return { enabled: row.enabled, mode: isPolarMode(row.mode) ? row.mode : "sandbox", creatorPercent: row.creatorPercent };
 }
 
 export type PaymentPanel = PaymentSettings & {
@@ -91,7 +91,11 @@ export async function savePaymentConnection(
       db
         .insert(paymentSettings)
         .values({ id: "singleton", mode: input.mode })
-        .onConflictDoUpdate({ target: paymentSettings.id, set: { mode: input.mode, updatedAt: new Date() } }),
+        // Changing between test and live turns subscriptions off: the owner switches them on again on purpose.
+        .onConflictDoUpdate({
+          target: paymentSettings.id,
+          set: { mode: input.mode, enabled: sql`case when ${paymentSettings.mode} = ${input.mode} then ${paymentSettings.enabled} else 0 end`, updatedAt: new Date() },
+        }),
     ];
     for (const [name, text] of [[TOKEN, token], [WEBHOOK, secret]] as const) {
       if (text === "") continue;
@@ -120,10 +124,29 @@ export async function savePaymentSplit(db: Db, creatorPercent: unknown): Promise
   return { ok: true };
 }
 
-/** Forgets the token and the webhook secret. */
+/** The owner's switch for the whole feature. Turning it on needs both keys saved and readable. */
+export async function setPaymentsEnabled(db: Db, encryptionKey: string | undefined, wanted: unknown): Promise<SaveResult> {
+  if (typeof wanted !== "boolean") return { ok: false, message: "Choose on or off." };
+  if (wanted && (await readAccess(db, encryptionKey)) === null) return { ok: false, message: "Save the access token and the webhook secret first." };
+  try {
+    await db
+      .insert(paymentSettings)
+      .values({ id: "singleton", enabled: wanted })
+      .onConflictDoUpdate({ target: paymentSettings.id, set: { enabled: wanted, updatedAt: new Date() } });
+  } catch {
+    return { ok: false, message: "Could not save. Try again." };
+  }
+  return { ok: true };
+}
+
+/** Forgets the token and the webhook secret, and turns subscriptions off (they cannot work without them). */
 export async function removePaymentKeys(db: Db): Promise<boolean> {
   try {
-    await db.batch([db.delete(instanceSecrets).where(eq(instanceSecrets.name, TOKEN)), db.delete(instanceSecrets).where(eq(instanceSecrets.name, WEBHOOK))]);
+    await db.batch([
+      db.delete(instanceSecrets).where(eq(instanceSecrets.name, TOKEN)),
+      db.delete(instanceSecrets).where(eq(instanceSecrets.name, WEBHOOK)),
+      db.update(paymentSettings).set({ enabled: false, updatedAt: new Date() }),
+    ]);
     return true;
   } catch {
     return false;

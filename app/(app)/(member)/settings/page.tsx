@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getMember } from "@/auth/session";
+import { getDb } from "@/db";
+import { readPaymentSettings } from "@/server/payments";
 import { signOutAction } from "../../sign-in/actions";
 import { Icon, type IconName } from "../_components/icon";
 import { PageHeader } from "../_components/page-header";
@@ -19,6 +22,12 @@ const ROWS: Row[] = [
   { href: "/privacy", title: "Privacy", sub: "Private account, blocked and muted people", icon: "lock" },
 ];
 
+// Shown only while the owner has subscriptions switched on (/hq/payments).
+const SUBSCRIPTION_ROWS: Row[] = [
+  { href: "/subscription", title: "Subscription price", sub: "Charge a monthly price for subscriber posts", icon: "credit-card" },
+  { href: "/subscriptions", title: "Your subscriptions", sub: "The people you pay, and stopping a subscription", icon: "credit-card" },
+];
+
 // Only the admin sees this row. /hq checks the role again on the server every time.
 const ADMIN_ROW: Row = { href: "/hq", title: "Admin panel", sub: "Approvals, invites and how this space looks", icon: "shield" };
 
@@ -30,13 +39,16 @@ const MODERATOR_ROW: Row = { href: "/hq/members", title: "Moderation", sub: "Mem
 export default async function SettingsPage() {
   const member = await getMember();
   if (!member) return null;
+  const { env } = await getCloudflareContext({ async: true });
+  const paying = (await readPaymentSettings(getDb(env.DB))).enabled;
+  const rows = paying ? [...ROWS.slice(0, 3), ...SUBSCRIPTION_ROWS, ...ROWS.slice(3)] : ROWS;
 
   return (
     <main className="column">
       <PageHeader title="Settings" back={{ href: "/", label: "Back to Home" }} centered />
 
       <ul className="settings-list" aria-label="Settings">
-        {(member.role === "admin" ? [...ROWS, ADMIN_ROW] : member.moderator ? [...ROWS, MODERATOR_ROW] : ROWS).map((row) => (
+        {(member.role === "admin" ? [...rows, ADMIN_ROW] : member.moderator ? [...rows, MODERATOR_ROW] : rows).map((row) => (
           <li key={row.href}>
             <Link href={row.href} className="srow">
               <span className="srow-icon">

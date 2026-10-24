@@ -84,6 +84,11 @@ export const profiles = sqliteTable(
      * one-admin rule is untouched. 0 or 1 (a CHECK added by hand in migration 0016, as drizzle would rebuild the table).
      */
     isModerator: integer("is_moderator", { mode: "boolean" }).notNull().default(false),
+    /**
+     * What this member charges a month, in US cents, or null when they offer no subscription (owner decision, session
+     * 49). $1.00 to $100.00; the database checks it (a CHECK added by hand in migration 0019, as drizzle would rebuild the table).
+     */
+    subscriptionPriceCents: integer("subscription_price_cents"),
     /** Who invited this person. Kept as null if that person is deleted. */
     invitedBy: text("invited_by").references(() => user.id, { onDelete: "set null" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
@@ -639,13 +644,122 @@ export const paymentSettings = sqliteTable(
   "payment_settings",
   {
     id: text("id").primaryKey().default("singleton"),
+    /** The owner's switch for the whole feature. Off until the keys are saved and the owner turns it on. */
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
     mode: text("mode").notNull().default("sandbox"),
     creatorPercent: integer("creator_percent").notNull().default(50),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
   },
   (t) => [
     check("payment_settings_singleton", sql`${t.id} = 'singleton'`),
+    check("payment_settings_enabled", sql`${t.enabled} in (0, 1)`),
     check("payment_settings_mode", sql`${t.mode} in ('sandbox', 'production')`),
     check("payment_settings_creator_percent", sql`${t.creatorPercent} between 0 and 100`),
+  ],
+);
+
+/** The states Polar gives a subscription. Only "active" and "trialing" give a subscriber access. */
+export const SUBSCRIPTION_STATUSES = ["incomplete", "incomplete_expired", "trialing", "active", "past_due", "canceled", "unpaid", "paused"] as const;
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
+
+/**
+ * The product Polar sells for one member at one price (docs/PRD.md, "Paid subscriptions"). Made when a member first
+ * has that price and a subscriber taps Subscribe; reused after that. `mode` keeps test (sandbox) products apart from
+ * live ones, because their ids mean nothing to the other.
+ */
+export const polarProducts = sqliteTable(
+  "polar_products",
+  {
+    mode: text("mode").notNull(),
+    creatorId: text("creator_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    priceCents: integer("price_cents").notNull(),
+    /** Polar's id for the product (a UUID). */
+    productId: text("product_id").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [
+    primaryKey({ columns: [t.mode, t.creatorId, t.priceCents] }),
+    check("polar_products_mode", sql`${t.mode} in ('sandbox', 'production')`),
+    check("polar_products_price", sql`${t.priceCents} between 100 and 10000`),
+  ],
+);
+
+/**
+ * One member's subscription to another, kept in step with Polar by its webhooks. Written only from a message whose
+ * signature checked out. `mode` is the Polar mode it was made in: a test (sandbox) subscription never gives access
+ * on a live site. `polarModifiedAt` is Polar's own "last changed" time, so a late older message cannot undo a newer one.
+ */
+export const subscriptions = sqliteTable(
+  "subscriptions",
+  {
+    id: text("id").primaryKey(),
+    polarId: text("polar_id").notNull().unique(),
+    mode: text("mode").notNull(),
+    subscriberId: text("subscriber_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    creatorId: text("creator_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    status: text("status").notNull(),
+    /** True once the subscriber has chosen to stop: access lasts until the period they paid for ends. */
+    cancelAtPeriodEnd: integer("cancel_at_period_end", { mode: "boolean" }).notNull().default(false),
+    /** The price in US cents at which this subscription renews. */
+    priceCents: integer("price_cents").notNull(),
+    currentPeriodEnd: integer("current_period_end", { mode: "timestamp_ms" }),
+    polarModifiedAt: integer("polar_modified_at").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [
+    check("subscriptions_mode", sql`${t.mode} in ('sandbox', 'production')`),
+    check("subscriptions_status", sql`${t.status} in ('incomplete', 'incomplete_expired', 'trialing', 'active', 'past_due', 'canceled', 'unpaid', 'paused')`),
+    check("subscriptions_not_self", sql`${t.subscriberId} <> ${t.creatorId}`),
+    check("subscriptions_price", sql`${t.priceCents} >= 0`),
+    // "Is this person subscribed to that one" is asked for every locked post, and "who has subscribed to me" for the counts.
+    index("subscriptions_pair_idx").on(t.subscriberId, t.creatorId, t.status),
+    index("subscriptions_creator_idx").on(t.creatorId, t.status),
+  ],
+);
+
+/**
+ * What one Polar payment earned the member it was for: one row per Polar order, worked out again from the order each
+ * time Polar sends it, so a repeated or late message changes nothing it should not. `splitPercent` is the percent in
+ * force when the first message arrived and never changes after, so changing the split affects only later payments.
+ * Amounts are US cents; `netCents` is the payment before tax.
+ */
+export const subscriptionPayments = sqliteTable(
+  "subscription_payments",
+  {
+    id: text("id").primaryKey(),
+    polarOrderId: text("polar_order_id").notNull().unique(),
+    subscriptionId: text("subscription_id")
+      .notNull()
+      .references(() => subscriptions.id, { onDelete: "cascade" }),
+    mode: text("mode").notNull(),
+    creatorId: text("creator_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    subscriberId: text("subscriber_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    netCents: integer("net_cents").notNull(),
+    refundedCents: integer("refunded_cents").notNull().default(0),
+    splitPercent: integer("split_percent").notNull(),
+    creatorCents: integer("creator_cents").notNull(),
+    paidAt: integer("paid_at", { mode: "timestamp_ms" }).notNull(),
+    polarModifiedAt: integer("polar_modified_at").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [
+    check("subscription_payments_mode", sql`${t.mode} in ('sandbox', 'production')`),
+    check("subscription_payments_amounts", sql`${t.netCents} >= 0 and ${t.refundedCents} >= 0`),
+    check("subscription_payments_split", sql`${t.splitPercent} between 0 and 100`),
+    // The member never earns more than was paid, or less than nothing.
+    check("subscription_payments_share", sql`${t.creatorCents} >= 0 and ${t.creatorCents} <= ${t.netCents}`),
+    index("subscription_payments_creator_idx").on(t.creatorId, t.mode, t.paidAt),
+    index("subscription_payments_subscription_idx").on(t.subscriptionId),
   ],
 );
