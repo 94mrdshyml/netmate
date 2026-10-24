@@ -170,6 +170,34 @@ describe("testing the connection", () => {
     expect(noScope.message).not.toContain(TOKEN);
   });
 
+  it("only sends a request that Cloudflare's own fetch accepts", async () => {
+    // A faked fetch hides settings the real one refuses (this once failed every call: "error" is not a redirect mode there).
+    // Building a real Request in the Workers runtime from exactly what we pass checks them.
+    await savePaymentConnection(db(), KEY, { mode: "sandbox", accessToken: TOKEN, webhookSecret: SECRET });
+    const seen: Request[] = [];
+    vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+      seen.push(new Request(url, init));
+      return new Response("{}", { status: 200 });
+    });
+    expect(await testPolar(db(), KEY)).toMatchObject({ ok: true });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.redirect).toBe("manual");
+    expect(seen[0]?.method).toBe("GET");
+    expect(seen[0]?.headers.get("authorization")).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("refuses a redirect instead of following it, and does not send the token on", async () => {
+    await savePaymentConnection(db(), KEY, { mode: "sandbox", accessToken: TOKEN, webhookSecret: SECRET });
+    let calls = 0;
+    vi.stubGlobal("fetch", async () => {
+      calls++;
+      return new Response(null, { status: 307, headers: { location: "https://elsewhere.example/steal" } });
+    });
+    const result = await testPolar(db(), KEY);
+    expect(result).toMatchObject({ ok: false, message: expect.stringContaining("sent us somewhere else") });
+    expect(calls).toBe(1);
+  });
+
   it("copes with Polar being unreachable", async () => {
     await savePaymentConnection(db(), KEY, { mode: "sandbox", accessToken: TOKEN, webhookSecret: SECRET });
     vi.stubGlobal("fetch", async () => {
