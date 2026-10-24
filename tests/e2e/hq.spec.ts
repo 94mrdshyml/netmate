@@ -1,4 +1,5 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { type Browser, type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { openSignUpForm, signUpMember } from "./helpers";
 
 // Serial: each step uses what the one before made. The invite quota is an instance setting other

@@ -15,6 +15,9 @@ jobs:
   dco:
     name: DCO sign-off
     runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.changes.outputs.code }}
+      heavy: ${{ steps.changes.outputs.heavy }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -25,9 +28,19 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
           REF: ${{ github.ref }}
         run: bash scripts/ci/check-dco.sh
+      # Decides which of the slow jobs below run (see the script). Cheap: it only looks at file names.
+      - id: changes
+        env:
+          BEFORE: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          REF: ${{ github.ref }}
+          EVENT: ${{ github.event_name }}
+        run: bash scripts/ci/changes.sh >> "$GITHUB_OUTPUT"
 
   verify:
     name: Typecheck, lint, unit and integration tests
+    needs: dco
+    if: needs.dco.outputs.heavy == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -46,6 +59,8 @@ jobs:
 
   build:
     name: Build for Workers
+    needs: dco
+    if: needs.dco.outputs.heavy == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -57,9 +72,17 @@ jobs:
           node-version: 24
       - run: bun install --frozen-lockfile
       - run: bun run build:cf
+      # Kept for the browser tests below, so the app is built once per run, not twice. The cache is saved when this
+      # job ends, and the browser job waits for it.
+      - uses: actions/cache/save@v6
+        with:
+          path: .open-next
+          key: open-next-${{ github.sha }}
 
   e2e:
     name: End to end (phone width)
+    needs: [dco, build]
+    if: needs.dco.outputs.heavy == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -82,7 +105,15 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
       - run: bunx playwright install chromium
         if: steps.browsers.outputs.cache-hit != 'true'
+      # The app the build job made. If it cannot be restored the tests build it themselves, as before.
+      - uses: actions/cache/restore@v6
+        id: app
+        with:
+          path: .open-next
+          key: open-next-${{ github.sha }}
       - run: bun run test:e2e
+        env:
+          E2E_SKIP_BUILD: ${{ steps.app.outputs.cache-hit == 'true' && '1' || '' }}
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -119,7 +150,9 @@ jobs:
 
   deploy:
     name: Deploy to Cloudflare
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # On main the slow checks are skipped (the pull request ran them), and a failure anywhere still stops the deploy.
+    # A change that only touches documentation is not deployed.
+    if: ${{ !cancelled() && !failure() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.dco.outputs.code == 'true' }}
     needs: [dco, verify, build, e2e, audit, secrets]
     runs-on: ubuntu-latest
     concurrency:

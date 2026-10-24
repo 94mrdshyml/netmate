@@ -1,4 +1,5 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { type Browser, type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { openSignUpForm, signUpMember } from "./helpers";
 
 // Serial: each step uses the members and state the one before made. Only Priya joins through the

@@ -128,6 +128,7 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 - **Error handling:** handle failures at every I/O boundary (D1, R2, Resend, fetch). Skip handling only for truly impossible states.
 - **UI:** follow `DESIGN.md`. Flat, no shadows or gradients. One brand colour, used sparingly. Feather icons only. No emoji and no em dashes in interface text. Tap targets at least 44px, safe areas respected. Plain-English copy. Zeros show as zeros, "new" is never a percentage.
 - **Dependencies:** ask before adding any package.
+- **CI minutes are limited** (the free 2000 a month ran out in session 46). Run every check locally first and push once per change, not once per fix; documentation-only pushes skip the slow jobs on their own. Never add a sleep or a wait for a rate limit to a browser test: give the test its own allowance (see `tests/e2e/fixtures.ts`).
 - **Git:** trunk-based. `main` is protected (PR, green CI, linear history, squash merge). Short-lived branches `feat/…`, `fix/…`, `docs/…`, `chore/…`. Conventional commits, also used for PR titles (GitHub builds release notes from merged PR titles). Sign off commits (`git commit -s`) for the DCO. Never use `--no-verify`.
 - **Docs:** if a change alters behaviour, update `docs/PRD.md` in the same PR.
 

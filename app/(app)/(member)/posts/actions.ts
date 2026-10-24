@@ -1,6 +1,7 @@
 "use server";
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getMember } from "@/auth/session";
@@ -11,7 +12,7 @@ import type { LinkCard } from "@/links/fetch";
 import { verifyLinkCard } from "@/links/token";
 import { setBookmark } from "@/server/bookmarks";
 import { createPost, deletePost, setLike, setRepost } from "@/server/posts";
-import { limitLike, limitPost, limitRepost, limitSave, tooManyMessage } from "@/server/rate-limit";
+import { limitLike, limitPost, limitRepost, limitSave, postSubject, tooManyMessage } from "@/server/rate-limit";
 import { isAttachable } from "@/storage/upload";
 
 // Every action checks the session itself and never trusts an id from the browser (CLAUDE.md rule 5).
@@ -42,7 +43,8 @@ export async function createPostAction(input: { body: string; parentId?: string;
   if (!member) redirect("/sign-in");
   const { env } = await getCloudflareContext({ async: true });
 
-  const limited = await limitPost(env.DB, env.AUTH_SECRET, member.userId);
+  const scope = env.ENV === "test" ? (await cookies()).get("e2e_scope")?.value : undefined;
+  const limited = await limitPost(env.DB, env.AUTH_SECRET, postSubject(env, member.userId, scope));
   if (!limited.ok) return { ok: false, message: tooManyMessage(limited.retryAfterSeconds) };
 
   // Each photo must still exist in storage, be this member's own and really be an image.

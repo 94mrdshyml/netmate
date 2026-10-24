@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { E2E } from "./constants";
 
 test("home renders at phone width with the instance name and reads the feed from D1", async ({ page }) => {

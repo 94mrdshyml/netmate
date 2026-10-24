@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { LIMITS, clientIp, limitSignIn, limitSignUp, pruneRateHits, takeSlot, tooManyMessage } from "@/server/rate-limit";
+import { LIMITS, clientIp, limitPost, limitSignIn, limitSignUp, postSubject, pruneRateHits, takeSlot, tooManyMessage } from "@/server/rate-limit";
 
 const SALT = "test-salt-for-rate-limits";
 const MIN = 60_000;
@@ -134,5 +134,48 @@ describe("helpers", () => {
 
     expect(removed).toBeGreaterThanOrEqual(1);
     expect(await hits("t:prune:%")).toBe(1);
+  });
+});
+
+describe("the post limit (10 a minute per person)", () => {
+  it("allows ten posts in a minute, refuses the eleventh with the wait, and lets the person back in when the minute is over", async () => {
+    const who = "usr_postlimit_user_aaaaaaaa";
+    for (let i = 0; i < 10; i++) expect(await limitPost(env.DB, SALT, who, T0 + i * 1000)).toEqual({ ok: true });
+    const refused = await limitPost(env.DB, SALT, who, T0 + 30_000);
+    expect(refused).toMatchObject({ ok: false });
+    expect(refused.ok === false && refused.retryAfterSeconds).toBeGreaterThan(0);
+    expect(refused.ok === false && refused.retryAfterSeconds).toBeLessThanOrEqual(60);
+    // Hammering does not extend the wait, and a minute after the first post there is room again.
+    expect(await limitPost(env.DB, SALT, who, T0 + 59_000)).toMatchObject({ ok: false });
+    expect(await limitPost(env.DB, SALT, who, T0 + MIN + 1)).toEqual({ ok: true });
+  });
+
+  it("counts each person apart", async () => {
+    for (let i = 0; i < 10; i++) await limitPost(env.DB, SALT, "usr_postlimit_user_bbbbbbbb", T0 + i);
+    expect(await limitPost(env.DB, SALT, "usr_postlimit_user_bbbbbbbb", T0 + 20)).toMatchObject({ ok: false });
+    expect(await limitPost(env.DB, SALT, "usr_postlimit_user_cccccccc", T0 + 20)).toEqual({ ok: true });
+  });
+});
+
+describe("a test's own posting allowance", () => {
+  const who = "usr_scope_user_aaaaaaaaaaaa";
+
+  it("splits one person's posts by scope, so two tests never share an allowance, but only when ENV is exactly test", async () => {
+    expect(postSubject({ ENV: "test" }, who, "abc-123")).toBe(`${who}:abc-123`);
+    for (let i = 0; i < 10; i++) await limitPost(env.DB, SALT, postSubject({ ENV: "test" }, who, "one"), T0 + i);
+    expect(await limitPost(env.DB, SALT, postSubject({ ENV: "test" }, who, "one"), T0 + 20)).toMatchObject({ ok: false });
+    expect(await limitPost(env.DB, SALT, postSubject({ ENV: "test" }, who, "two"), T0 + 20)).toEqual({ ok: true });
+  });
+
+  it("cannot be used on a real site: any other ENV, or no ENV, ignores the scope and counts the person", () => {
+    for (const real of [{}, { ENV: undefined }, { ENV: "" }, { ENV: "production" }, { ENV: "Test" }, { ENV: "TEST" }, { ENV: " test" }, { ENV: "test " }, { ENV: "testing" }]) {
+      expect(postSubject(real, who, "abc-123"), JSON.stringify(real)).toBe(who);
+    }
+  });
+
+  it("ignores a missing or odd scope, even in test mode", () => {
+    for (const scope of [undefined, null, "", "a b", "a/b", "a:b", "x".repeat(65), "<script>", "é"]) {
+      expect(postSubject({ ENV: "test" }, who, scope), String(scope)).toBe(who);
+    }
   });
 });
