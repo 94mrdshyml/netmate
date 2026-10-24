@@ -649,6 +649,13 @@ export const paymentSettings = sqliteTable(
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
     mode: text("mode").notNull().default("sandbox"),
     creatorPercent: integer("creator_percent").notNull().default(50),
+    /**
+     * Polar's own fee on a payment, used to estimate what the owner keeps: a percent in hundredths (450 is 4.50%) of the
+     * payment before tax, plus a fixed amount in US cents. Polar does not report its fee on each payment in a form we can
+     * rely on, so this is the owner's own entry from their Polar plan. Checked in migration 0022.
+     */
+    feeBp: integer("fee_bp").notNull().default(450),
+    feeFixedCents: integer("fee_fixed_cents").notNull().default(40),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
   },
   (t) => [
@@ -751,8 +758,16 @@ export const subscriptionPayments = sqliteTable(
     subscriberId: text("subscriber_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    /** What the subscriber paid, tax included (the price, since prices include tax). */
+    totalCents: integer("total_cents").notNull().default(0),
+    /** The tax in it, which Polar collects and pays on. */
+    taxCents: integer("tax_cents").notNull().default(0),
     netCents: integer("net_cents").notNull(),
     refundedCents: integer("refunded_cents").notNull().default(0),
+    /** The tax that went back with a refund. */
+    refundedTaxCents: integer("refunded_tax_cents").notNull().default(0),
+    /** Our estimate of Polar's fee on this payment, worked out once when it was first seen at the rate set then. */
+    feeCents: integer("fee_cents").notNull().default(0),
     splitPercent: integer("split_percent").notNull(),
     creatorCents: integer("creator_cents").notNull(),
     paidAt: integer("paid_at", { mode: "timestamp_ms" }).notNull(),
@@ -767,5 +782,33 @@ export const subscriptionPayments = sqliteTable(
     check("subscription_payments_share", sql`${t.creatorCents} >= 0 and ${t.creatorCents} <= ${t.netCents}`),
     index("subscription_payments_creator_idx").on(t.creatorId, t.mode, t.paidAt),
     index("subscription_payments_subscription_idx").on(t.subscriptionId),
+  ],
+);
+
+/**
+ * What the owner has paid out to a member, by hand for now (docs/PRD.md, "Paid subscriptions"). A mistake is voided, not
+ * deleted, so the record stays whole. `mode` keeps test (sandbox) payouts apart from live ones. A payout can never be
+ * recorded for more than the member is owed at that moment (the insert itself checks).
+ */
+export const payouts = sqliteTable(
+  "payouts",
+  {
+    id: text("id").primaryKey(),
+    creatorId: text("creator_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    mode: text("mode").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    note: text("note").notNull().default(""),
+    /** The admin who recorded it. */
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+    voidedAt: integer("voided_at", { mode: "timestamp_ms" }),
+  },
+  (t) => [
+    check("payouts_mode", sql`${t.mode} in ('sandbox', 'production')`),
+    check("payouts_amount", sql`${t.amountCents} between 1 and 100000000`),
+    check("payouts_note", sql`length(${t.note}) <= 200`),
+    index("payouts_creator_idx").on(t.creatorId, t.mode, t.createdAt),
   ],
 );

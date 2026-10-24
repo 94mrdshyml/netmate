@@ -7,7 +7,7 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { LIVE_SUBSCRIPTION_STATUSES, profiles, subscriptionPayments, subscriptions } from "@/db/schema";
 import { isId, newId } from "@/lib/ids";
-import { CURRENCY, creatorShareCents } from "@/lib/money";
+import { CURRENCY, creatorShareCents, polarFeeCents } from "@/lib/money";
 import { envelope, ORDER_EVENTS, orderData, PAID_STATUSES, PAYING_REASONS, subscriptionData, SUBSCRIPTION_EVENTS, type PolarSubscription } from "@/payments/events";
 import type { PolarMode } from "@/payments/polar";
 import { alertOnSubscribe } from "@/server/notifications";
@@ -76,11 +76,14 @@ async function saveSubscription(db: Db, mode: PolarMode, sub: PolarSubscription)
   return true;
 }
 
+/** The terms in force now. They are stored with a payment the first time it is seen and never changed after. */
+export type Terms = { splitPercent: number; feeBp: number; feeFixedCents: number };
+
 /**
- * Handles one verified message. `splitPercent` is the share in force now; it is stored with a payment the first time
- * the payment is seen and never changed after. Throws only for a database failure, so the route answers 500 and Polar sends it again.
+ * Handles one verified message. Throws only for a database failure, so the route answers 500 and Polar sends it again.
  */
-export async function handlePolarEvent(db: Db, mode: PolarMode, raw: unknown, splitPercent: number): Promise<EventOutcome> {
+export async function handlePolarEvent(db: Db, mode: PolarMode, raw: unknown, terms: Terms): Promise<EventOutcome> {
+  const splitPercent = terms.splitPercent;
   const outer = envelope.safeParse(raw);
   if (!outer.success) return ignored("bad_message");
   const { type, data } = outer.data;
@@ -119,8 +122,12 @@ export async function handlePolarEvent(db: Db, mode: PolarMode, raw: unknown, sp
         mode,
         creatorId: sub.creatorId,
         subscriberId: sub.subscriberId,
+        totalCents: order.total_amount,
+        taxCents: order.tax_amount,
         netCents: order.net_amount,
         refundedCents: order.refunded_amount,
+        refundedTaxCents: order.refunded_tax_amount,
+        feeCents: polarFeeCents(order.net_amount, terms.feeBp, terms.feeFixedCents),
         splitPercent,
         creatorCents: share,
         paidAt: new Date(order.created_at),
@@ -129,10 +136,15 @@ export async function handlePolarEvent(db: Db, mode: PolarMode, raw: unknown, sp
       .onConflictDoUpdate({
         target: subscriptionPayments.polarOrderId,
         set: {
+          // The fee and the percent stay as they were when the payment was first seen; what Polar can change is the amounts.
+          totalCents: order.total_amount,
+          taxCents: order.tax_amount,
           netCents: order.net_amount,
           refundedCents: order.refunded_amount,
+          refundedTaxCents: order.refunded_tax_amount,
           // The percent stored with the payment decides, not today's: the member's share of a refund is taken back at the rate it was earned.
-          creatorCents: sql`(max(0, ${order.net_amount} - ${order.refunded_amount}) * ${subscriptionPayments.splitPercent}) / 100`,
+          // cast(... as integer): the database divides with fractions when a number arrives as a decimal, and a cent is a whole number that rounds down.
+          creatorCents: sql`cast((max(0, ${order.net_amount} - ${order.refunded_amount}) * ${subscriptionPayments.splitPercent}) / 100 as integer)`,
           polarModifiedAt: modified,
           updatedAt: new Date(),
         },

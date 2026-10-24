@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "@/db";
 import { LIMITS, limitPolarTest } from "@/server/rate-limit";
-import { paymentPanel, readAccess, readPaymentSettings, removePaymentKeys, savePaymentConnection, savePaymentSplit, testPolar } from "@/server/payments";
+import { paymentPanel, readAccess, readPaymentSettings, removePaymentKeys, savePaymentConnection, savePaymentSplit, savePolarFee, testPolar } from "@/server/payments";
 
 const db = () => getDb(env.DB);
 const KEY = "k".repeat(40);
@@ -19,8 +19,8 @@ afterEach(async () => {
 
 describe("the Polar connection", () => {
   it("starts with nothing saved and test mode", async () => {
-    expect(await readPaymentSettings(db())).toEqual({ enabled: false, mode: "sandbox", creatorPercent: 50 });
-    expect(await paymentPanel(db(), KEY)).toEqual({ enabled: false, mode: "sandbox", creatorPercent: 50, hasToken: false, hasWebhookSecret: false, readable: true });
+    expect(await readPaymentSettings(db())).toEqual({ enabled: false, mode: "sandbox", creatorPercent: 50, feeBp: 450, feeFixedCents: 40 });
+    expect(await paymentPanel(db(), KEY)).toEqual({ enabled: false, mode: "sandbox", creatorPercent: 50, feeBp: 450, feeFixedCents: 40, hasToken: false, hasWebhookSecret: false, readable: true });
     expect(await readAccess(db(), KEY)).toBeNull();
   });
 
@@ -35,7 +35,7 @@ describe("the Polar connection", () => {
       expect(r.value).not.toContain(SECRET);
     }
     const panel = await paymentPanel(db(), KEY);
-    expect(panel).toEqual({ enabled: false, mode: "production", creatorPercent: 50, hasToken: true, hasWebhookSecret: true, readable: true });
+    expect(panel).toEqual({ enabled: false, mode: "production", creatorPercent: 50, feeBp: 450, feeFixedCents: 40, hasToken: true, hasWebhookSecret: true, readable: true });
     expect(JSON.stringify(panel)).not.toContain(TOKEN);
     expect(await readAccess(db(), KEY)).toEqual({ mode: "production", token: TOKEN, webhookSecret: SECRET });
   });
@@ -103,7 +103,7 @@ describe("the split", () => {
     await savePaymentConnection(db(), KEY, { mode: "production" });
     for (const [input, percent] of [["55", 55], [" 0 ", 0], ["100", 100], [45, 45]] as const) {
       expect(await savePaymentSplit(db(), input)).toEqual({ ok: true });
-      expect(await readPaymentSettings(db())).toEqual({ enabled: false, mode: "production", creatorPercent: percent });
+      expect(await readPaymentSettings(db())).toEqual({ enabled: false, mode: "production", creatorPercent: percent, feeBp: 450, feeFixedCents: 40 });
     }
   });
 
@@ -131,6 +131,36 @@ describe("the split", () => {
     await put("polar_webhook_secret");
     await expect(put("polar_other")).rejects.toThrow();
     await expect(put("anything")).rejects.toThrow();
+  });
+});
+
+describe("Polar's fee", () => {
+  it("is saved as typed (a percent and dollars) and kept apart from the split and the mode", async () => {
+    await savePaymentSplit(db(), "40");
+    expect(await savePolarFee(db(), "5", "0.50")).toEqual({ ok: true });
+    expect(await readPaymentSettings(db())).toMatchObject({ creatorPercent: 40, feeBp: 500, feeFixedCents: 50 });
+    expect(await savePolarFee(db(), "4.5%", "0")).toEqual({ ok: true });
+    expect(await readPaymentSettings(db())).toMatchObject({ feeBp: 450, feeFixedCents: 0 });
+    await savePaymentSplit(db(), "60");
+    expect(await readPaymentSettings(db())).toMatchObject({ creatorPercent: 60, feeBp: 450, feeFixedCents: 0 });
+  });
+
+  it("refuses what is not a sensible fee and keeps what was saved", async () => {
+    await savePolarFee(db(), "4.5", "0.40");
+    for (const [pct, fixed] of [["21", "0.40"], ["-1", "0.40"], ["abc", "0.40"], ["", "0.40"], ["4.5", "5.01"], ["4.5", "abc"], ["4.5", ""], ["4.555", "0.40"]] as const) {
+      expect(await savePolarFee(db(), pct, fixed), `${pct} / ${fixed}`).toMatchObject({ ok: false });
+    }
+    expect(await readPaymentSettings(db())).toMatchObject({ feeBp: 450, feeFixedCents: 40 });
+  });
+
+  it("is checked by the database too", async () => {
+    const put = (bp: number, fixed: number) => env.DB.prepare("update payment_settings set fee_bp = ?, fee_fixed_cents = ?").bind(bp, fixed).run();
+    await savePolarFee(db(), "4.5", "0.40");
+    await expect(put(2001, 40)).rejects.toThrow();
+    await expect(put(-1, 40)).rejects.toThrow();
+    await expect(put(450, 501)).rejects.toThrow();
+    await expect(put(450, -1)).rejects.toThrow();
+    await put(2000, 500);
   });
 });
 

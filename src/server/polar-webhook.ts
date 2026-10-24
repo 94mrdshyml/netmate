@@ -32,7 +32,7 @@ export async function processPolarWebhook(db: Db, encryptionKey: string | undefi
 
   try {
     const settings = await readPaymentSettings(db);
-    const outcome = await handlePolarEvent(db, access.mode, message, settings.creatorPercent);
+    const outcome = await handlePolarEvent(db, access.mode, message, { splitPercent: settings.creatorPercent, feeBp: settings.feeBp, feeFixedCents: settings.feeFixedCents });
     return { status: 200, body: { ok: true, handled: outcome.kind !== "ignored" } };
   } catch {
     return { status: 500, body: {} };

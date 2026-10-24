@@ -2,13 +2,14 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { headers } from "next/headers";
 import { requireAdmin } from "@/auth/admin";
 import { getDb } from "@/db";
-import { estimatePolarFeeCents, formatUsd, splitPreview } from "@/lib/money";
+import { formatUsd, polarFeeCents, splitPreview } from "@/lib/money";
 import { paymentPanel } from "@/server/payments";
 import { siteOrigin } from "@/server/origin";
 import { CopyButton } from "../copy-button";
 import { Card, PageHeader, Pill } from "../hq-ui";
 import { ConnectionForm } from "./connection-form";
 import { EnabledSwitch } from "./enabled-switch";
+import { FeeForm } from "./fee-form";
 import { SplitForm } from "./split-form";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function PaymentsPage() {
   const webhookUrl = `${siteOrigin(env, await headers())}/api/webhooks/polar`;
   const connected = panel.hasToken && panel.hasWebhookSecret;
   const example = splitPreview(EXAMPLE_CENTS, panel.creatorPercent);
-  const fee = estimatePolarFeeCents(EXAMPLE_CENTS);
+  const fee = polarFeeCents(EXAMPLE_CENTS, panel.feeBp, panel.feeFixedCents);
 
   return (
     <>
@@ -81,6 +82,20 @@ export default async function PaymentsPage() {
         <SplitForm initial={panel.creatorPercent} />
         <p className="hint">
           Prices include tax, wherever the subscriber lives, and Polar takes the tax out first. Example with no tax in it: a member charges {formatUsd(EXAMPLE_CENTS)} a month. They earn {formatUsd(example.creator)} and your side is {formatUsd(example.owner)}. Polar keeps a fee out of your side (roughly {formatUsd(fee)} on {formatUsd(EXAMPLE_CENTS)} at Polar&apos;s published rates, which can change), so you keep about {formatUsd(Math.max(0, example.owner - fee))}. With tax, the payment before tax is smaller, so both sides get a little less. Sales tax is collected and paid on by Polar and is not part of the sharing. If Polar refunds a payment, the member&apos;s share of it is taken back in the same proportion. A change here only applies to payments made after it.
+        </p>
+      </Card>
+
+      <Card
+        id="fee-heading"
+        icon="percent"
+        title="Polar's fee"
+        description="Polar keeps a fee from every payment. Enter your rate so the Revenue page can show what is left for you."
+      >
+        <FeeForm feeBp={panel.feeBp} feeFixedCents={panel.feeFixedCents} />
+        <p className="hint">
+          Take the figures from your Polar plan (a new account started at 4% plus 40 cents, with 0.5% more for subscriptions, so 4.5% and 0.40 is a good start).
+          Polar does not tell us its fee on each payment, so this is an estimate: it is worked out once, on the amount before tax, when a payment is first counted, and a later change applies only to new payments.
+          It is never used to pay anyone. Your Polar statement is the final word.
         </p>
       </Card>
     </>
