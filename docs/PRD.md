@@ -639,7 +639,7 @@ Worker "netmate"  ── Next.js 16 via @opennextjs/cloudflare
 
 **Performance goal:** first load on a 4G phone under 2 seconds, feed rendered on the server. Latest two versions of Safari on iPhone and Chrome on Android.
 
-**CI (GitHub Actions), required to merge:** install, lint, typecheck, unit, integration, build (OpenNext), end to end, dependency audit, secret scan, and a migration check (apply from empty, and from the previous release).
+**CI (GitHub Actions), required to merge:** install, lint, typecheck, unit, integration, build (OpenNext), end to end, dependency audit, secret scan, and a migration check (apply from empty, and from the previous release). **What runs when (session 47, to save the free CI minutes):** on a branch, a push that changes code runs everything; a push that changes only documentation (`docs/`, any `.md` file, `LICENSE`) runs only the sign-off, audit and secret scan; after a merge to `main` the unit, integration and browser tests are not run again (the pull request ran them on the same code) and the deploy job builds the app itself, so a build or type error still stops it before anything is uploaded; a documentation-only merge is not deployed. The browser tests reuse the build the build job made, and each browser test counts its own posts apart from the others (test mode only), so no test waits for a rate limit to reset. The post limit itself is tested directly in the integration tests. `scripts/ci/changes.sh` decides this, and any doubt means "run everything".
 
 **Delivery**
 

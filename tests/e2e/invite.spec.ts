@@ -1,4 +1,5 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { type Browser, type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { openSignUpForm } from "./helpers";
 
 // Serial: the second test uses a member made by the first.

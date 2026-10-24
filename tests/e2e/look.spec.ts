@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { E2E } from "./constants";
 
 const accountLink = (page: Page) => page.getByRole("link", { name: `Settings, signed in as @${E2E.admin.username}` });

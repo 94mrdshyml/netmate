@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { E2E } from "./constants";
 
 // Writes nothing: it only types into the composer and never presses Post, so it can run anywhere in the suite.
