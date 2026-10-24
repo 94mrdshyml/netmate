@@ -6,7 +6,7 @@
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db";
-import { blocks, polarProducts, profiles, subscriptions } from "@/db/schema";
+import { blocks, polarProducts, profiles, subscriptions, user } from "@/db/schema";
 import { isId } from "@/lib/ids";
 import { CURRENCY, parsePrice } from "@/lib/money";
 import { polarCall } from "@/payments/polar";
@@ -202,8 +202,10 @@ async function productFor(db: Db, access: Access, creator: { userId: string; use
 export type CheckoutResult = { ok: true; url: string } | { ok: false; message: string };
 
 /**
- * Starts a subscription: makes a Polar checkout for the member's product and returns Polar's page address. Polar is
- * given only our ids for the two people (no names, no email: the subscriber types their email on Polar's own page).
+ * Starts a subscription: makes a Polar checkout for the member's product and returns Polar's page address. Polar is given
+ * our ids for the two people and, so that its page opens filled in (owner decision, session 53), the subscriber's own name
+ * and email from their account. The subscriber can change both on Polar's page. Nothing about the creator beyond their id
+ * is sent, and neither the name nor the email is ever logged or stored again by us.
  */
 export async function startCheckout(
   db: Db,
@@ -235,11 +237,19 @@ export async function startCheckout(
   const product = await productFor(db, access, creator, creator.price, input.siteName);
   if (!product.ok) return product;
 
+  const payer = await db
+    .select({ first: profiles.firstName, last: profiles.lastName, email: user.email })
+    .from(profiles)
+    .innerJoin(user, eq(user.id, profiles.userId))
+    .where(eq(profiles.userId, input.subscriberId))
+    .get();
+
   const checkout = await polarCall(access.mode, access.token, "/v1/checkouts/", {
     method: "POST",
     json: {
       products: [product.productId],
       external_customer_id: input.subscriberId,
+      ...(payer ? { customer_name: `${payer.first} ${payer.last}`.slice(0, 256), customer_email: payer.email } : {}),
       metadata: { [META_CREATOR]: creator.userId, [META_SUBSCRIBER]: input.subscriberId },
       success_url: `${input.origin}/subscribe/done?creator=${creator.username}&checkout_id={CHECKOUT_ID}`,
       return_url: `${input.origin}/${creator.username}`,
