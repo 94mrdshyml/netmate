@@ -7,13 +7,14 @@ import { getDb } from "@/db";
 import { transportFor } from "@/email/transport";
 import { pngLogoUrl } from "@/email/template";
 import { removeEmailSettings, saveEmailSettings, sendTestEmail, type SaveEmailResult } from "@/server/email";
-import { limitTestEmail, tooManyMessage } from "@/server/rate-limit";
+import { limitPolarTest, limitTestEmail, tooManyMessage } from "@/server/rate-limit";
 import { getInstanceState } from "@/instance/request";
 import { saveBrandingForm, type BrandingResult } from "@/instance/branding";
 import { clearInstanceCache } from "@/instance/settings";
 import { DEMO_STEPS, removeDemo, runDemoStep, type Removed } from "@/demo/seed";
 import { isId } from "@/lib/ids";
 import { setModerator } from "@/server/members";
+import { removePaymentKeys, savePaymentConnection, savePaymentSplit, testPolar, type SaveResult, type TestResult } from "@/server/payments";
 import { closeCase, reopenCase, startReview, type CaseChange } from "@/server/reports";
 import { removeKlipyKey, saveKlipyKey, type SaveKlipyResult } from "@/server/gifs";
 import { approvePending, regenerateInvite, rejectPending, setInviteQuota, setLinkPreviewsEnabled, setPlacesEnabled } from "@/server/admin";
@@ -289,4 +290,42 @@ export async function closeCaseAction(caseNo: number, outcome: string, note: str
 export async function reopenCaseAction(caseNo: number): Promise<CaseActionResult> {
   const { staff, db } = await staffAndDb();
   return finish(await reopenCase(db, staff, caseNo));
+}
+
+// ---- Payments (owner decision, session 49): the owner connects Polar and sets the split. Admin only. ----
+
+/** Saves the mode and, when pasted, a new Polar access token and webhook secret. A blank box keeps what is saved. */
+export async function savePaymentConnectionAction(input: { mode: string; accessToken: string; webhookSecret: string }): Promise<SaveResult> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await savePaymentConnection(getDb(env.DB), env.SETTINGS_ENCRYPTION_KEY, input);
+  if (result.ok) revalidatePath("/hq/payments");
+  return result;
+}
+
+/** Saves the share of each payment that goes to the member (a whole percent). */
+export async function savePaymentSplitAction(percent: string): Promise<SaveResult> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await savePaymentSplit(getDb(env.DB), percent);
+  if (result.ok) revalidatePath("/hq/payments");
+  return result;
+}
+
+/** Forgets the Polar token and webhook secret. */
+export async function removePaymentKeysAction(): Promise<{ ok: boolean }> {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const ok = await removePaymentKeys(getDb(env.DB));
+  if (ok) revalidatePath("/hq/payments");
+  return { ok };
+}
+
+/** Asks Polar once with the saved token. Limited to 10 an hour. */
+export async function testPolarAction(): Promise<TestResult> {
+  const admin = await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const limited = await limitPolarTest(env.DB, env.AUTH_SECRET, admin.userId);
+  if (!limited.ok) return { ok: false, message: tooManyMessage(limited.retryAfterSeconds) };
+  return testPolar(getDb(env.DB), env.SETTINGS_ENCRYPTION_KEY);
 }

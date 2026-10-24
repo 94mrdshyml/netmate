@@ -1,0 +1,72 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { headers } from "next/headers";
+import { requireAdmin } from "@/auth/admin";
+import { getDb } from "@/db";
+import { estimatePolarFeeCents, formatUsd, splitPreview } from "@/lib/money";
+import { paymentPanel } from "@/server/payments";
+import { siteOrigin } from "@/server/origin";
+import { CopyButton } from "../copy-button";
+import { Card, PageHeader, Pill } from "../hq-ui";
+import { ConnectionForm } from "./connection-form";
+import { SplitForm } from "./split-form";
+
+export const dynamic = "force-dynamic";
+
+export const metadata = { title: "Payments" };
+
+const EXAMPLE_CENTS = 1000;
+
+export default async function PaymentsPage() {
+  await requireAdmin();
+  const { env } = await getCloudflareContext({ async: true });
+  const panel = await paymentPanel(getDb(env.DB), env.SETTINGS_ENCRYPTION_KEY);
+  const webhookUrl = `${siteOrigin(env, await headers())}/api/webhooks/polar`;
+  const connected = panel.hasToken && panel.hasWebhookSecret;
+  const example = splitPreview(EXAMPLE_CENTS, panel.creatorPercent);
+  const fee = estimatePolarFeeCents(EXAMPLE_CENTS);
+
+  return (
+    <>
+      <PageHeader title="Payments">
+        Members can charge a monthly price for posts that only their subscribers see. Payments are taken by Polar and land in your Polar account. You decide how much of each payment the member earns.
+      </PageHeader>
+
+      <Card
+        id="connection-heading"
+        icon="credit-card"
+        title="Connect Polar"
+        description="Polar takes the payment, handles sales tax and sends you the money."
+        aside={connected ? <Pill icon="check-circle">Keys saved</Pill> : <Pill>Not connected</Pill>}
+      >
+        {!panel.readable ? (
+          <p className="banner" role="status">
+            The saved keys cannot be read any more, because the key this server uses to lock them has changed. Paste them again below.
+          </p>
+        ) : null}
+        <ConnectionForm mode={panel.mode} hasToken={panel.hasToken} hasWebhookSecret={panel.hasWebhookSecret} />
+        <div className="field">
+          <label htmlFor="webhook-url">Webhook address to give Polar</label>
+          <div className="hq-inline">
+            <input id="webhook-url" className="input" readOnly value={webhookUrl} />
+            <CopyButton url={webhookUrl} label="Copy address" />
+          </div>
+          <p className="hint">
+            In Polar, open Settings, then Webhooks, add this address, tick the subscription, order and refund events, and paste the secret Polar shows you into the box above. Make the access token in Polar under Settings, then Developers, with the permissions for products, checkouts, subscriptions, orders and customers.
+          </p>
+        </div>
+      </Card>
+
+      <Card
+        id="split-heading"
+        icon="percent"
+        title="How payments are shared"
+        description="The share of every payment, before tax, that goes to the member being paid for."
+      >
+        <SplitForm initial={panel.creatorPercent} />
+        <p className="hint">
+          Example: a member charges {formatUsd(EXAMPLE_CENTS)} a month. They earn {formatUsd(example.creator)} and your side is {formatUsd(example.owner)}. Polar keeps a fee out of your side (roughly {formatUsd(fee)} on {formatUsd(EXAMPLE_CENTS)} at Polar&apos;s published rates, which can change), so you keep about {formatUsd(Math.max(0, example.owner - fee))}. Sales tax is collected and paid on by Polar and is not part of the sharing. If Polar refunds a payment, the member&apos;s share of it is taken back in the same proportion. A change here only applies to payments made after it.
+        </p>
+      </Card>
+    </>
+  );
+}

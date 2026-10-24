@@ -3796,3 +3796,7 @@ a.link-card:hover {
   display: grid;
   gap: 8px;
 }
+
+.choices-2 {
+  grid-template-columns: repeat(2, 1fr);
+}

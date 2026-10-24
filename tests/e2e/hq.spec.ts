@@ -358,14 +358,14 @@ test("a new link replaces a leaked one at once", async ({ page, browser }) => {
 });
 
 test("only the admin can open /hq, and everyone else gets a plain not found", async ({ browser }) => {
-  for (const path of ["/hq", "/hq/approvals", "/hq/invites", "/hq/members", "/hq/stats"]) {
+  for (const path of ["/hq", "/hq/approvals", "/hq/invites", "/hq/members", "/hq/stats", "/hq/payments"]) {
     const asMember = await memberPage.goto(path);
     expect(asMember?.status(), `member ${path}`).toBe(404);
   }
 
   const anonymous = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const page = await anonymous.newPage();
-  for (const path of ["/hq", "/hq/approvals", "/hq/invites", "/hq/members", "/hq/stats"]) {
+  for (const path of ["/hq", "/hq/approvals", "/hq/invites", "/hq/members", "/hq/stats", "/hq/payments"]) {
     const res = await page.goto(path);
     expect(res?.status(), `signed out ${path}`).toBe(404);
   }
@@ -417,7 +417,7 @@ test("the admin makes a member a moderator, who gets the members list and the nu
     // /hq itself leads a moderator to the list, and every other admin page is still not found.
     await memberPage.goto("/hq");
     await expect(memberPage).toHaveURL(/\/hq\/members$/);
-    for (const path of ["/hq/approvals", "/hq/invites", "/hq/branding", "/hq/email", "/hq/services"]) {
+    for (const path of ["/hq/approvals", "/hq/invites", "/hq/branding", "/hq/email", "/hq/services", "/hq/payments"]) {
       expect((await memberPage.goto(path))?.status(), path).toBe(404);
     }
   } finally {

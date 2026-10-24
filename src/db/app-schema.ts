@@ -56,7 +56,9 @@ export const instanceSecrets = sqliteTable(
     value: text("value").notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
   },
-  (t) => [check("instance_secrets_name", sql`${t.name} in ('resend_api_key', 'resend_from', 'klipy_api_key')`)],
+  (t) => [
+    check("instance_secrets_name", sql`${t.name} in ('resend_api_key', 'resend_from', 'klipy_api_key', 'polar_access_token', 'polar_webhook_secret')`),
+  ],
 );
 
 /** One profile per user. The primary key is the Better Auth user id. */
@@ -624,5 +626,26 @@ export const reportEvents = sqliteTable(
   (t) => [
     check("report_events_type", sql`${t.type} in ('filed', 'review_started', 'closed', 'reopened')`),
     index("report_events_report_idx").on(t.reportId, t.createdAt, t.id),
+  ],
+);
+
+/**
+ * How paid subscriptions are set up (docs/PRD.md, "Paid subscriptions"). One row, present once the owner has saved
+ * the payment page; no row means nothing is set up. The Polar token and webhook secret are not here: they are
+ * encrypted in `instance_secrets`. `creator_percent` is the share of each payment (before tax) that goes to the member
+ * being paid for; the owner keeps the rest and pays Polar's fee out of it.
+ */
+export const paymentSettings = sqliteTable(
+  "payment_settings",
+  {
+    id: text("id").primaryKey().default("singleton"),
+    mode: text("mode").notNull().default("sandbox"),
+    creatorPercent: integer("creator_percent").notNull().default(50),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [
+    check("payment_settings_singleton", sql`${t.id} = 'singleton'`),
+    check("payment_settings_mode", sql`${t.mode} in ('sandbox', 'production')`),
+    check("payment_settings_creator_percent", sql`${t.creatorPercent} between 0 and 100`),
   ],
 );
