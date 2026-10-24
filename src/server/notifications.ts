@@ -129,6 +129,26 @@ export function alertOnReply(db: Db, actorId: string, parentId: string, replyId:
     .onConflictDoNothing();
 }
 
+/**
+ * The subscription `polarId` has just been paid up for the first time (the caller's batch has set its `notified_at` to
+ * `at` in the statement right before this one). Its creator hears about it. The select runs only if that update really
+ * changed a row (`changes()`), so a repeated message alerts nobody twice. A person who subscribes again later bumps
+ * their old alert and makes it unread, since the table keeps one such alert per pair.
+ */
+export function alertOnSubscribe(db: Db, polarId: string, at: number) {
+  return db
+    .insert(notifications)
+    .select(
+      sql`select ${newId("notification")}, creator_id, subscriber_id, 'subscribe', null, ${at}, null
+          from subscriptions where polar_id = ${polarId} and notified_at = ${at} and changes() = 1`,
+    )
+    .onConflictDoUpdate({
+      target: [notifications.recipientId, notifications.actorId, notifications.type],
+      targetWhere: sql`post_id is null`,
+      set: { createdAt: sql`excluded.created_at`, readAt: null },
+    });
+}
+
 /** The admin no longer has to decide about this person (approved). Rejecting deletes the account, which removes it too. */
 export function removePendingApprovalAlert(db: Db, personId: string) {
   return db.delete(notifications).where(and(eq(notifications.actorId, personId), eq(notifications.type, "pending_approval")));

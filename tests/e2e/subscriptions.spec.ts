@@ -145,8 +145,14 @@ test("Polar's signed messages make a subscription, and unsigned ones do nothing"
   await member.goto(`/subscribe/done?creator=${E2E.admin.username}`);
   await expect(member.getByRole("heading", { name: /You are subscribed to Riya Sen/ })).toBeVisible();
 
+  // The creator is told, once, with a link to the subscription page.
+  await page.goto("/notifications");
+  const alert = page.getByRole("listitem").filter({ hasText: "Sam Subscriber subscribed to you" });
+  await expect(alert).toHaveCount(1);
+  await alert.getByRole("link").click();
+  await expect(page).toHaveURL(/\/subscription$/);
+
   // The creator sees a number, not a name.
-  await page.goto("/subscription");
   await expect(page.getByText("1 person is subscribed to you.")).toBeVisible();
   await expect(page.getByText("Sam Subscriber")).toHaveCount(0);
 });

@@ -4,6 +4,7 @@ import { getDb } from "@/db";
 import { profiles, user } from "@/db/schema";
 import { newId } from "@/lib/ids";
 import { readWebhookHeaders } from "@/payments/webhook";
+import { listAlerts, countUnreadAlerts } from "@/server/notifications";
 import { savePaymentConnection, savePaymentSplit, setPaymentsEnabled, removePaymentKeys } from "@/server/payments";
 import { handlePolarEvent } from "@/server/polar-events";
 import { processPolarWebhook } from "@/server/polar-webhook";
@@ -235,6 +236,90 @@ describe("Polar's payment messages", () => {
     await expect(bad(101, 100)).rejects.toThrow();
     await expect(bad(-1, 50)).rejects.toThrow();
     await expect(bad(50, 101)).rejects.toThrow();
+  });
+});
+
+describe("the alert when someone subscribes", () => {
+  const alertsFor = async (userId: string) => (await listAlerts(db(), userId)).items.filter((a) => a.type === "subscribe");
+
+  it("tells the creator once, the first time the subscription is paid up", async () => {
+    const a = await person();
+    const b = await person();
+    const ids = { sub: a.id, creator: b.id };
+    await send(subEvent("subscription.created", subData({ ...ids, modified: T0 })));
+    const first = await alertsFor(b.id);
+    expect(first).toHaveLength(1);
+    expect(first[0]).toMatchObject({ type: "subscribe", unread: true, count: 1, post: null });
+    expect(first[0]?.actors[0]?.userId).toBe(a.id);
+    expect(await countUnreadAlerts(db(), b.id)).toBe(1);
+
+    // The same message again, a renewal, a cancel and a late older message all leave it at one alert.
+    await send(subEvent("subscription.created", subData({ ...ids, modified: T0 })));
+    await send(subEvent("subscription.cycled", subData({ ...ids, modified: T0 + 1000 })));
+    await send(subEvent("subscription.canceled", subData({ ...ids, cancel: true, modified: T0 + 2000 })));
+    await send(subEvent("subscription.updated", subData({ ...ids, modified: T0 - 5000 })));
+    expect(await alertsFor(b.id)).toHaveLength(1);
+    expect(await count("select count(*) as n from notifications where type = 'subscribe' and recipient_id = ?", b.id)).toBe(1);
+    // The subscriber is not alerted about themselves.
+    expect(await alertsFor(a.id)).toHaveLength(0);
+  });
+
+  it("waits until the payment has gone through", async () => {
+    const a = await person();
+    const b = await person();
+    const ids = { sub: a.id, creator: b.id };
+    await send(subEvent("subscription.created", subData({ ...ids, status: "incomplete", modified: T0 })));
+    expect(await alertsFor(b.id)).toHaveLength(0);
+    await send(subEvent("subscription.updated", subData({ ...ids, status: "incomplete_expired", modified: T0 + 1000 })));
+    expect(await alertsFor(b.id)).toHaveLength(0);
+    // A subscription that was never paid for never alerts, and one that later becomes active alerts then.
+    const c = await person();
+    await send(subEvent("subscription.created", subData({ polar: "sub-late", sub: c.id, creator: b.id, status: "incomplete", modified: T0 })));
+    await send(subEvent("subscription.active", subData({ polar: "sub-late", sub: c.id, creator: b.id, status: "active", modified: T0 + 1000 })));
+    const alerts = await alertsFor(b.id);
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]?.actors[0]?.userId).toBe(c.id);
+  });
+
+  it("also fires when the first news is a paid order that carries its subscription", async () => {
+    const a = await person();
+    const b = await person();
+    await send(orderEvent("order.paid", orderData({ id: "o-alert", polarSub: "sub-from-order", sub: subData({ polar: "sub-from-order", sub: a.id, creator: b.id }) })));
+    expect(await alertsFor(b.id)).toHaveLength(1);
+  });
+
+  it("is brought back to the top and made unread when the same person subscribes again later", async () => {
+    const a = await person();
+    const b = await person();
+    await send(subEvent("subscription.created", subData({ polar: "sub-first", sub: a.id, creator: b.id, modified: T0 })));
+    await env.DB.prepare("update notifications set read_at = 1, created_at = 1 where recipient_id = ? and type = 'subscribe'").bind(b.id).run();
+    expect(await countUnreadAlerts(db(), b.id)).toBe(0);
+    await send(subEvent("subscription.revoked", subData({ polar: "sub-first", sub: a.id, creator: b.id, status: "canceled", modified: T0 + 1000 })));
+    await send(subEvent("subscription.created", subData({ polar: "sub-second", sub: a.id, creator: b.id, modified: T0 + 2000 })));
+    const alerts = await alertsFor(b.id);
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]?.unread).toBe(true);
+    expect(alerts[0]!.createdAt).toBeGreaterThan(1000);
+  });
+
+  it("is not shown to someone who blocked the subscriber, and goes with an account that is removed", async () => {
+    const a = await person();
+    const b = await person();
+    await send(subEvent("subscription.created", subData({ sub: a.id, creator: b.id })));
+    await setBlock(db(), b.id, a.id, true);
+    expect(await alertsFor(b.id)).toHaveLength(0);
+    await env.DB.prepare("delete from user where id = ?").bind(a.id).run();
+    expect(await count("select count(*) as n from notifications where type = 'subscribe' and recipient_id = ?", b.id)).toBe(0);
+  });
+
+  it("is checked by the database: a subscribe alert never points at a post, and never at yourself", async () => {
+    const a = await person();
+    const b = await person();
+    const put = (recipient: string, actor: string, post: string | null) =>
+      env.DB.prepare("insert into notifications (id, recipient_id, actor_id, type, post_id) values (?, ?, ?, 'subscribe', ?)").bind(newId("notification"), recipient, actor, post).run();
+    await expect(put(a.id, a.id, null)).rejects.toThrow();
+    await expect(put(b.id, a.id, "post_000000000000000000000000")).rejects.toThrow();
+    await put(b.id, a.id, null);
   });
 });
 
