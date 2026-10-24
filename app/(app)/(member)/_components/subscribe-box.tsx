@@ -46,7 +46,7 @@ export function SubscribeBox({
   return (
     <div className="subscribe-box">
       <p className="hint">
-        {testMode ? "Test mode: no real money moves. " : ""}The price includes any tax. Subscribe to see the posts {name} shares with subscribers only. You pay on Polar&apos;s secure page, which opens with your name and email from your account filled in (you can change them there), and you can stop any time. They can see your name as a subscriber.
+        {testMode ? "Test mode: no real money moves. " : ""}Sales tax or VAT is added on top where it applies, and Polar shows you the total before you pay. Subscribe to see the posts {name} shares with subscribers only. You pay on Polar&apos;s secure page, which opens with your name and email from your account filled in (you can change them there), and you can stop any time. They can see your name as a subscriber.
       </p>
       <button
         type="button"

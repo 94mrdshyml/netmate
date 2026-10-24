@@ -162,6 +162,13 @@
       "when": 1792836504133,
       "tag": "0022_revenue",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1792837104133,
+      "tag": "0023_tax_on_top",
+      "breakpoints": true
     }
   ]
 }

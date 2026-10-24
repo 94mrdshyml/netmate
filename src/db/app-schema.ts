@@ -758,7 +758,7 @@ export const subscriptionPayments = sqliteTable(
     subscriberId: text("subscriber_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    /** What the subscriber paid, tax included (the price, since prices include tax). */
+    /** What the subscriber paid, tax included (the price plus any tax Polar added). */
     totalCents: integer("total_cents").notNull().default(0),
     /** The tax in it, which Polar collects and pays on. */
     taxCents: integer("tax_cents").notNull().default(0),
