@@ -81,7 +81,7 @@ export default async function PaymentsPage() {
       >
         <SplitForm initial={panel.creatorPercent} />
         <p className="hint">
-          Prices include tax, wherever the subscriber lives, and Polar takes the tax out first. Example with no tax in it: a member charges {formatUsd(EXAMPLE_CENTS)} a month. They earn {formatUsd(example.creator)} and your side is {formatUsd(example.owner)}. Polar keeps a fee out of your side (roughly {formatUsd(fee)} on {formatUsd(EXAMPLE_CENTS)} at Polar&apos;s published rates, which can change), so you keep about {formatUsd(Math.max(0, example.owner - fee))}. With tax, the payment before tax is smaller, so both sides get a little less. Sales tax is collected and paid on by Polar and is not part of the sharing. If Polar refunds a payment, the member&apos;s share of it is taken back in the same proportion. A change here only applies to payments made after it.
+          Prices are before tax: Polar adds the tax of the subscriber&apos;s country on top, collects it and pays it on. Example: a member charges {formatUsd(EXAMPLE_CENTS)} a month. They earn {formatUsd(example.creator)} and your side is {formatUsd(example.owner)}. Polar keeps a fee out of your side (roughly {formatUsd(fee)} on {formatUsd(EXAMPLE_CENTS)} at Polar&apos;s published rates, which can change), so you keep about {formatUsd(Math.max(0, example.owner - fee))}. Tax is never part of the sharing, so it takes nothing from either side. If Polar refunds a payment, the member&apos;s share of it is taken back in the same proportion. A change here only applies to payments made after it.
         </p>
       </Card>
 

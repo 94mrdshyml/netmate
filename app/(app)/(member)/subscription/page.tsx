@@ -41,8 +41,8 @@ export default async function SubscriptionPage() {
       <PageHeader title="Subscription price" back={{ href: "/settings", label: "Back to Settings" }} centered />
       {mine.testMode ? <p className="banner" role="status">Test mode: no real money moves. Payments here are practice ones.</p> : null}
       <p className="hint">
-        Charge a monthly price and others can subscribe to see the posts you share with subscribers only. Choose a price from {formatUsd(PRICE_MIN_CENTS)} to {formatUsd(PRICE_MAX_CENTS)}. The price includes any sales tax or VAT, wherever the subscriber lives, so they always pay exactly this.
-        You earn {mine.creatorPercent}% of each payment after the tax is taken out, and the tax depends on where the subscriber lives. Payments are taken by Polar, who also handle sales tax,
+        Charge a monthly price and others can subscribe to see the posts you share with subscribers only. Choose a price from {formatUsd(PRICE_MIN_CENTS)} to {formatUsd(PRICE_MAX_CENTS)}. This is the price before tax. Where sales tax or VAT applies, Polar adds it on top for the subscriber, so it never comes out of your share.
+        You earn {mine.creatorPercent}% of each payment, worked out on the price before any tax. Payments are taken by Polar, who also handle sales tax,
         and the person who runs this space pays your share out to you.
       </p>
       <PriceForm initialCents={mine.priceCents} />
@@ -70,7 +70,7 @@ export default async function SubscriptionPage() {
         </dl>
         <MonthBars months={earnings.months} mode="earned" label="What you earned each month" />
         <p className="hint">
-          Your share is worked out on each payment after the tax is taken out, and a refund takes its share back. The person who runs this space pays you out and records each payment below.
+          Your share is worked out on the price before tax, and a refund takes its share back. The person who runs this space pays you out and records each payment below.
         </p>
         {earnings.payouts.length > 0 ? (
           <ul className="case-list" aria-label="Paid to you">
