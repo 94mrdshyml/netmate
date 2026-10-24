@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useTransition, type ReactNode } from "reac
 import type { PostGif } from "@/lib/gif";
 import { POST_MAX, countCharacters } from "@/lib/post-text";
 import { createPostAction } from "../posts/actions";
+import { ComposeField } from "./compose-field";
 import { GifPicker } from "./gif-picker";
 import { Icon } from "./icon";
 import { PlacePicker } from "./place-picker";
@@ -158,14 +159,11 @@ export function Composer({
       <div className="composer-row">
         {leading}
         <div className="composer-main">
-          <label className="sr-only" htmlFor={`composer-${parentId ?? "new"}`}>
-            {parentId ? "Your reply" : "Your post"}
-          </label>
-          <textarea
+          <ComposeField
             id={`composer-${parentId ?? "new"}`}
-            className="composer-text"
+            label={parentId ? "Your reply" : "Your post"}
             value={text}
-            onChange={(event) => setText(event.target.value)}
+            onChange={setText}
             placeholder={placeholder}
             rows={parentId ? 2 : 6}
             autoFocus={autoFocus}
