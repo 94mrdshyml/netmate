@@ -82,7 +82,7 @@ export function PostCard({
           ) : null}
           <LikeButton postId={post.id} liked={post.likedByMe} count={post.likeCount} />
           <BookmarkButton postId={post.id} saved={post.bookmarkedByMe} />
-          {post.author.userId === viewerId ? <PostMenu postId={post.id} goHomeAfter={!linkToPost} /> : null}
+          <PostMenu postId={post.id} mine={post.author.userId === viewerId} goHomeAfter={!linkToPost} />
         </footer>
       </div>
     </article>

@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 import { Icon } from "../(member)/_components/icon";
 import { HQ_SECTIONS } from "./sections";
 
-export function HqNav({ pending, isAdmin }: { pending: number; isAdmin: boolean }) {
+export function HqNav({ pending, cases, isAdmin }: { pending: number; cases: number; isAdmin: boolean }) {
   const pathname = usePathname();
   const nav = useRef<HTMLElement>(null);
   // On a phone the menu is a strip that scrolls sideways: bring the page you are on into view.
@@ -22,12 +22,17 @@ export function HqNav({ pending, isAdmin }: { pending: number; isAdmin: boolean 
         <div className="hq-nav-group" key={group}>
           <p className="hq-nav-label">{group}</p>
           {sections.filter((s) => s.group === group).map((s) => (
-            <Link key={s.href} href={s.href} aria-current={pathname === s.href ? "page" : undefined}>
+            <Link key={s.href} href={s.href} aria-current={pathname === s.href || (s.href !== "/hq" && pathname.startsWith(`${s.href}/`)) ? "page" : undefined}>
               <Icon name={s.icon} size={18} />
               <span className="hq-nav-text">{s.label}</span>
               {s.href === "/hq/approvals" && pending > 0 ? (
                 <span className="hq-badge" aria-label={`${pending} waiting`}>
                   {pending}
+                </span>
+              ) : null}
+              {s.href === "/hq/cases" && cases > 0 ? (
+                <span className="hq-badge" aria-label={`${cases} open`}>
+                  {cases}
                 </span>
               ) : null}
             </Link>

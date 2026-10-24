@@ -541,3 +541,88 @@ export const notifications = sqliteTable(
     index("notifications_unread_idx").on(t.recipientId).where(sql`${t.readAt} is null`),
   ],
 );
+
+/** The steps a report case moves through. */
+export const REPORT_STATUSES = ["open", "reviewing", "closed"] as const;
+export type ReportStatus = (typeof REPORT_STATUSES)[number];
+
+/**
+ * One case per report (docs/PRD.md, "Reporting a post"). `caseNo` is the number people read out (shown as
+ * CASE-000123); `id` is the row's own id. The case keeps its own copy of the post as it was reported, so it
+ * still makes sense if the post is later edited out or deleted, and so staff read what the reporter read.
+ * Nothing here is ever shown to the person who wrote the post.
+ */
+export const reports = sqliteTable(
+  "reports",
+  {
+    id: text("id").primaryKey(),
+    caseNo: integer("case_no").notNull(),
+    /** The post. Kept as null if its row is ever removed for good; the copy below stays. */
+    postId: text("post_id").references(() => posts.id, { onDelete: "set null" }),
+    postAuthorId: text("post_author_id").references(() => user.id, { onDelete: "set null" }),
+    /** The copy of the post taken when it was reported. */
+    postAuthorUsername: text("post_author_username").notNull(),
+    postBody: text("post_body").notNull(),
+    postPhotos: integer("post_photos").notNull().default(0),
+    postHasGif: integer("post_has_gif", { mode: "boolean" }).notNull().default(false),
+    postHasLink: integer("post_has_link", { mode: "boolean" }).notNull().default(false),
+    postIsReply: integer("post_is_reply", { mode: "boolean" }).notNull().default(false),
+    postCreatedAt: integer("post_created_at", { mode: "timestamp_ms" }).notNull(),
+    /** Who reported. Kept as null if that person is ever removed. */
+    reporterId: text("reporter_id").references(() => user.id, { onDelete: "set null" }),
+    category: text("category").notNull(),
+    /** What the reporter added, 0 to 500 characters. */
+    note: text("note").notNull().default(""),
+    status: text("status").notNull().default("open"),
+    /** Set when the case is closed. */
+    outcome: text("outcome"),
+    /** Staff's own note on how it ended, 0 to 500 characters. Never shown to the reporter. */
+    resolutionNote: text("resolution_note").notNull().default(""),
+    /** Who took it, or closed it. */
+    handledBy: text("handled_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+    closedAt: integer("closed_at", { mode: "timestamp_ms" }),
+  },
+  (t) => [
+    uniqueIndex("reports_case_no_idx").on(t.caseNo),
+    check("reports_case_no", sql`${t.caseNo} >= 1`),
+    check(
+      "reports_category",
+      sql`${t.category} in ('spam', 'harassment', 'hate', 'threat', 'sexual', 'self_harm', 'misinformation', 'impersonation', 'private_info', 'illegal', 'other')`,
+    ),
+    check("reports_note_length", sql`length(${t.note}) <= 500 and length(${t.resolutionNote}) <= 500`),
+    check("reports_status", sql`${t.status} in ('open', 'reviewing', 'closed')`),
+    check("reports_outcome", sql`${t.outcome} is null or ${t.outcome} in ('no_action', 'handled', 'removed', 'duplicate')`),
+    // A closed case has an outcome and a closing time; an unclosed one has neither.
+    check("reports_closed_fields", sql`(${t.status} = 'closed') = (${t.outcome} is not null and ${t.closedAt} is not null)`),
+    // A person has one live case per post. Reporting it again gives them the same case back.
+    uniqueIndex("reports_one_live_per_reporter")
+      .on(t.reporterId, t.postId)
+      .where(sql`${t.status} <> 'closed'`),
+    index("reports_status_idx").on(t.status, t.caseNo),
+    index("reports_post_idx").on(t.postId),
+    index("reports_reporter_idx").on(t.reporterId, t.caseNo),
+  ],
+);
+
+/** What happened to a case, oldest first. Written in the same batch as the change it records. */
+export const reportEvents = sqliteTable(
+  "report_events",
+  {
+    id: text("id").primaryKey(),
+    reportId: text("report_id")
+      .notNull()
+      .references(() => reports.id, { onDelete: "cascade" }),
+    /** Who did it. Kept as null if that person is ever removed. */
+    actorId: text("actor_id").references(() => user.id, { onDelete: "set null" }),
+    type: text("type").notNull(),
+    /** For "closed": the outcome. Otherwise empty. */
+    detail: text("detail").notNull().default(""),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [
+    check("report_events_type", sql`${t.type} in ('filed', 'review_started', 'closed', 'reopened')`),
+    index("report_events_report_idx").on(t.reportId, t.createdAt, t.id),
+  ],
+);

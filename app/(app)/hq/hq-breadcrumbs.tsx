@@ -8,7 +8,7 @@ import { HQ_SECTIONS } from "./sections";
 /** Where you are: Admin, then the page. "Admin" goes back to the Overview. */
 export function HqBreadcrumbs() {
   const pathname = usePathname();
-  const here = HQ_SECTIONS.find((s) => s.href === pathname);
+  const here = HQ_SECTIONS.find((s) => s.href === pathname || (s.href !== "/hq" && pathname.startsWith(`${s.href}/`)));
   return (
     <nav className="hq-crumbs" aria-label="Breadcrumb">
       <ol>

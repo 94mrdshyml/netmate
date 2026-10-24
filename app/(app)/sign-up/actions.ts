@@ -1,13 +1,13 @@
 "use server";
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createNextAuth } from "@/auth/next";
 import { signInMember } from "@/auth/sign-in";
 import { getDb } from "@/db";
 import { findActiveInvite } from "@/server/invites";
-import { clientIp, limitSignUp, tooManyMessage } from "@/server/rate-limit";
+import { clientIp, limitSignUp, scopedSubject, tooManyMessage } from "@/server/rate-limit";
 import { mailContext } from "@/server/mail-context";
 import { signUpWithInvite, type SignUpFailure } from "@/server/sign-up";
 import { emailAdminOfPending } from "@/server/status-emails";
@@ -35,9 +35,11 @@ export async function signUpAction(input: SignUpInput): Promise<SignUpActionResu
 
   const requestHeaders = await headers();
   const invite = await findActiveInvite(getDb(env.DB), input?.invite);
+  // Browser tests only (ENV exactly "test"): sign-ups a test makes through the shared admin link count apart.
+  const scope = env.ENV === "test" ? (await cookies()).get("e2e_scope")?.value : undefined;
   const limited = await limitSignUp(env.DB, env.AUTH_SECRET, {
     ip: clientIp(requestHeaders),
-    inviteLinkId: invite?.id ?? "none",
+    inviteLinkId: scopedSubject(env, invite?.id ?? "none", scope),
   });
   if (!limited.ok) return { ok: false, code: "rate_limited", message: tooManyMessage(limited.retryAfterSeconds) };
 

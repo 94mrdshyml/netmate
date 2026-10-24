@@ -21,6 +21,7 @@ export const LIMITS = {
   follows: { name: "follows", max: 30, windowMs: 10 * MINUTE },
   uploads: { name: "uploads", max: 30, windowMs: 10 * MINUTE },
   places: { name: "places", max: 40, windowMs: MINUTE },
+  reports: { name: "reports", max: 10, windowMs: 60 * MINUTE },
   linkPreviews: { name: "link-previews", max: 20, windowMs: 10 * MINUTE },
   mentions: { name: "mentions", max: 120, windowMs: MINUTE },
   testEmail: { name: "email:test", max: 5, windowMs: 60 * MINUTE },
@@ -97,14 +98,18 @@ export const limitPost = (db: D1Database, salt: string, userId: string, now?: nu
   takeSlot(db, LIMITS.posts, userId, salt, now);
 
 /**
- * Whose allowance a post is counted against. Browser tests only: when the server was started with ENV exactly
- * "test" (production never sets it), a test may add a scope (a cookie it sets for itself) so its posts are counted
- * apart from every other test's, instead of the suite sleeping a minute each time the shared admin hits 10 posts.
- * With any other ENV the scope is ignored, and so is anything that is not a short plain id.
+ * Whose allowance something is counted against. Browser tests only: when the server was started with ENV exactly
+ * "test" (production never sets it), a test may add a scope (a cookie it sets for itself) so its posts, or the
+ * sign-ups it makes through the shared admin link, are counted apart from every other test's, instead of the suite
+ * sleeping a minute each time the shared admin hits 10 posts, or failing when the link's 20 sign-ups per 10 minutes
+ * run out. With any other ENV the scope is ignored, and so is anything that is not a short plain id.
  */
-export function postSubject(env: { ENV?: string }, userId: string, scope?: string | null): string {
-  return env.ENV === "test" && scope && /^[0-9A-Za-z-]{1,64}$/.test(scope) ? `${userId}:${scope}` : userId;
+export function scopedSubject(env: { ENV?: string }, subject: string, scope?: string | null): string {
+  return env.ENV === "test" && scope && /^[0-9A-Za-z-]{1,64}$/.test(scope) ? `${subject}:${scope}` : subject;
 }
+
+/** Whose allowance a post is counted against: the person, or (browser tests only) the person within a test's scope. */
+export const postSubject = scopedSubject;
 
 export const limitLike = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.likes, userId, salt, now);
@@ -128,6 +133,10 @@ export const limitLinkPreview = (db: D1Database, salt: string, userId: string, n
 /** Name suggestions while typing an @ (docs/PRD.md section 8.2): 120 a minute per person, so typing is free but a loop is not. */
 export const limitMentions = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.mentions, userId, salt, now);
+
+/** Reporting a post (docs/PRD.md, "Reporting a post"): 10 an hour per person, enough for a bad day and not enough to bury the moderators. */
+export const limitReport = (db: D1Database, salt: string, userId: string, now?: number) =>
+  takeSlot(db, LIMITS.reports, userId, salt, now);
 
 export const limitUpload = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.uploads, userId, salt, now);

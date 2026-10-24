@@ -5,6 +5,7 @@ import { getDb } from "@/db";
 import { getInstanceState } from "@/instance/request";
 import { countPending } from "@/server/admin";
 import { isEmailSetUp } from "@/server/email";
+import { countOpenCases } from "@/server/reports";
 import { Icon } from "../(member)/_components/icon";
 import { ThemeToggle } from "../(member)/_components/theme-toggle";
 import { HqBreadcrumbs } from "./hq-breadcrumbs";
@@ -23,6 +24,8 @@ export default async function HqLayout({ children }: { children: React.ReactNode
   const db = getDb(env.DB);
   // The waiting-for-approval count and the email notice are for the admin; a moderator is not shown them.
   const [pending, emailReady] = isAdmin ? await Promise.all([countPending(db), isEmailSetUp(db)]) : [0, true];
+  // Open report cases the person may handle (a moderator never counts one about themselves).
+  const cases = await countOpenCases(db, { userId: staff.userId, isAdmin });
   const initial = Array.from(settings.name.trim())[0] ?? "";
 
   return (
@@ -39,7 +42,7 @@ export default async function HqLayout({ children }: { children: React.ReactNode
           )}
           <p className="hq-title">{settings.name} {isAdmin ? "admin" : "moderation"}</p>
         </div>
-        <HqNav pending={pending} isAdmin={isAdmin} />
+        <HqNav pending={pending} cases={cases} isAdmin={isAdmin} />
       </aside>
 
       <div className="hq-content">

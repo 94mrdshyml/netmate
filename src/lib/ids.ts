@@ -18,6 +18,8 @@ export const ID_PREFIXES = {
   inviteUse: "invu",
   post: "post",
   notification: "ntf",
+  report: "rpt",
+  reportEvent: "rpe",
 } as const;
 
 export type IdModel = keyof typeof ID_PREFIXES;

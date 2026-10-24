@@ -199,10 +199,10 @@ export function BookmarkButton({ postId, saved }: { postId: string; saved: boole
 }
 
 /**
- * The "..." on your own posts. It opens a small menu (today: Delete post), and deleting still asks
- * first. Posts by other people have no menu, because there is nothing in it for them yet.
+ * The "..." under a post. On your own post it opens Delete post (which still asks first). On anyone
+ * else's it opens Report post, which goes to the report form.
  */
-export function PostMenu({ postId, goHomeAfter = false }: { postId: string; goHomeAfter?: boolean }) {
+export function PostMenu({ postId, mine, goHomeAfter = false }: { postId: string; mine: boolean; goHomeAfter?: boolean }) {
   const router = useRouter();
   const root = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
@@ -268,11 +268,16 @@ export function PostMenu({ postId, goHomeAfter = false }: { postId: string; goHo
                 </button>
               </div>
             </div>
-          ) : (
+          ) : mine ? (
             <button type="button" className="post-menu-item" onClick={() => setConfirming(true)}>
               <Icon name="trash-2" />
               <span>Delete post</span>
             </button>
+          ) : (
+            <Link href={`/report/${postId}`} className="post-menu-item">
+              <Icon name="flag" />
+              <span>Report post</span>
+            </Link>
           )}
         </div>
       ) : null}

@@ -137,8 +137,9 @@ test("another member sees my post, and cannot delete it", async ({ browser, page
   await other.page.goto("/");
   const card = other.page.getByRole("article").filter({ hasText: text });
   await expect(card).toBeVisible();
-  // Not even the "..." menu: there is nothing in it for someone else's post.
-  await expect(card.getByRole("button", { name: "More options" })).toHaveCount(0);
+  // Someone else's post has a "..." menu with Report post in it, and never Delete post.
+  await card.getByRole("button", { name: "More options" }).click();
+  await expect(card.getByRole("link", { name: "Report post" })).toBeVisible();
   await expect(card.getByRole("button", { name: "Delete post" })).toHaveCount(0);
   await other.context.close();
 });
