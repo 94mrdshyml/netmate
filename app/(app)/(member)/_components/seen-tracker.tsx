@@ -48,6 +48,17 @@ export function SeenTracker() {
       { threshold: 0.5 },
     );
     document.querySelectorAll("[data-post-id]").forEach((el) => observer.observe(el));
+    // Posts that load as you scroll are looked at too.
+    const added = new MutationObserver((records) => {
+      for (const record of records) {
+        record.addedNodes.forEach((node) => {
+          if (!(node instanceof HTMLElement)) return;
+          if (node.dataset.postId) observer.observe(node);
+          node.querySelectorAll("[data-post-id]").forEach((el) => observer.observe(el));
+        });
+      }
+    });
+    added.observe(document.querySelector("main") ?? document.body, { childList: true, subtree: true });
 
     const every = setInterval(flush, SEND_EVERY_MS);
     const onHide = () => {
@@ -56,6 +67,7 @@ export function SeenTracker() {
     document.addEventListener("visibilitychange", onHide);
     return () => {
       observer.disconnect();
+      added.disconnect();
       timers.forEach((t) => clearTimeout(t));
       clearInterval(every);
       document.removeEventListener("visibilitychange", onHide);

@@ -4465,3 +4465,33 @@ a.link-card:hover {
   gap: 8px;
   margin: 0;
 }
+
+/* ---- Home: "N new posts", load on scroll, Mates of your mates (docs/PRD.md section 8.3) ---- */
+
+/* A zero-height row under the tabs, so the pill floats over the posts without pushing them down. */
+.new-posts {
+  position: sticky;
+  top: calc(var(--topbar-h) + 48px);
+  z-index: 15;
+  display: flex;
+  justify-content: center;
+  height: 0;
+  overflow: visible;
+}
+
+.new-posts-pill {
+  margin-top: 12px;
+  border-radius: 999px;
+}
+
+.feed-end {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 8px 0 16px;
+}
+
+.mates {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
