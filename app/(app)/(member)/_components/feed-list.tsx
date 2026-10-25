@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PersonView } from "@/server/follows";
 import type { PostView } from "@/server/posts";
 import { loadMoreAction } from "../feed-actions";
+import { RemovePostContext } from "./feed-context";
 import { PersonRow } from "./person-row";
 import { PostCard } from "./post-card";
 
@@ -40,6 +41,8 @@ export function FeedList({
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const busy = useRef(false);
+  // A deleted post leaves the list at once, as itself and as anyone's repost of it.
+  const remove = useCallback((postId: string) => setItems((all) => all.filter((p) => p.id !== postId)), []);
   const end = useRef<HTMLDivElement>(null);
 
   const loadMore = useCallback(async () => {
@@ -82,7 +85,7 @@ export function FeedList({
     ) : null;
 
   return (
-    <>
+    <RemovePostContext.Provider value={remove}>
       {items.flatMap((post, i) => {
         const card = <PostCard key={keyOf(post)} post={post} viewerId={viewerId} now={now} />;
         return i === MATES_AFTER - 1 && block ? [card, block] : [card];
@@ -102,6 +105,6 @@ export function FeedList({
       ) : items.length > 0 ? (
         <p className="muted end">{endText}</p>
       ) : null}
-    </>
+    </RemovePostContext.Provider>
   );
 }

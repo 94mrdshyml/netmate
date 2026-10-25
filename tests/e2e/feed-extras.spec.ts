@@ -103,11 +103,18 @@ test("posts load as you scroll, each only once", async ({ browser }) => {
     const ids = await articles.evaluateAll((all) => all.map((el) => (el as HTMLElement).dataset.postId));
     expect(new Set(ids).size).toBe(ids.length);
 
+    // Deleting a post that came in on the second page takes it off the list at once.
+    const last = articles.last();
+    await last.getByRole("button", { name: "More options" }).click();
+    await last.getByRole("button", { name: "Delete post" }).click();
+    await last.getByRole("button", { name: "Delete", exact: true }).click();
+    await expect(articles).toHaveCount(loaded - 1);
+
     // A button that changes something redraws the page in the background. What has loaded must stay.
     const row = l.page.getByRole("region", { name: "Mates of your mates" }).getByRole("listitem").filter({ hasText: "Cat Mate" });
     await row.getByRole("button", { name: /^Follow / }).click();
     await expect(row).toHaveCount(0);
-    await expect(articles).toHaveCount(loaded);
+    await expect(articles).toHaveCount(loaded - 1);
   } finally {
     await l.context.close();
   }

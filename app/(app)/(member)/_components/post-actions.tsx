@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type RefObject } from "react";
 import { deletePostAction, setBookmarkAction, setLikeAction, setRepostAction } from "../posts/actions";
 import { Icon } from "./icon";
+import { useRemovePost } from "./feed-context";
 
 /** Closes a small panel on an outside tap or Escape (and gives focus back to its button). */
 function useDismiss(open: boolean, close: () => void, root: RefObject<HTMLElement | null>) {
@@ -204,6 +205,7 @@ export function BookmarkButton({ postId, saved }: { postId: string; saved: boole
  */
 export function PostMenu({ postId, mine, goHomeAfter = false }: { postId: string; mine: boolean; goHomeAfter?: boolean }) {
   const router = useRouter();
+  const removeFromList = useRemovePost();
   const root = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -248,7 +250,8 @@ export function PostMenu({ postId, mine, goHomeAfter = false }: { postId: string
                   disabled={pending}
                   onClick={() =>
                     start(async () => {
-                      await deletePostAction(postId);
+                      const result = await deletePostAction(postId);
+                      if (result.ok) removeFromList?.(postId);
                       if (goHomeAfter) router.push("/");
                       else router.refresh();
                     })
