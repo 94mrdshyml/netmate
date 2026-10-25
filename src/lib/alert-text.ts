@@ -24,7 +24,23 @@ const ACTION: Record<NotificationType, string> = {
   invite_used: "joined with your invite link",
   pending_approval: "is waiting for your approval",
   subscribe: "subscribed to you",
+  // These two are from the people who look after the space, and never name them: see `systemAlertText`.
+  post_removed: "removed a post of yours",
+  report_closed: "looked at your report",
 };
+
+/**
+ * The two alerts that come from the people who look after the space (docs/PRD.md section 8.8a). They carry no name: the
+ * person is told what happened and nothing about who did it, who reported it or why a case was opened. `outcome` is how a
+ * case ended ("Handled"), `caseId` its number.
+ */
+export function systemAlertText(type: "post_removed" | "report_closed", report: { caseId: string; outcome: string } | null): string {
+  if (type === "post_removed") return "A post of yours was removed because it broke this space's rules.";
+  return report ? `Your report ${report.caseId} was looked at: ${report.outcome}.` : "Your report was looked at.";
+}
+
+/** Alerts that say what happened without naming anyone. */
+export const SYSTEM_TYPES: ReadonlySet<NotificationType> = new Set(["post_removed", "report_closed"]);
 
 /** What happened, such as "liked your post" ("is waiting" only reads right for one person; only likes and reposts are grouped). */
 export const alertAction = (type: NotificationType): string => ACTION[type];

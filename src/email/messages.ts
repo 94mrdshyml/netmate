@@ -77,3 +77,15 @@ export function rejectedForInvitee(instanceName: string, firstName: string): Mes
     },
   };
 }
+
+/** Tells the person who reported a post that the people who look after the space looked at it. Says how it ended, and nothing about the author. */
+export function reportClosedForReporter(instanceName: string, firstName: string, report: { caseId: string; outcome: string }, reportsUrl: string | null): Message {
+  return {
+    subject: oneLine(`Your report ${report.caseId} on ${instanceName} was looked at`),
+    content: {
+      heading: "We looked at your report",
+      paragraphs: [`Hi ${firstName},`, `Thank you for telling us. Your report ${report.caseId} was looked at and is now closed. How it ended: ${report.outcome}.`],
+      ...(reportsUrl ? { button: { label: "See your reports", url: reportsUrl } } : {}),
+    },
+  };
+}

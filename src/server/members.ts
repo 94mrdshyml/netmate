@@ -9,7 +9,7 @@ import { isId } from "@/lib/ids";
 import { decodePeopleCursor, encodePeopleCursor } from "@/server/follows";
 
 export const MEMBER_PAGE = 25;
-export const MEMBER_FILTERS = ["all", "moderators", "pending"] as const;
+export const MEMBER_FILTERS = ["all", "moderators", "pending", "suspended"] as const;
 export type MemberFilter = (typeof MEMBER_FILTERS)[number];
 
 export type MemberCounts = {
@@ -35,7 +35,7 @@ export type MemberRow = {
   email: string | null;
   role: "admin" | "member";
   isModerator: boolean;
-  status: "active" | "pending";
+  status: "active" | "pending" | "suspended";
   isPrivate: boolean;
   joinedAt: number;
   invitedBy: string | null;
@@ -85,7 +85,14 @@ export async function listMembers(
       : sql`and (lower(p.username) like ${pattern} escape '\\'
                  or lower(p.first_name || ' ' || p.last_name) like ${pattern} escape '\\'
                  ${viewer.isAdmin ? sql`or lower(u.email) like ${pattern} escape '\\'` : sql``})`;
-  const narrow = filter === "moderators" ? sql`and p.is_moderator = 1` : filter === "pending" ? sql`and p.status = 'pending'` : sql``;
+  const narrow =
+    filter === "moderators"
+      ? sql`and p.is_moderator = 1`
+      : filter === "pending"
+        ? sql`and p.status = 'pending'`
+        : filter === "suspended"
+          ? sql`and p.status = 'suspended'`
+          : sql``;
   const after = cursor ? sql`and (p.created_at < ${cursor.createdAt} or (p.created_at = ${cursor.createdAt} and p.user_id < ${cursor.userId}))` : sql``;
 
   const rows = await db.all<Raw>(sql`
@@ -121,7 +128,7 @@ export async function listMembers(
       email: viewer.isAdmin ? r.email : null,
       role: r.role === "admin" ? "admin" : "member",
       isModerator: r.role !== "admin" && r.isModerator === 1,
-      status: r.status === "pending" ? "pending" : "active",
+      status: r.status === "pending" ? "pending" : r.status === "suspended" ? "suspended" : "active",
       isPrivate: r.isPrivate === 1,
       joinedAt: r.joinedAt,
       invitedBy: r.invitedBy,
@@ -149,7 +156,7 @@ export const WEEKS = 8;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type SiteStats = {
-  members: { active: number; pending: number; moderators: number; private: number };
+  members: { active: number; pending: number; suspended: number; moderators: number; private: number };
   content: { posts: number; replies: number; quotes: number; reposts: number; pictures: number; gifs: number; links: number; places: number; removed: number };
   interactions: { likes: number; reposts: number; mentions: number; follows: number };
   /** Oldest first. Week 0 of the list is 7 weeks ago; the last entry is the last 7 days. */
@@ -178,6 +185,7 @@ export async function siteStats(db: Db, now: number = Date.now()): Promise<SiteS
     select
       (select count(*) from profiles where status = 'active') as active,
       (select count(*) from profiles where status = 'pending') as pending,
+      (select count(*) from profiles where status = 'suspended') as suspended,
       (select count(*) from profiles where is_moderator = 1 and role = 'member') as moderators,
       (select count(*) from profiles where is_private = 1 and status = 'active') as private,
       (select count(*) from posts where deleted_at is null and parent_id is null and quoted_post_id is null) as posts,
@@ -195,7 +203,7 @@ export async function siteStats(db: Db, now: number = Date.now()): Promise<SiteS
   const n = one ?? {};
   const [newMembers, posts, replies, likes] = await Promise.all([perWeek(db, "profiles", now), perWeek(db, "posts_top", now), perWeek(db, "posts_replies", now), perWeek(db, "likes", now)]);
   return {
-    members: { active: n.active ?? 0, pending: n.pending ?? 0, moderators: n.moderators ?? 0, private: n.private ?? 0 },
+    members: { active: n.active ?? 0, pending: n.pending ?? 0, suspended: n.suspended ?? 0, moderators: n.moderators ?? 0, private: n.private ?? 0 },
     content: {
       posts: n.posts ?? 0,
       replies: n.replies ?? 0,

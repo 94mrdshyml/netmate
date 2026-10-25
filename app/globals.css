@@ -4099,7 +4099,9 @@ a.link-card:hover {
 }
 
 .hq-toolbar .hq-filters {
-  flex: none;
+  /* May shrink, so on a phone the chips wrap onto a second line instead of making the page scroll sideways. */
+  flex: 0 1 auto;
+  max-width: 100%;
   margin: 0;
 }
 
@@ -4494,4 +4496,24 @@ a.link-card:hover {
 .mates {
   border-bottom: 1px solid var(--line);
   padding-bottom: 8px;
+}
+
+/* ---- Taking a post down and suspending a member (docs/PRD.md 8.8a) ---- */
+
+.case-remove {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.case-remove .hint,
+.hq-confirm p {
+  margin: 0;
+}
+
+.hq-confirm {
+  display: grid;
+  gap: 8px;
+  max-width: 420px;
 }

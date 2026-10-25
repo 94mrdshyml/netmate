@@ -22,6 +22,7 @@ import {
   type ReportOutcome,
 } from "@/lib/report-categories";
 import { decodeCaseCursor, likePatternOf } from "@/lib/report-list";
+import { alertReportClosed, removeReportClosedAlert } from "@/server/notifications";
 import { getPost } from "@/server/posts";
 
 export const CASE_PAGE = 25;
@@ -139,7 +140,7 @@ export type Staff = { userId: string; isAdmin: boolean };
  * Which cases this person may see. The admin sees all. A moderator never sees one about their own post or one
  * they reported themselves, so nobody judges their own case.
  */
-const mayHandle = (staff: Staff) =>
+export const mayHandle = (staff: Staff) =>
   staff.isAdmin ? sql`1 = 1` : sql`(r.reporter_id is null or r.reporter_id <> ${staff.userId}) and (r.post_author_id is null or r.post_author_id <> ${staff.userId})`;
 
 export type CaseSummary = {
@@ -231,7 +232,7 @@ export type CaseDetail = CaseSummary & {
   resolutionNote: string;
   closedAt: number | null;
   updatedAt: number;
-  post: { body: string; photos: number; hasGif: boolean; hasLink: boolean; isReply: boolean; createdAt: number; authorUsername: string; authorName: string | null; stillUp: boolean };
+  post: { body: string; photos: number; hasGif: boolean; hasLink: boolean; isReply: boolean; createdAt: number; authorUsername: string; authorName: string | null; stillUp: boolean; canRemove: boolean };
   reporter: { username: string; name: string } | null;
   /** Other cases about the same post: the number and where each stands. */
   others: { caseNo: number; caseId: string; status: ReportStatus; categoryLabel: string }[];
@@ -258,6 +259,8 @@ export async function getCase(db: Db, staff: Staff, caseNo: unknown): Promise<Ca
       postCreatedAt: number;
       authorName: string | null;
       stillUp: number;
+      authorRole: string | null;
+      authorIsModerator: number | null;
       reporterUsername: string | null;
     }
   >(sql`
@@ -268,6 +271,8 @@ export async function getCase(db: Db, staff: Staff, caseNo: unknown): Promise<Ca
            r.post_photos as photos, r.post_has_gif as hasGif, r.post_has_link as hasLink, r.post_is_reply as isReply, r.post_created_at as postCreatedAt,
            (select p.first_name || ' ' || p.last_name from profiles p where p.user_id = r.post_author_id) as authorName,
            (select count(*) from posts x where x.id = r.post_id and x.deleted_at is null) as stillUp,
+           (select p.role from profiles p where p.user_id = r.post_author_id) as authorRole,
+           (select p.is_moderator from profiles p where p.user_id = r.post_author_id) as authorIsModerator,
            (select p.username from profiles p where p.user_id = r.reporter_id) as reporterUsername,
            (select p.first_name || ' ' || p.last_name from profiles p where p.user_id = r.reporter_id) as reporterName,
            (select p.first_name || ' ' || p.last_name from profiles p where p.user_id = r.handled_by) as handledByName
@@ -306,6 +311,8 @@ export async function getCase(db: Db, staff: Staff, caseNo: unknown): Promise<Ca
       authorUsername: row.authorUsername,
       authorName: row.authorName,
       stillUp: row.stillUp > 0,
+      // Staff can take it down while it is up, except the owner's posts, and a moderator's posts unless this is the admin.
+      canRemove: row.stillUp > 0 && row.authorRole !== "admin" && (staff.isAdmin || row.authorIsModerator !== 1),
     },
     reporter: row.reporterName && row.reporterUsername ? { username: row.reporterUsername, name: row.reporterName } : null,
     others: others.map((o) => ({ caseNo: o.caseNo, caseId: formatCaseId(o.caseNo), status: o.status as ReportStatus, categoryLabel: categoryLabel(o.category) })),
@@ -350,11 +357,14 @@ async function move(
     await db.batch([db.update(reports).set({ status: "reviewing", handledBy: staff.userId, updatedAt: new Date(now) }).where(guard), event("review_started", "")]);
   } else if (wanted.status === "closed") {
     await db.batch([
+      // An alert from an earlier closing goes first (only when this really is a change), so the reporter hears this closing as new.
+      removeReportClosedAlert(db, id, found.status),
       db
         .update(reports)
         .set({ status: "closed", outcome: wanted.outcome, resolutionNote: wanted.note, handledBy: staff.userId, closedAt: new Date(now), updatedAt: new Date(now) })
         .where(guard),
       event("closed", wanted.outcome),
+      alertReportClosed(db, staff.userId, id),
     ]);
   } else {
     // Only a closed case can be reopened. Reopening is refused if the reporter has since filed a new live case on the same post.

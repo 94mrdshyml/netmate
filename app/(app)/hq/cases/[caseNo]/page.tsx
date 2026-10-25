@@ -108,8 +108,8 @@ export default async function CasePage({ params }: { params: Promise<{ caseNo: s
         </dl>
       </Card>
 
-      <Card id="case-actions" icon="check-circle" title="What to do" description="The person who wrote the post and the person who reported it are not told what you decide.">
-        <CaseActions caseNo={found.caseNo} status={found.status} />
+      <Card id="case-actions" icon="check-circle" title="What to do" description="The person who wrote the post is never told about the report. If you take the post down they are told it was removed, and the person who reported is told when a case closes.">
+        <CaseActions caseNo={found.caseNo} status={found.status} canRemove={found.post.canRemove} />
       </Card>
 
       <Card id="case-history" icon="calendar" title="History">
