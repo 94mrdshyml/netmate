@@ -54,7 +54,8 @@ test("the phone tells the server which posts were on screen, and the page does n
   await member.waitForTimeout(1500);
   await member.getByRole("navigation", { name: "Feeds" }).getByRole("link", { name: "Following" }).click();
   await reported;
-  await expect(member.getByRole("alert")).toHaveCount(0);
+  // Nothing about it is shown. (The framework's own page-change announcer is also an "alert", so look for our error styles.)
+  await expect(member.locator(".banner, .error")).toHaveCount(0);
 });
 
 test("the For you tab opens first, and each feed marks its tab", async () => {
