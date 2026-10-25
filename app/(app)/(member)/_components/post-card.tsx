@@ -9,6 +9,7 @@ import { PostBody } from "./post-body";
 import { PostGif } from "./post-gif";
 import { PostPhotos } from "./post-photos";
 import { QuoteCard } from "./quote-card";
+import { SubscribeOffer } from "./subscribe-offer";
 
 /** One post in a list. The text is always rendered as text, never as markup. */
 export function PostCard({
@@ -16,11 +17,14 @@ export function PostCard({
   viewerId,
   now,
   linkToPost = true,
+  offer,
 }: {
   post: PostView;
   viewerId: string;
   now: number;
   linkToPost?: boolean;
+  /** For a locked post: what the Subscribe button offers (null price: the author is not taking new subscribers). */
+  offer?: { cents: number | null; testMode: boolean };
 }) {
   const href = `/${post.author.username}/status/${post.id}`;
   const name = `${post.author.firstName} ${post.author.lastName}`;
@@ -49,7 +53,26 @@ export function PostCard({
           <time className="muted" dateTime={new Date(post.createdAt).toISOString()}>
             {relativeTime(post.createdAt, now)}
           </time>
+          {post.subscribersOnly && !post.locked && !post.parentId ? (
+            <span className="post-audience muted">
+              <Icon name="lock" size={14} />
+              <span>Subscribers only</span>
+            </span>
+          ) : null}
         </header>
+        {post.locked ? (
+          <div className="post-locked">
+            <p>
+              <Icon name="lock" size={16} />
+              <strong>This post is for subscribers only.</strong>
+            </p>
+            {offer && offer.cents !== null ? (
+              <SubscribeOffer creatorId={post.author.userId} name={name} offerCents={offer.cents} testMode={offer.testMode} />
+            ) : (
+              <p className="hint">{name} is not taking new subscribers right now.</p>
+            )}
+          </div>
+        ) : null}
         {post.body ? (
           <p className="post-body">
             <PostBody text={post.body} tags={post.tags} mentions={post.mentions} />
@@ -65,25 +88,27 @@ export function PostCard({
             <span>{post.place}</span>
           </p>
         ) : null}
-        <footer className="post-actions">
-          {linkToPost ? (
-            <Link className="action" href={href} aria-label={`Reply, ${post.replyCount} replies`}>
-              <Icon name="message-circle" />
-              <span>{post.replyCount}</span>
-            </Link>
-          ) : (
-            <span className="action" aria-label={`${post.replyCount} replies`}>
-              <Icon name="message-circle" />
-              <span>{post.replyCount}</span>
-            </span>
-          )}
-          {post.share !== "none" ? (
-            <RepostButton postId={post.id} reposted={post.repostedByMe} count={post.repostCount} share={post.share} />
-          ) : null}
-          <LikeButton postId={post.id} liked={post.likedByMe} count={post.likeCount} />
-          <BookmarkButton postId={post.id} saved={post.bookmarkedByMe} />
-          <PostMenu postId={post.id} mine={post.author.userId === viewerId} goHomeAfter={!linkToPost} />
-        </footer>
+        {post.locked ? null : (
+          <footer className="post-actions">
+            {linkToPost ? (
+              <Link className="action" href={href} aria-label={`Reply, ${post.replyCount} replies`}>
+                <Icon name="message-circle" />
+                <span>{post.replyCount}</span>
+              </Link>
+            ) : (
+              <span className="action" aria-label={`${post.replyCount} replies`}>
+                <Icon name="message-circle" />
+                <span>{post.replyCount}</span>
+              </span>
+            )}
+            {post.share !== "none" ? (
+              <RepostButton postId={post.id} reposted={post.repostedByMe} count={post.repostCount} share={post.share} />
+            ) : null}
+            <LikeButton postId={post.id} liked={post.likedByMe} count={post.likeCount} />
+            <BookmarkButton postId={post.id} saved={post.bookmarkedByMe} />
+            <PostMenu postId={post.id} mine={post.author.userId === viewerId} goHomeAfter={!linkToPost} />
+          </footer>
+        )}
       </div>
     </article>
   );

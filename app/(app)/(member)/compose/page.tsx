@@ -6,6 +6,7 @@ import { getInstanceState } from "@/instance/request";
 import { currentTime } from "@/lib/time";
 import { readKlipyKey } from "@/server/gifs";
 import { getPost } from "@/server/posts";
+import { mySubscriptionSettings } from "@/server/subscriptions";
 import { Avatar } from "../_components/avatar";
 import { Composer } from "../_components/composer";
 import { PageHeader } from "../_components/page-header";
@@ -34,6 +35,9 @@ export default async function ComposePage({ searchParams }: { searchParams: Prom
     if (!quoted || quoted.share === "none") notFound();
   }
 
+  // "Subscribers only" is offered while subscriptions are on and this member has set a price.
+  const mine = await mySubscriptionSettings(db, member.userId);
+
   return (
     <main className="column">
       <PageHeader title={quoted ? "Quote post" : "New post"} back={{ href: "/", label: "Back to Home" }} />
@@ -42,6 +46,7 @@ export default async function ComposePage({ searchParams }: { searchParams: Prom
         places={settings.placesEnabled}
         gifKey={gifKey}
         linkPreviews={settings.linkPreviewsEnabled}
+        subscribersChoice={mine.enabled && mine.priceCents !== null}
         placeholder={quoted ? "Add your thoughts" : undefined}
         quoteId={quoted?.id}
         quoteCard={

@@ -8,13 +8,14 @@ import { z } from "zod";
 import type { Db } from "@/db";
 import { blocks, LIVE_SUBSCRIPTION_STATUSES, polarProducts, profiles, subscriptions, user } from "@/db/schema";
 import { isId } from "@/lib/ids";
+import { ACCESS_GRACE_MS } from "@/lib/subscription-access";
 import { CURRENCY, parsePrice } from "@/lib/money";
 import { polarCall } from "@/payments/polar";
 import { META_CREATOR, META_SUBSCRIBER } from "@/server/polar-events";
 import { readAccess, readPaymentSettings } from "@/server/payments";
+import { hasSubscriberAccessSql } from "@/server/visibility";
 
-/** A subscription whose end-of-period message never reached us is trusted for this long past its period, then stops. */
-export const ACCESS_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
+export { ACCESS_GRACE_MS };
 
 const LIVE = LIVE_SUBSCRIPTION_STATUSES;
 
@@ -59,21 +60,8 @@ export async function mySubscriptionSettings(db: Db, userId: string): Promise<My
 
 /** True when `subscriberId` has a paid-up subscription to `creatorId` in the mode the site is in now. */
 export async function hasSubscriberAccess(db: Db, subscriberId: string, creatorId: string, now: number = Date.now()): Promise<boolean> {
-  const settings = await readPaymentSettings(db);
-  const row = await db
-    .select({ id: subscriptions.id })
-    .from(subscriptions)
-    .where(
-      and(
-        eq(subscriptions.subscriberId, subscriberId),
-        eq(subscriptions.creatorId, creatorId),
-        eq(subscriptions.mode, settings.mode),
-        inArray(subscriptions.status, [...LIVE]),
-        sql`(${subscriptions.currentPeriodEnd} is null or ${subscriptions.currentPeriodEnd} > ${now - ACCESS_GRACE_MS})`,
-      ),
-    )
-    .get();
-  return row !== undefined;
+  const row = await db.get<{ ok: number }>(sql`select ${hasSubscriberAccessSql(subscriberId, creatorId, now)} as ok`);
+  return Boolean(row?.ok);
 }
 
 export type SubscribeState = {

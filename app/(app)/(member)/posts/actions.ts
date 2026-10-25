@@ -32,13 +32,16 @@ const MESSAGES = {
   quote_and_reply: "A post can be a reply or a quote, not both.",
   quote_not_found: "That post is not available any more.",
   quote_private: "Posts from a private account cannot be quoted.",
+  quote_subscribers: "Posts for subscribers only cannot be quoted.",
+  audience_reply: "A reply is seen by the same people as the post it answers.",
+  audience_off: "You can post for subscribers only once subscriptions are on and you have set a price.",
   bad_link: "That link preview could not be used. Remove it and try again.",
 } as const;
 
 export type CreatePostActionResult = { ok: true } | { ok: false; message: string };
 
 /** Posts (then goes Home), or replies when `parentId` is given (then stays, so the page can show the reply). */
-export async function createPostAction(input: { body: string; parentId?: string; photos?: string[]; place?: string; gif?: unknown; quote?: string; linkToken?: string }): Promise<CreatePostActionResult> {
+export async function createPostAction(input: { body: string; parentId?: string; photos?: string[]; place?: string; gif?: unknown; quote?: string; linkToken?: string; audience?: string }): Promise<CreatePostActionResult> {
   const member = await getMember();
   if (!member) redirect("/sign-in");
   const { env } = await getCloudflareContext({ async: true });
@@ -80,6 +83,7 @@ export async function createPostAction(input: { body: string; parentId?: string;
     input?.gif,
     typeof input?.quote === "string" ? input.quote : undefined,
     link ?? undefined,
+    input?.audience === "subscribers" ? "subscribers" : "everyone",
   );
   if (!result.ok) return { ok: false, message: MESSAGES[result.code] };
 
@@ -109,6 +113,7 @@ export type RepostActionResult = { ok: true; reposted: boolean; repostCount: num
 const REPOST_MESSAGES = {
   not_found: "That post is not available any more.",
   private: "Posts from a private account cannot be reposted.",
+  subscribers: "Posts for subscribers only cannot be reposted.",
   reply: "Replies cannot be reposted.",
 } as const;
 
