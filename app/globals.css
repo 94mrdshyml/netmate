@@ -4099,7 +4099,9 @@ a.link-card:hover {
 }
 
 .hq-toolbar .hq-filters {
-  flex: none;
+  /* May shrink, so on a phone the chips wrap onto a second line instead of making the page scroll sideways. */
+  flex: 0 1 auto;
+  max-width: 100%;
   margin: 0;
 }
 

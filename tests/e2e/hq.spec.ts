@@ -407,7 +407,8 @@ test("the admin makes a member a moderator, who gets the members list and the nu
     await memberPage.getByRole("link", { name: "Moderation" }).click();
     await expect(memberPage).toHaveURL(/\/hq\/members$/);
     await expect(memberPage.getByRole("heading", { name: "Members", level: 1 })).toBeVisible();
-    // A moderator sees no email addresses and has no buttons to make moderators.
+    // A moderator sees no email addresses and has no buttons to make moderators. (Since session 64 a moderator may suspend an
+    // ordinary member, which has its own test in moderation.spec.ts; that is the only button that changes anything.)
     await expect(memberPage.getByText(/@example\.com/)).toHaveCount(0);
     await expect(memberPage.getByRole("button", { name: /moderator/i })).toHaveCount(0);
     // Measured against the phone's real width, not the page's own idea of it.
