@@ -525,6 +525,10 @@ legend.label {
   transform: scale(0.92);
 }
 
+.icon-btn[aria-pressed="true"] {
+  color: var(--brand-text);
+}
+
 .topbar,
 .page-header {
   position: sticky;
@@ -4437,40 +4441,6 @@ a.link-card:hover {
 }
 
 /* ---- Posts for subscribers only (docs/PRD.md 8.14, step 3) ---- */
-
-.audience {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 16px;
-  margin: 0;
-  padding: 4px 0 8px;
-  border: 0;
-}
-
-.audience legend {
-  float: left;
-  margin-right: 12px;
-  padding: 0;
-  color: var(--muted);
-  font-size: 0.875rem;
-  line-height: 44px;
-}
-
-.audience label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  cursor: pointer;
-}
-
-.audience input {
-  accent-color: var(--brand);
-  width: 20px;
-  height: 20px;
-  margin: 0;
-}
 
 .post-audience {
   display: inline-flex;
