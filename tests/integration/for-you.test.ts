@@ -280,6 +280,22 @@ describe("the order", () => {
     });
   }
 
+  it("puts the post you just wrote first, even against a followed post with many reactions, and ranks it normally after ten minutes", async () => {
+    const me = await member();
+    const friend = await member();
+    await setFollow(db(), me.id, friend.id, true);
+    const busy = await post(friend, "busy", 60_000);
+    for (let i = 0; i < 6; i++) await setLike(db(), (await member()).id, busy, true);
+    const mine = await post(me, "just now");
+    expect((await ids(me))[0]).toBe(mine);
+    expect((await ids(me)).indexOf(busy)).toBeGreaterThan(0);
+
+    // Eleven minutes later it is an ordinary post, and the busy one is ahead.
+    await env.DB.prepare("update posts set created_at = ? where id = ?").bind(Date.now() - 11 * 60_000, mine).run();
+    const later = await ids(me);
+    expect(later.indexOf(busy)).toBeLessThan(later.indexOf(mine));
+  });
+
   it("counts a busy author's second post for less, so one author cannot fill the feed", async () => {
     const me = await member();
     const busy = await member();

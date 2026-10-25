@@ -149,6 +149,7 @@ export async function listForYou(db: Db, viewerId: string, opts: { cursor?: unkn
       affinity: affinity.get(r.userId) ?? 0,
       friends: friendCount,
       seen: seen.has(r.id),
+      own: c.by === null && r.userId === viewerId,
     });
     const entry: Scored = { ...c, id: r.id, authorId: r.userId, score };
     const had = best.get(r.id);

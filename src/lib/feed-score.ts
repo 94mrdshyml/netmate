@@ -3,6 +3,7 @@
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
+const MINUTE = 60 * 1000;
 
 export const FEED = {
   /** Only posts (and reposts) from this long ago are looked at. */
@@ -21,6 +22,13 @@ export const FEED = {
   /** For a stranger's post, each person the reader follows who liked or reposted it adds this share, up to `friendMax` people. */
   friendStep: 0.25,
   friendMax: 4,
+  /**
+   * A post the reader wrote in the last `justPostedMs` goes before everything else, so the post you just wrote is at the top
+   * when you land on Home (owner-facing behaviour from before the ranked feed; the Home tests rely on it). Added to the score,
+   * and larger than any score the other parts can make.
+   */
+  justPostedMs: 10 * MINUTE,
+  justPostedBonus: 1000,
   /** A post the reader has already seen counts this much of its score. */
   seenFactor: 0.15,
   /** The second post by one author counts this much of its score, the third this squared, and so on. */
@@ -51,6 +59,8 @@ export type ScoreInput = {
   /** For a stranger's post: how many people the reader follows liked or reposted it. */
   friends: number;
   seen: boolean;
+  /** The reader wrote this post themself (not a repost of it). */
+  own: boolean;
 };
 
 /** `1 + ln(1 + likes + 2 x reposts + 2 x replies)`: the tenth like counts much less than the first. */
@@ -72,7 +82,8 @@ export function closenessPart(near: boolean, affinity: number, friends: number):
 }
 
 export function scorePost(i: ScoreInput): number {
-  return reactionPart(i.likes, i.reposts, i.replies) * freshnessPart(i.reachedAt, i.now) * closenessPart(i.near, i.affinity, i.friends) * (i.seen ? FEED.seenFactor : 1);
+  const score = reactionPart(i.likes, i.reposts, i.replies) * freshnessPart(i.reachedAt, i.now) * closenessPart(i.near, i.affinity, i.friends) * (i.seen ? FEED.seenFactor : 1);
+  return i.own && i.now - i.reachedAt < FEED.justPostedMs ? score + FEED.justPostedBonus : score;
 }
 
 export type Ranked = { score: number; authorId: string; at: number; id: string };

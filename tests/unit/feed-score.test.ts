@@ -4,7 +4,7 @@ import { FEED, closenessPart, freshnessPart, rank, reactionPart, scorePost, type
 const NOW = Date.UTC(2026, 9, 25, 12, 0, 0);
 const HOUR = 3_600_000;
 
-const base: ScoreInput = { likes: 0, reposts: 0, replies: 0, reachedAt: NOW, now: NOW, near: true, affinity: 0, friends: 0, seen: false };
+const base: ScoreInput = { likes: 0, reposts: 0, replies: 0, reachedAt: NOW, now: NOW, near: true, affinity: 0, friends: 0, seen: false, own: false };
 
 describe("the reaction part", () => {
   it("is 1 for a post nobody reacted to", () => {
@@ -62,6 +62,18 @@ describe("the whole score", () => {
     const friend = scorePost({ ...base });
     const stranger = scorePost({ ...base, near: false, likes: 20, reachedAt: NOW - 36 * HOUR });
     expect(friend).toBeGreaterThan(stranger);
+  });
+});
+
+describe("the post you just wrote", () => {
+  it("goes before everything else for ten minutes, then ranks like any post", () => {
+    const busy = scorePost({ ...base, likes: 500, reposts: 100, replies: 100, affinity: 8 });
+    expect(scorePost({ ...base, own: true })).toBeGreaterThan(busy);
+    expect(scorePost({ ...base, own: true, reachedAt: NOW - 9 * 60_000 })).toBeGreaterThan(busy);
+    expect(scorePost({ ...base, own: true, reachedAt: NOW - 11 * 60_000 })).toBeLessThan(1);
+  });
+  it("is for your own posts only", () => {
+    expect(scorePost({ ...base, own: false })).toBe(1);
   });
 });
 
