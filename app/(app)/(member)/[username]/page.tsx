@@ -200,7 +200,7 @@ export default async function ProfilePage({
                 post={post}
                 viewerId={viewer.userId}
                 now={now}
-                offer={subscribe ? { cents: subscribe.offerCents, testMode: subscribe.testMode } : undefined}
+                offer={subscribe ? { cents: subscribe.offerCents, testMode: subscribe.testMode, compact: true } : undefined}
               />
             ))}
             {page.items.length === 0 ? (

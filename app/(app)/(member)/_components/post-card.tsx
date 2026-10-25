@@ -23,8 +23,8 @@ export function PostCard({
   viewerId: string;
   now: number;
   linkToPost?: boolean;
-  /** For a locked post: what the Subscribe button offers (null price: the author is not taking new subscribers). */
-  offer?: { cents: number | null; testMode: boolean };
+  /** For a locked post: what the Subscribe button offers (null price: the author is not taking new subscribers). `compact` leaves out the long wording because the page already shows it (the Subscribe box on a profile). */
+  offer?: { cents: number | null; testMode: boolean; compact?: boolean };
 }) {
   const href = `/${post.author.username}/status/${post.id}`;
   const name = `${post.author.firstName} ${post.author.lastName}`;
@@ -67,7 +67,7 @@ export function PostCard({
               <strong>This post is for subscribers only.</strong>
             </p>
             {offer && offer.cents !== null ? (
-              <SubscribeOffer creatorId={post.author.userId} name={name} offerCents={offer.cents} testMode={offer.testMode} />
+              <SubscribeOffer creatorId={post.author.userId} name={name} offerCents={offer.cents} testMode={offer.testMode} showHint={!offer.compact} />
             ) : (
               <p className="hint">{name} is not taking new subscribers right now.</p>
             )}

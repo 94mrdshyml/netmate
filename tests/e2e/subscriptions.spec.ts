@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 import { type Page } from "@playwright/test";
 import { E2E } from "./constants";
 import { expect, test } from "./fixtures";
-import { signUpMember } from "./helpers";
+import { sendPost, signUpMember } from "./helpers";
 
 // Serial: each step uses what the one before made, and the last one puts everything back. Nothing here calls Polar:
 // the keys are made-up, "Subscribe" is not pressed, and Polar's messages are posted to our own webhook address,
@@ -82,6 +82,10 @@ test("the admin saves the Polar keys, turns subscriptions on and sets a price", 
   await page.getByLabel("Plus a fixed amount (US dollars)").fill("0.40");
   await page.getByRole("button", { name: "Save fee" }).click();
   await expect(page.getByText("Saved.").last()).toBeVisible();
+
+  // Subscriptions are on but nobody has a price yet: the composer offers no choice of who can see a post.
+  await page.goto("/compose");
+  await expect(page.getByRole("group", { name: "Who can see this" })).toHaveCount(0);
 
   // Members now have a Subscriptions row in Settings, with three tabs inside; the admin sets a price on My price.
   await page.goto("/settings");
@@ -264,7 +268,7 @@ test("a subscriber can see and stop their subscription, which asks first", async
   expect(await member.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(412);
 });
 
-test("when Polar says it ended, the subscription is gone; then everything is put back", async ({ page }) => {
+test("when Polar says it ended, the subscription is gone", async ({ page }) => {
   expect(
     (await polar(page, { type: "subscription.revoked", timestamp: new Date().toISOString(), data: subscription({ status: "canceled", cancel_at_period_end: true, modified_at: new Date(Date.now() + 3_600_000).toISOString() }) })).status(),
   ).toBe(200);
@@ -273,7 +277,133 @@ test("when Polar says it ended, the subscription is gone; then everything is put
   await expect(member.getByText("You are subscribed.")).toHaveCount(0);
   await member.goto("/subscriptions");
   await expect(member.getByText("You are not subscribed to anyone.")).toBeVisible();
+});
 
+// ---- posts for subscribers only (docs/PRD.md 8.14, step 3). They sit here because they need the Polar keys, the price and
+// the member this file sets up, and because two files changing the owner's payment settings cannot run side by side. ----
+
+const STAMP = Date.now().toString(36);
+const LOCKED_WORD = `kiwi${STAMP}`;
+const OPEN_WORD = `banana${STAMP}`;
+
+test("a member with a price can make a post for subscribers only", async ({ page }) => {
+  await page.goto("/compose");
+  const audience = page.getByRole("group", { name: "Who can see this" });
+  await expect(audience.getByRole("radio", { name: "Everyone" })).toBeChecked();
+  await page.getByLabel("Your post").fill(`Everyone can read this ${OPEN_WORD}`);
+  await sendPost(page);
+
+  await page.goto("/compose");
+  await page.getByRole("radio", { name: "Subscribers only" }).check({ force: true });
+  await expect(page.getByRole("radio", { name: "Subscribers only" })).toBeChecked();
+  await page.getByLabel("Your post").fill(`Only subscribers read this ${LOCKED_WORD}`);
+  await sendPost(page);
+
+  // The author sees both, and a label on the one for subscribers.
+  await page.goto(`/${E2E.admin.username}`);
+  const mine = page.getByRole("article").filter({ hasText: LOCKED_WORD });
+  await expect(mine).toBeVisible();
+  await expect(mine.getByText("Subscribers only")).toBeVisible();
+  await expect(page.getByRole("article").filter({ hasText: OPEN_WORD }).getByText("Subscribers only")).toHaveCount(0);
+  // It cannot be reposted or quoted: there is no repost button on it, and the quote address finds nothing.
+  await expect(mine.getByRole("button", { name: /^Repost/ })).toHaveCount(0);
+  const href = await mine.getByRole("link", { name: /Reply/ }).getAttribute("href");
+  const postId = /status\/(post_[0-9A-Za-z]{24})/.exec(href ?? "")![1]!;
+  expect((await page.goto(`/compose?quote=${postId}`))!.status()).toBe(404);
+});
+
+test("someone who does not subscribe sees a locked card, and the words stay out of the feed and search", async ({ page }) => {
+  await member.setViewportSize({ width: 412, height: 915 });
+  await member.goto(`/${E2E.admin.username}`);
+  await expect(member.getByRole("article").filter({ hasText: OPEN_WORD })).toBeVisible();
+  const locked = member.getByRole("article").filter({ hasText: "This post is for subscribers only." });
+  await expect(locked).toHaveCount(1);
+  // The Subscribe box at the top says it all; the card has the button.
+  await expect(locked.getByRole("button", { name: "Subscribe for $5.00 a month" })).toBeVisible();
+  await expect(locked.getByText(/You pay on Polar/)).toHaveCount(0);
+  expect((await locked.getByRole("button", { name: /^Subscribe for/ }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await expect(member.getByText(LOCKED_WORD)).toHaveCount(0);
+  // A locked card has no like, save or repost buttons.
+  await expect(locked.getByRole("button", { name: /Like|Save post|Repost/ })).toHaveCount(0);
+  expect(await member.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(412);
+
+  // Not in search. (The search page repeats what was typed, so the check is on post cards.)
+  await member.goto(`/search?q=${OPEN_WORD}`);
+  await expect(member.getByRole("article").filter({ hasText: OPEN_WORD })).toBeVisible();
+  await member.goto(`/search?q=${LOCKED_WORD}`);
+  await expect(member.getByText(/No posts found for/)).toBeVisible();
+  await expect(member.getByRole("article")).toHaveCount(0);
+
+  // The post's own page is a locked card too, with all the words about paying: no words of the post, no reply box.
+  await page.goto(`/${E2E.admin.username}`);
+  const href = await page.getByRole("article").filter({ hasText: LOCKED_WORD }).getByRole("link", { name: /Reply/ }).getAttribute("href");
+  await member.goto(href!);
+  await expect(member.getByText("This post is for subscribers only.")).toBeVisible();
+  await expect(member.getByRole("button", { name: /^Subscribe for/ })).toBeVisible();
+  await expect(member.getByText(/You pay on Polar/)).toBeVisible();
+  await expect(member.getByText(LOCKED_WORD)).toHaveCount(0);
+  await expect(member.getByLabel("Your reply")).toHaveCount(0);
+});
+
+test("a paying subscriber reads it and answers it, and loses it again when the subscription ends", async ({ page }) => {
+  await polar(page, { type: "subscription.updated", timestamp: new Date().toISOString(), data: subscription({ id: "e2e-sub-2" }) });
+  await polar(page, {
+    type: "order.paid",
+    timestamp: new Date().toISOString(),
+    data: {
+      id: "e2e-order-2",
+      created_at: new Date().toISOString(),
+      modified_at: new Date().toISOString(),
+      status: "paid",
+      paid: true,
+      net_amount: 500,
+      total_amount: 500,
+      tax_amount: 0,
+      refunded_amount: 0,
+      refunded_tax_amount: 0,
+      currency: "usd",
+      billing_reason: "subscription_create",
+      subscription_id: "e2e-sub-2",
+      metadata: {},
+    },
+  });
+
+  await member.goto(`/${E2E.admin.username}`);
+  const post = member.getByRole("article").filter({ hasText: LOCKED_WORD });
+  await expect(post).toBeVisible();
+  await expect(post.getByText("Subscribers only")).toBeVisible();
+  await expect(member.getByText("This post is for subscribers only.")).toHaveCount(0);
+  await expect(post.getByRole("button", { name: /^Repost/ })).toHaveCount(0);
+  await member.goto(`/search?q=${LOCKED_WORD}`);
+  await expect(member.getByRole("article").filter({ hasText: LOCKED_WORD })).toBeVisible();
+
+  // They can answer it.
+  await member.goto(`/${E2E.admin.username}`);
+  await member.goto((await post.getByRole("link", { name: /Reply/ }).getAttribute("href"))!);
+  await member.getByLabel("Your reply").fill(`A subscriber answers ${STAMP}`);
+  await member.getByRole("button", { name: "Reply", exact: true }).click();
+  await expect(member.getByRole("region", { name: "Replies" }).getByText(`A subscriber answers ${STAMP}`)).toBeVisible();
+
+  // The subscription ends (Polar says so): the card is back, and so is the empty search.
+  await polar(page, { type: "subscription.revoked", timestamp: new Date().toISOString(), data: subscription({ id: "e2e-sub-2", status: "canceled", current_period_end: new Date(Date.now() - 10 * 86_400_000).toISOString(), modified_at: new Date(Date.now() + 3_600_000).toISOString() }) });
+  await member.goto(`/${E2E.admin.username}`);
+  await expect(member.getByText(LOCKED_WORD)).toHaveCount(0);
+  await expect(member.getByText("This post is for subscribers only.")).toHaveCount(1);
+  await member.goto(`/search?q=${LOCKED_WORD}`);
+  await expect(member.getByRole("article")).toHaveCount(0);
+
+  // Take the two posts down: deleting is a soft delete and hides them from everyone.
+  await page.goto(`/${E2E.admin.username}`);
+  for (const word of [LOCKED_WORD, OPEN_WORD]) {
+    const card = page.getByRole("article").filter({ hasText: word });
+    await card.getByRole("button", { name: "More options" }).click();
+    await card.getByRole("button", { name: "Delete post" }).click();
+    await card.getByRole("button", { name: "Delete", exact: true }).click();
+    await expect(page.getByRole("article").filter({ hasText: word })).toHaveCount(0);
+  }
+});
+
+test("everything is put back", async ({ page }) => {
   // Put back: stop offering, switch off, forget the keys.
   await page.goto("/subscriptions/price");
   await page.getByRole("button", { name: "Stop offering" }).click();

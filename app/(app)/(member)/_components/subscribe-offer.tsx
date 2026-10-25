@@ -9,15 +9,17 @@ import { subscribeAction } from "../subscriptions/actions";
  * given and that the person can see your name. On a profile and on a locked post (CLAUDE.md rule 2 names this one place a
  * member's browser goes to a third party).
  */
-export function SubscribeOffer({ creatorId, name, offerCents, testMode }: { creatorId: string; name: string; offerCents: number; testMode: boolean }) {
+export function SubscribeOffer({ creatorId, name, offerCents, testMode, showHint = true }: { creatorId: string; name: string; offerCents: number; testMode: boolean; showHint?: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   return (
     <>
-      <p className="hint">
-        {testMode ? "Test mode: no real money moves. " : ""}Sales tax or VAT is added on top where it applies, and Polar shows you the total before you pay. Subscribe to see the posts {name} shares with subscribers only. You pay on Polar&apos;s secure page, which opens with your name and email from your account filled in (you can change them there), and you can stop any time. They can see your name as a subscriber.
-      </p>
+      {showHint ? (
+        <p className="hint">
+          {testMode ? "Test mode: no real money moves. " : ""}Sales tax or VAT is added on top where it applies, and Polar shows you the total before you pay. Subscribe to see the posts {name} shares with subscribers only. You pay on Polar&apos;s secure page, which opens with your name and email from your account filled in (you can change them there), and you can stop any time. They can see your name as a subscriber.
+        </p>
+      ) : null}
       <button
         type="button"
         className="btn btn-primary"
