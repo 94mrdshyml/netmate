@@ -16,6 +16,8 @@ import { isId } from "@/lib/ids";
 import { setModerator } from "@/server/members";
 import { removePaymentKeys, savePaymentConnection, savePaymentSplit, savePolarFee, setPaymentsEnabled, testPolar, type SaveResult, type TestResult } from "@/server/payments";
 import { recordPayout, voidPayout } from "@/server/revenue";
+import { emailReportersOfCases } from "@/server/case-mail";
+import { liftSuspension, removePostFromCase, suspendMember, type RemoveResult, type SuspendResult } from "@/server/moderation";
 import { closeCase, reopenCase, startReview, type CaseChange } from "@/server/reports";
 import { removeKlipyKey, saveKlipyKey, type SaveKlipyResult } from "@/server/gifs";
 import { approvePending, regenerateInvite, rejectPending, setInviteQuota, setLinkPreviewsEnabled, setPlacesEnabled } from "@/server/admin";
@@ -284,7 +286,62 @@ export async function startReviewAction(caseNo: number): Promise<CaseActionResul
 /** Closes a case with how it ended and an optional note. Closing one that is already closed changes nothing. */
 export async function closeCaseAction(caseNo: number, outcome: string, note: string): Promise<CaseActionResult> {
   const { staff, db } = await staffAndDb();
-  return finish(await closeCase(db, staff, caseNo, outcome, note));
+  const result = await closeCase(db, staff, caseNo, outcome, note);
+  // The person who reported it is emailed once, only when this press really closed the case.
+  if (result.ok && result.changed && result.status === "closed") {
+    const { env } = await getCloudflareContext({ async: true });
+    await emailReportersOfCases(db, mailContext(env), [Number(caseNo)]);
+  }
+  return finish(result);
+}
+
+const REMOVE_MESSAGES = {
+  not_found: "That case is not available.",
+  gone: "That post is already gone.",
+  owner: "The owner's posts cannot be taken down from here.",
+  moderator: "Only the admin can take down a moderator's post.",
+  bad_note: "That note has characters we cannot use.",
+  note_too_long: "Keep the note to 500 characters or fewer.",
+} as const satisfies Record<Extract<RemoveResult, { ok: false }>["code"], string>;
+
+/** Takes down the post a case is about, closes every open case on it, and tells the author and the reporters. */
+export async function removePostAction(caseNo: number, note: string): Promise<CaseActionResult> {
+  const { staff, db } = await staffAndDb();
+  const result = await removePostFromCase(db, staff, caseNo, note);
+  revalidatePath("/hq", "layout");
+  revalidatePath("/");
+  if (!result.ok) return { ok: false, message: REMOVE_MESSAGES[result.code] };
+  const { env } = await getCloudflareContext({ async: true });
+  await emailReportersOfCases(db, mailContext(env), result.closed);
+  return { ok: true };
+}
+
+const SUSPEND_MESSAGES = {
+  not_found: "That member is not available.",
+  self: "You cannot do that to yourself.",
+  owner: "The owner cannot be suspended.",
+  moderator: "Only the admin can suspend a moderator.",
+  not_active: "Only an active member can be suspended.",
+  bad_note: "That note has characters we cannot use.",
+  note_too_long: "Keep the note to 500 characters or fewer.",
+} as const satisfies Record<Extract<SuspendResult, { ok: false }>["code"], string>;
+
+function suspension(result: SuspendResult): CaseActionResult {
+  revalidatePath("/hq/members");
+  revalidatePath("/", "layout");
+  return result.ok ? { ok: true } : { ok: false, message: SUSPEND_MESSAGES[result.code] };
+}
+
+/** Suspends a member: signed out at once, cannot sign in, hidden from everyone but staff until lifted. */
+export async function suspendMemberAction(userId: string, note: string): Promise<CaseActionResult> {
+  const { staff, db } = await staffAndDb();
+  return suspension(await suspendMember(db, staff, userId, note));
+}
+
+/** Lifts a suspension. */
+export async function liftSuspensionAction(userId: string): Promise<CaseActionResult> {
+  const { staff, db } = await staffAndDb();
+  return suspension(await liftSuspension(db, staff, userId));
 }
 
 /** Opens a closed case again. */

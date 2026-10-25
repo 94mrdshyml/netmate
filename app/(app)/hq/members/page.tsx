@@ -6,13 +6,14 @@ import { listMembers, MEMBER_FILTERS, siteStats, type MemberFilter, type MemberR
 import { EmptyState } from "../../(member)/_components/empty-state";
 import { Icon } from "../../(member)/_components/icon";
 import { setModeratorAction } from "../actions";
+import { MemberSuspension } from "./member-suspension";
 import { Card, Initial, PageHeader, Pill, Toolbar } from "../hq-ui";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Members" };
 
-const FILTER_LABEL: Record<MemberFilter, string> = { all: "Everyone", moderators: "Moderators", pending: "Waiting" };
+const FILTER_LABEL: Record<MemberFilter, string> = { all: "Everyone", moderators: "Moderators", pending: "Waiting", suspended: "Suspended" };
 const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
@@ -112,12 +113,19 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
                     {m.role === "admin" ? <Pill icon="shield">Admin</Pill> : null}
                     {m.isModerator ? <Pill icon="shield">Moderator</Pill> : null}
                     {m.status === "pending" ? <Pill tone="attention">Waiting for approval</Pill> : null}
+                    {m.status === "suspended" ? <Pill tone="attention" icon="user-x">Suspended</Pill> : null}
                     {m.isPrivate ? <Pill icon="lock">Private</Pill> : null}
                     <div className="hq-meta">
                       {m.email ? `${m.email} · ` : ""}joined {day(m.joinedAt)}
                       {m.invitedBy ? ` · through ${m.invitedBy}'s link` : ""}
                     </div>
                   </div>
+                  {/* Staff may suspend an active member, or lift it; never the owner or themselves, and a moderator only for ordinary members. */}
+                  {m.role !== "admin" && m.userId !== staff.userId && (m.status === "active" || m.status === "suspended") && (isAdmin || !m.isModerator) ? (
+                    <div className="hq-item-actions">
+                      <MemberSuspension userId={m.userId} name={name} suspended={m.status === "suspended"} />
+                    </div>
+                  ) : null}
                   {isAdmin && m.role !== "admin" && m.status === "active" ? (
                     <div className="hq-item-actions">
                       <form action={setModeratorAction}>

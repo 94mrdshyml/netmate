@@ -42,12 +42,14 @@ export async function signUpMember(browser: Browser, ip: string, names: { first?
   const username = `m_${stamp.slice(-11)}`;
   await page.getByLabel("First name").fill(names.first ?? "Other");
   await page.getByLabel("Last name").fill(names.last ?? "Member");
-  await page.getByLabel("Email").fill(`member-${stamp}@example.com`);
+  const email = `member-${stamp}@example.com`;
+  const password = "a-long-enough-pass";
+  await page.getByLabel("Email").fill(email);
   await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Password").fill("a-long-enough-pass");
+  await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/$/);
-  return { page, context, username };
+  return { page, context, username, email, password };
 }
 
 /**

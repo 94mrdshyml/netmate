@@ -4,13 +4,14 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { REPORT_NOTE_MAX, REPORT_OUTCOMES } from "@/lib/report-categories";
 import { Icon } from "../../../(member)/_components/icon";
-import { closeCaseAction, reopenCaseAction, startReviewAction, type CaseActionResult } from "../../actions";
+import { closeCaseAction, removePostAction, reopenCaseAction, startReviewAction, type CaseActionResult } from "../../actions";
 
 /** The buttons for one case: take it, close it with how it ended, or open it again. Each one sends the state wanted. */
-export function CaseActions({ caseNo, status }: { caseNo: number; status: "open" | "reviewing" | "closed" }) {
+export function CaseActions({ caseNo, status, canRemove }: { caseNo: number; status: "open" | "reviewing" | "closed"; canRemove: boolean }) {
   const router = useRouter();
   const [outcome, setOutcome] = useState("handled");
   const [note, setNote] = useState("");
+  const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -46,6 +47,32 @@ export function CaseActions({ caseNo, status }: { caseNo: number; status: "open"
           <Icon name="eye" size={18} />
           Take this case
         </button>
+      ) : null}
+
+      {canRemove ? (
+        <div className="case-remove">
+          <p className="hint">
+            Take the post down for everyone. Every open case about it is closed as &ldquo;Post removed&rdquo;, the author gets a plain alert that a post of theirs was removed, and each person who reported it is told.
+            The post is kept, only hidden, like a post its author deletes.
+          </p>
+          {removing ? (
+            <div className="confirm" role="group" aria-label="Remove this post?">
+              <p>Remove this post?</p>
+              <button type="button" className="btn btn-primary" disabled={pending} onClick={() => run(() => removePostAction(caseNo, note))}>
+                <Icon name="trash-2" size={18} />
+                {pending ? "Removing" : "Yes, remove it"}
+              </button>
+              <button type="button" className="btn btn-ghost" disabled={pending} onClick={() => setRemoving(false)}>
+                Keep it
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="btn btn-ghost" disabled={pending} onClick={() => setRemoving(true)}>
+              <Icon name="trash-2" size={18} />
+              Remove post
+            </button>
+          )}
+        </div>
       ) : null}
 
       <form

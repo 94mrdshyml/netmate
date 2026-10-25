@@ -78,7 +78,12 @@ export const profiles = sqliteTable(
     avatarKey: text("avatar_key"),
     bannerKey: text("banner_key"),
     role: text("role").notNull().default("member"),
+    /** "active", "pending" (waiting for the admin) or "suspended" (staff paused the account; owner decision, session 64). */
     status: text("status").notNull().default("active"),
+    /** When and by whom a suspension was made, and staff's own note on it (never shown to the member). Empty unless suspended. */
+    suspendedAt: integer("suspended_at", { mode: "timestamp_ms" }),
+    suspendedBy: text("suspended_by").references(() => user.id, { onDelete: "set null" }),
+    suspensionNote: text("suspension_note").notNull().default(""),
     /**
      * A member the admin made a moderator (owner decision, session 46). The role stays "member", so the
      * one-admin rule is untouched. 0 or 1 (a CHECK added by hand in migration 0016, as drizzle would rebuild the table).
@@ -98,7 +103,8 @@ export const profiles = sqliteTable(
     check("profiles_name_length", sql`length(${t.firstName}) between 1 and 50 and length(${t.lastName}) between 1 and 50`),
     check("profiles_bio_length", sql`length(${t.bio}) <= 160`),
     check("profiles_role", sql`${t.role} in ('admin', 'member')`),
-    check("profiles_status", sql`${t.status} in ('active', 'pending')`),
+    check("profiles_status", sql`${t.status} in ('active', 'pending', 'suspended')`),
+    check("profiles_suspended_fields", sql`(${t.status} = 'suspended') = (${t.suspendedAt} is not null) and length(${t.suspensionNote}) <= 500`),
     // Exactly one admin, enforced by the database (docs/PRD.md section 3).
     uniqueIndex("profiles_one_admin").on(t.role).where(sql`${t.role} = 'admin'`),
     index("profiles_invited_by_idx").on(t.invitedBy),
@@ -529,6 +535,8 @@ export const NOTIFICATION_TYPES = [
   "invite_used",
   "pending_approval",
   "subscribe",
+  "post_removed",
+  "report_closed",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -553,22 +561,27 @@ export const notifications = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
     /** Empty while unread. */
     readAt: integer("read_at", { mode: "timestamp_ms" }),
+    /** For "report_closed": the case it is about. Empty for every other kind. */
+    reportId: text("report_id").references(() => reports.id, { onDelete: "cascade" }),
   },
   (t) => [
     check(
       "notifications_type",
-      sql`${t.type} in ('like', 'repost', 'follow', 'follow_request', 'reply', 'quote', 'mention', 'invite_used', 'pending_approval', 'subscribe')`,
+      sql`${t.type} in ('like', 'repost', 'follow', 'follow_request', 'reply', 'quote', 'mention', 'invite_used', 'pending_approval', 'subscribe', 'post_removed', 'report_closed')`,
     ),
     check("notifications_no_self", sql`${t.recipientId} <> ${t.actorId}`),
-    // Alerts about people have no post; alerts about posts always have one.
+    // Alerts about people have no post; alerts about posts always have one. ("post_removed" is about a post that is now gone.)
     check(
       "notifications_post_matches_type",
-      sql`(${t.type} in ('follow', 'follow_request', 'invite_used', 'pending_approval', 'subscribe')) = (${t.postId} is null)`,
+      sql`(${t.type} in ('follow', 'follow_request', 'invite_used', 'pending_approval', 'subscribe', 'report_closed')) = (${t.postId} is null)`,
     ),
+    check("notifications_report_matches_type", sql`(${t.type} = 'report_closed') = (${t.reportId} is not null)`),
     // The same person doing the same thing alerts once, however often it is sent. Two indexes, because
     // an empty post never counts as equal to another empty post in a unique index.
     uniqueIndex("notifications_once_per_post").on(t.recipientId, t.actorId, t.type, t.postId).where(sql`${t.postId} is not null`),
-    uniqueIndex("notifications_once_per_person").on(t.recipientId, t.actorId, t.type).where(sql`${t.postId} is null`),
+    uniqueIndex("notifications_once_per_person").on(t.recipientId, t.actorId, t.type).where(sql`${t.postId} is null and ${t.reportId} is null`),
+    // One alert for each closed case, for the person who reported it.
+    uniqueIndex("notifications_once_per_report").on(t.recipientId, t.reportId).where(sql`${t.reportId} is not null`),
     index("notifications_recipient_idx").on(t.recipientId, t.createdAt, t.id),
     index("notifications_unread_idx").on(t.recipientId).where(sql`${t.readAt} is null`),
   ],

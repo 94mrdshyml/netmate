@@ -6,9 +6,10 @@
 import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { Db } from "@/db";
-import { notifications, posts, profiles, type NotificationType } from "@/db/schema";
-import { GROUPED_TYPES } from "@/lib/alert-text";
+import { notifications, posts, profiles, reports, type NotificationType } from "@/db/schema";
+import { GROUPED_TYPES, SYSTEM_TYPES } from "@/lib/alert-text";
 import { isId, newId } from "@/lib/ids";
+import { formatCaseId, outcomeLabel } from "@/lib/report-categories";
 import { notBlockedWith, notMutedBy, visiblePosts } from "@/server/visibility";
 
 export const ALERTS_PAGE_SIZE = 30;
@@ -21,13 +22,13 @@ export const ALERTS_PAGE_SIZE = 30;
 
 /**
  * Someone liked a post. Nothing is written for a like on your own post. The select supplies every
- * column of the table, in order (id, recipient, actor, type, post, created, read).
+ * column of the table, in order (id, recipient, actor, type, post, created, read, report).
  */
 export function alertOnLike(db: Db, actorId: string, postId: string) {
   return db
     .insert(notifications)
     .select(
-      sql`select ${newId("notification")}, p.author_id, ${actorId}, 'like', p.id, ${Date.now()}, null
+      sql`select ${newId("notification")}, p.author_id, ${actorId}, 'like', p.id, ${Date.now()}, null, null
           from ${posts} p where p.id = ${postId} and p.author_id <> ${actorId}`,
     )
     .onConflictDoNothing();
@@ -43,7 +44,7 @@ export function alertOnRepost(db: Db, actorId: string, postId: string) {
   return db
     .insert(notifications)
     .select(
-      sql`select ${newId("notification")}, p.author_id, ${actorId}, 'repost', p.id, ${Date.now()}, null
+      sql`select ${newId("notification")}, p.author_id, ${actorId}, 'repost', p.id, ${Date.now()}, null, null
           from ${posts} p where p.id = ${postId} and p.author_id <> ${actorId}`,
     )
     .onConflictDoNothing();
@@ -59,7 +60,7 @@ export function alertOnQuote(db: Db, actorId: string, quotedId: string, quoteId:
   return db
     .insert(notifications)
     .select(
-      sql`select ${newId("notification")}, p.author_id, ${actorId}, 'quote', ${quoteId}, ${Date.now()}, null
+      sql`select ${newId("notification")}, p.author_id, ${actorId}, 'quote', ${quoteId}, ${Date.now()}, null, null
           from ${posts} p where p.id = ${quotedId} and p.author_id <> ${actorId}`,
     )
     .onConflictDoNothing();
@@ -70,7 +71,7 @@ export function alertOnMention(db: Db, actorId: string, recipientId: string, pos
   return db
     .insert(notifications)
     .select(
-      sql`select ${newId("notification")}, ${recipientId}, ${actorId}, 'mention', ${postId}, ${Date.now()}, null
+      sql`select ${newId("notification")}, ${recipientId}, ${actorId}, 'mention', ${postId}, ${Date.now()}, null, null
           where ${recipientId} <> ${actorId}`,
     )
     .onConflictDoNothing();
@@ -106,6 +107,37 @@ export function removeFollowRequestAlert(db: Db, actorId: string, targetId: stri
     .where(and(eq(notifications.actorId, actorId), eq(notifications.recipientId, targetId), eq(notifications.type, "follow_request")));
 }
 
+/**
+ * The person who reported a case hears it was looked at (docs/PRD.md section 8.8a). Put it straight after the statement that
+ * wrote the case's "closed" event: it is written only if that one was (changes() = 1), so a repeat closes nothing and alerts
+ * nobody. The staff member who did it is the row's actor, but the alert never shows a name.
+ */
+export function alertReportClosed(db: Db, staffId: string, reportId: string) {
+  return db
+    .insert(notifications)
+    .select(
+      sql`select ${newId("notification")}, r.reporter_id, ${staffId}, 'report_closed', null, ${Date.now()}, null, r.id
+          from reports r where r.id = ${reportId} and r.reporter_id is not null and r.reporter_id <> ${staffId} and changes() = 1`,
+    )
+    .onConflictDoNothing();
+}
+
+/**
+ * An earlier "your report was looked at" alert for this case goes, so a case closed again alerts again, as a new unread one.
+ * With `whileStatus` it goes only while the case is still in that state, so a repeat that changes nothing keeps the alert.
+ */
+export function removeReportClosedAlert(db: Db, reportId: string, whileStatus?: string) {
+  return db
+    .delete(notifications)
+    .where(
+      and(
+        eq(notifications.reportId, reportId),
+        eq(notifications.type, "report_closed"),
+        whileStatus ? sql`exists (select 1 from reports where id = ${reportId} and status = ${whileStatus})` : undefined,
+      ),
+    );
+}
+
 /** Every alert either of two people caused for the other. A block takes them all away. */
 export function removeAlertsBetween(db: Db, a: string, b: string) {
   return db
@@ -123,7 +155,7 @@ export function alertOnReply(db: Db, actorId: string, parentId: string, replyId:
   return db
     .insert(notifications)
     .select(
-      sql`select ${newId("notification")}, p.author_id, ${actorId}, 'reply', ${replyId}, ${Date.now()}, null
+      sql`select ${newId("notification")}, p.author_id, ${actorId}, 'reply', ${replyId}, ${Date.now()}, null, null
           from ${posts} p where p.id = ${parentId} and p.author_id <> ${actorId}`,
     )
     .onConflictDoNothing();
@@ -139,12 +171,12 @@ export function alertOnSubscribe(db: Db, polarId: string, at: number) {
   return db
     .insert(notifications)
     .select(
-      sql`select ${newId("notification")}, creator_id, subscriber_id, 'subscribe', null, ${at}, null
+      sql`select ${newId("notification")}, creator_id, subscriber_id, 'subscribe', null, ${at}, null, null
           from subscriptions where polar_id = ${polarId} and notified_at = ${at} and changes() = 1`,
     )
     .onConflictDoUpdate({
       target: [notifications.recipientId, notifications.actorId, notifications.type],
-      targetWhere: sql`post_id is null`,
+      targetWhere: sql`post_id is null and report_id is null`,
       set: { createdAt: sql`excluded.created_at`, readAt: null },
     });
 }
@@ -158,6 +190,8 @@ export function removePendingApprovalAlert(db: Db, personId: string) {
 
 export type AlertActor = { userId: string; username: string; firstName: string; lastName: string; avatarKey: string | null; active: boolean };
 
+export type AlertReport = { caseId: string; outcome: string };
+
 export type AlertItem = {
   /** Stable key for the row: the alert id, or the type and post for a group. */
   key: string;
@@ -169,6 +203,8 @@ export type AlertItem = {
   /** How many people did it (more than `actors` when a group is large). */
   count: number;
   post: { id: string; body: string; authorUsername: string } | null;
+  /** For "report_closed": the case and how it ended. Null for every other kind. */
+  report: AlertReport | null;
 };
 
 export type AlertPage = { items: AlertItem[]; nextCursor: string | null };
@@ -183,7 +219,8 @@ const postAuthor = alias(profiles, "post_author");
  */
 const shown = (viewerId: string) =>
   and(
-    or(isNull(notifications.postId), visiblePosts(viewerId)),
+    // "post_removed" is about a post that is gone, so it is the one kind that does not need the post to be visible.
+    or(isNull(notifications.postId), eq(notifications.type, "post_removed"), visiblePosts(viewerId)),
     notBlockedWith(viewerId, notifications.actorId),
     notMutedBy(viewerId, notifications.actorId),
   );
@@ -218,6 +255,8 @@ export async function listAlerts(db: Db, viewerId: string, opts: { cursor?: unkn
       postId: notifications.postId,
       postBody: posts.body,
       postAuthorUsername: postAuthor.username,
+      reportCaseNo: reports.caseNo,
+      reportOutcome: reports.outcome,
       userId: profiles.userId,
       username: profiles.username,
       firstName: profiles.firstName,
@@ -229,6 +268,7 @@ export async function listAlerts(db: Db, viewerId: string, opts: { cursor?: unkn
     .innerJoin(profiles, eq(profiles.userId, notifications.actorId))
     .leftJoin(posts, eq(posts.id, notifications.postId))
     .leftJoin(postAuthor, eq(postAuthor.userId, posts.authorId))
+    .leftJoin(reports, eq(reports.id, notifications.reportId))
     .where(and(eq(notifications.recipientId, viewerId), shown(viewerId), older))
     .orderBy(desc(notifications.createdAt), desc(notifications.id))
     .limit(limit + 1);
@@ -246,7 +286,10 @@ export async function listAlerts(db: Db, viewerId: string, opts: { cursor?: unkn
       avatarKey: r.avatarKey,
       active: r.status === "active",
     };
-    const post = r.postId && r.postBody !== null && r.postAuthorUsername ? { id: r.postId, body: r.postBody, authorUsername: r.postAuthorUsername } : null;
+    // A removed post has nothing to open or quote; and an alert from the people who look after the space names nobody.
+    const system = SYSTEM_TYPES.has(type);
+    const post = !system && r.postId && r.postBody !== null && r.postAuthorUsername ? { id: r.postId, body: r.postBody, authorUsername: r.postAuthorUsername } : null;
+    const report = type === "report_closed" && r.reportCaseNo !== null ? { caseId: formatCaseId(r.reportCaseNo), outcome: outcomeLabel(r.reportOutcome) } : null;
     const groupKey = GROUPED_TYPES.has(type) && r.postId ? `${type}:${r.postId}` : null;
     const existing = groupKey ? groups.get(groupKey) : undefined;
     if (existing) {
@@ -255,7 +298,7 @@ export async function listAlerts(db: Db, viewerId: string, opts: { cursor?: unkn
       if (existing.actors.length < SHOWN_ACTORS) existing.actors.push(actor);
       continue;
     }
-    const item: AlertItem = { key: groupKey ?? r.id, type, createdAt: r.createdAt.getTime(), unread: r.readAt === null, actors: [actor], count: 1, post };
+    const item: AlertItem = { key: groupKey ?? r.id, type, createdAt: r.createdAt.getTime(), unread: r.readAt === null, actors: system ? [] : [actor], count: 1, post, report };
     items.push(item);
     if (groupKey) groups.set(groupKey, item);
   }

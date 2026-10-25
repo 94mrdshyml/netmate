@@ -12,13 +12,14 @@ export const signInSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
-export type SignInFailure = "invalid" | "pending" | "failed";
+export type SignInFailure = "invalid" | "pending" | "suspended" | "failed";
 export type SignInResult = { ok: true; userId: string } | { ok: false; code: SignInFailure; message: string };
 
 const MESSAGES: Record<SignInFailure, string> = {
   // One message for an unknown email and a wrong password, so the form never tells who is a member.
   invalid: "That email and password do not match.",
   pending: "Your account is waiting for approval. You can sign in once the admin approves it.",
+  suspended: "Your account is suspended. Ask the people who run this space if you think that is a mistake.",
   failed: "Could not sign you in. Try again in a moment.",
 };
 
@@ -48,7 +49,7 @@ export async function signInMember(
       .get();
     if (profile?.status !== "active") {
       await db.delete(session).where(eq(session.token, res.token));
-      return fail("pending");
+      return fail(profile?.status === "suspended" ? "suspended" : "pending");
     }
     return { ok: true, userId: res.user.id };
   } catch (error) {

@@ -2,7 +2,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import Link from "next/link";
 import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
-import { alertAction, snippet, whoPhrase } from "@/lib/alert-text";
+import { alertAction, snippet, SYSTEM_TYPES, systemAlertText, whoPhrase } from "@/lib/alert-text";
 import { currentTime, relativeTime } from "@/lib/time";
 import { listAlerts, type AlertItem } from "@/server/notifications";
 import { Avatar } from "../_components/avatar";
@@ -27,6 +27,8 @@ const ICONS: Record<AlertItem["type"], { icon: IconName; filled?: boolean }> = {
   invite_used: { icon: "user-plus" },
   pending_approval: { icon: "user-check" },
   subscribe: { icon: "credit-card" },
+  post_removed: { icon: "alert-circle" },
+  report_closed: { icon: "check-circle" },
 };
 
 /** Where tapping the alert goes. A person who is not approved yet has no profile page to open. */
@@ -35,6 +37,8 @@ function hrefFor(item: AlertItem): string | null {
   if (item.type === "pending_approval") return "/hq/approvals";
   if (item.type === "follow_request") return "/privacy/requests";
   if (item.type === "subscribe") return "/subscriptions/earnings";
+  if (item.type === "report_closed") return "/reports";
+  if (item.type === "post_removed") return null;
   if (item.post) return `/${item.post.authorUsername}/status/${item.post.id}`;
   return actor?.active ? `/${actor.username}` : null;
 }
@@ -43,6 +47,8 @@ function AlertRow({ item, now }: { item: AlertItem; now: number }) {
   const names = item.actors.map((a) => `${a.firstName} ${a.lastName}`);
   const href = hrefFor(item);
   const { icon, filled } = ICONS[item.type];
+  // From the people who look after the space: what happened, and no name.
+  const system = SYSTEM_TYPES.has(item.type);
   const body = (
     <>
       <span className={`alert-icon alert-icon-${item.type}`}>
@@ -55,7 +61,13 @@ function AlertRow({ item, now }: { item: AlertItem; now: number }) {
           ))}
         </span>
         <span className="alert-text">
-          <strong>{whoPhrase(names, item.count)}</strong> {alertAction(item.type)}{" "}
+          {system ? (
+            <strong>{systemAlertText(item.type as "post_removed" | "report_closed", item.report)}</strong>
+          ) : (
+            <>
+              <strong>{whoPhrase(names, item.count)}</strong> {alertAction(item.type)}
+            </>
+          )}{" "}
           <time className="muted" dateTime={new Date(item.createdAt).toISOString()}>
             {relativeTime(item.createdAt, now)}
           </time>
