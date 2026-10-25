@@ -15,7 +15,8 @@ const keyOf = (post: PostView) => `${post.repostedBy?.userId ?? ""}${post.id}`;
 /**
  * The posts of Home. The first page comes from the server; the next ones load as the end comes near, are added below
  * (a post already on the page is dropped), and a button does the same by hand. After the third post a small block
- * suggests people followed by people you follow. Draw it with a new `key` to start again (the page was reloaded).
+ * suggests people followed by people you follow. What has loaded stays when the page is drawn again in the background
+ * (a Follow button does that); it starts over when the page is loaded again, or the other tab is opened (its own `key`).
  */
 export function FeedList({
   feed,

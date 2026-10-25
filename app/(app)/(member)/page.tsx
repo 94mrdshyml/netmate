@@ -46,13 +46,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
         </Link>
       </nav>
 
-      {/* A new key whenever the page is drawn again (the pill reloads it), so what loaded below and the count start over. */}
-      <NewPostsPill key={`pill-${now}`} since={now} />
-      {following ? null : <SeenTracker key={`seen-${now}`} />}
+      <NewPostsPill since={now} />
+      {following ? null : <SeenTracker />}
 
       <section aria-label="Posts">
         <FeedList
-          key={`${following ? "following" : "for-you"}-${now}`}
+          key={following ? "following" : "for-you"}
           feed={following ? "following" : "for-you"}
           initial={feed.items}
           nextCursor={feed.nextCursor}

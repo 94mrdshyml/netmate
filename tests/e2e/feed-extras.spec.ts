@@ -13,7 +13,10 @@ let c: Who;
 const follow = async (page: Page, username: string) => {
   await page.goto(`/${username}`);
   await page.getByRole("button", { name: /^Follow / }).first().click();
-  await expect(page.getByRole("button", { name: /^Following / }).first()).toBeVisible();
+  // The label changes at once and the button is disabled until the server has saved it: wait for that.
+  const following = page.getByRole("button", { name: /^Following / }).first();
+  await expect(following).toBeVisible();
+  await expect(following).toBeEnabled();
 };
 
 test.beforeAll(async ({ browser }) => {
@@ -42,7 +45,8 @@ test("people followed by people you follow are suggested in a block on Home, wit
   expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   expect(await a.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(412);
   await button.click();
-  await expect(row.getByRole("button", { name: /^Following / })).toBeVisible();
+  // Following her shows "Following"; once the server has saved it the block is drawn again without her.
+  await expect(row).toHaveCount(0);
 
   // Following Cat takes her off the next list.
   await a.page.reload();
@@ -75,6 +79,8 @@ test("posts load as you scroll, each only once", async ({ browser }) => {
   test.setTimeout(150_000);
   const l = await signUpMember(browser, "198.18.64.4", { first: "Lou", last: "Lister" });
   try {
+    // Lou follows Ben, who follows Cat, so the Mates block has Cat in it.
+    await follow(l.page, b.username);
     const host = new URL(l.page.url()).hostname;
     // Posting is limited to 10 a minute, so each batch of nine counts against its own allowance (the same thing every test does for itself).
     for (let i = 0; i < 21; i++) {
@@ -93,8 +99,15 @@ test("posts load as you scroll, each only once", async ({ browser }) => {
     await l.page.locator(".feed-end").scrollIntoViewIfNeeded();
     await expect.poll(() => articles.count()).toBeGreaterThan(20);
 
+    const loaded = await articles.count();
     const ids = await articles.evaluateAll((all) => all.map((el) => (el as HTMLElement).dataset.postId));
     expect(new Set(ids).size).toBe(ids.length);
+
+    // A button that changes something redraws the page in the background. What has loaded must stay.
+    const row = l.page.getByRole("region", { name: "Mates of your mates" }).getByRole("listitem").filter({ hasText: "Cat Mate" });
+    await row.getByRole("button", { name: /^Follow / }).click();
+    await expect(row).toHaveCount(0);
+    await expect(articles).toHaveCount(loaded);
   } finally {
     await l.context.close();
   }

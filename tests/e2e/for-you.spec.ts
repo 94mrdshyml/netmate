@@ -33,7 +33,10 @@ test("a post from someone you follow is in For you without a Suggested line, and
   // Following: the same post is now one of "theirs", with no line, and near the top.
   await member.goto(`/${E2E.admin.username}`);
   await member.getByRole("button", { name: /^Follow / }).first().click();
-  await expect(member.getByRole("button", { name: /^Following / }).first()).toBeVisible();
+  // The label changes at once and the button is disabled until the server has saved it: wait for that, or Home is read too early.
+  const following = member.getByRole("button", { name: /^Following / }).first();
+  await expect(following).toBeVisible();
+  await expect(following).toBeEnabled();
   await member.goto("/");
   const card = member.getByRole("article").filter({ hasText: WORD });
   await expect(card).toBeVisible();
