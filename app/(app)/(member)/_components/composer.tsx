@@ -70,7 +70,7 @@ export function Composer({
   quoteCard?: ReactNode;
   /** Show a card for the first web address in the words (the admin has link previews on). Not with pictures, a GIF or a quote. */
   linkPreviews?: boolean;
-  /** Offer "who can see this": Everyone or Subscribers only. For a new post or quote of a member who has a price while subscriptions are on. */
+  /** Offer the lock button in the bar: the post is for subscribers only. For a new post or quote of a member who has a price while subscriptions are on. */
   subscribersChoice?: boolean;
 }) {
   const router = useRouter();
@@ -232,6 +232,15 @@ export function Composer({
               </button>
             </p>
           ) : null}
+          {audience === "subscribers" ? (
+            <p className="composer-place">
+              <Icon name="lock" size={16} />
+              <span>Only your subscribers can read this</span>
+              <button type="button" className="composer-place-remove" aria-label="Make it for everyone" onClick={() => setAudience("everyone")}>
+                <Icon name="x" size={16} />
+              </button>
+            </p>
+          ) : null}
           {choosingPlace ? (
             <PlacePicker
               onPick={(chosen) => {
@@ -253,19 +262,6 @@ export function Composer({
           ) : null}
         </div>
       </div>
-      {subscribersChoice ? (
-        <fieldset className="audience" disabled={pending}>
-          <legend>Who can see this</legend>
-          <label>
-            <input type="radio" name="audience" value="everyone" checked={audience === "everyone"} onChange={() => setAudience("everyone")} />
-            <span>Everyone</span>
-          </label>
-          <label>
-            <input type="radio" name="audience" value="subscribers" checked={audience === "subscribers"} onChange={() => setAudience("subscribers")} />
-            <span>Subscribers only</span>
-          </label>
-        </fieldset>
-      ) : null}
       <div className="composer-bar">
         <div className="composer-tools">
           <input
@@ -318,6 +314,18 @@ export function Composer({
               }}
             >
               <Icon name="map-pin" />
+            </button>
+          ) : null}
+          {subscribersChoice ? (
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label="Post for subscribers only"
+              aria-pressed={audience === "subscribers"}
+              disabled={pending}
+              onClick={() => setAudience((now) => (now === "subscribers" ? "everyone" : "subscribers"))}
+            >
+              <Icon name="lock" />
             </button>
           ) : null}
         </div>
