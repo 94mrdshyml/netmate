@@ -97,8 +97,9 @@ export async function searchPeople(db: Db, viewerId: string, rawQuery: unknown):
 /**
  * Who to show when nothing is typed: people followed by the people you follow (most shared
  * first), then the newest members. Never yourself, never someone you already follow.
+ * With `matesOnly`, only the people followed by someone you follow (the "Mates of your mates" block on Home).
  */
-export async function suggestPeople(db: Db, viewerId: string, limit = SUGGESTION_COUNT): Promise<PersonView[]> {
+export async function suggestPeople(db: Db, viewerId: string, limit = SUGGESTION_COUNT, opts: { matesOnly?: boolean } = {}): Promise<PersonView[]> {
   const rows = await db.all<PersonRow>(sql`
     select p.user_id, p.username, p.first_name, p.last_name, p.bio, p.avatar_key, 0 as i_follow,
       exists (select 1 from follow_requests rq where rq.requester_id = ${viewerId} and rq.target_id = p.user_id) as requested
@@ -113,6 +114,7 @@ export async function suggestPeople(db: Db, viewerId: string, limit = SUGGESTION
       and ${notBlockedWith(viewerId, sql`p.user_id`)}
       and p.user_id <> ${viewerId}
       and p.user_id not in (select followee_id from follows where follower_id = ${viewerId})
+      ${opts.matesOnly ? sql`and s.shared > 0` : sql``}
     order by coalesce(s.shared, 0) desc, p.created_at desc, p.user_id desc
     limit ${limit}
   `);

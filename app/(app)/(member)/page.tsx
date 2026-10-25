@@ -6,9 +6,12 @@ import { getInstanceState } from "@/instance/request";
 import { currentTime } from "@/lib/time";
 import { listForYou } from "@/server/for-you";
 import { listFeed } from "@/server/posts";
+import { suggestPeople } from "@/server/search";
 import { EmptyState } from "./_components/empty-state";
+import { FeedList } from "./_components/feed-list";
 import { Icon } from "./_components/icon";
-import { PostCard } from "./_components/post-card";
+import { NewPostsPill } from "./_components/new-posts-pill";
+import { PersonRow } from "./_components/person-row";
 import { SeenTracker } from "./_components/seen-tracker";
 import { TopBar } from "./_components/top-bar";
 
@@ -25,6 +28,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
   const { settings } = await getInstanceState();
   // Following is newest first; For you is ranked (docs/PRD.md section 8.3).
   const feed = following ? await listFeed(db, member.userId, { cursor, scope: "following" }) : await listForYou(db, member.userId, { cursor });
+  // "Mates of your mates": a few people followed by people you follow, after the third post (or under an empty feed).
+  const mates = await suggestPeople(db, member.userId, 4, { matesOnly: true });
   const now = currentTime();
 
   return (
@@ -41,12 +46,21 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
         </Link>
       </nav>
 
-      {following ? null : <SeenTracker key={cursor ?? "first"} />}
+      {/* A new key whenever the page is drawn again (the pill reloads it), so what loaded below and the count start over. */}
+      <NewPostsPill key={`pill-${now}`} since={now} />
+      {following ? null : <SeenTracker key={`seen-${now}`} />}
 
       <section aria-label="Posts">
-        {feed.items.map((post) => (
-          <PostCard key={`${post.repostedBy?.userId ?? ""}${post.id}`} post={post} viewerId={member.userId} now={now} />
-        ))}
+        <FeedList
+          key={`${following ? "following" : "for-you"}-${now}`}
+          feed={following ? "following" : "for-you"}
+          initial={feed.items}
+          nextCursor={feed.nextCursor}
+          viewerId={member.userId}
+          now={now}
+          mates={mates}
+          endText={following ? "You are all caught up." : "That is everything from the last 7 days."}
+        />
         {feed.items.length === 0 ? (
           following ? (
             <EmptyState icon="users" title="Your feed is empty" action={{ href: "/search", label: "Find people" }}>
@@ -58,12 +72,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
             </EmptyState>
           )
         ) : null}
-        {feed.nextCursor ? (
-          <Link className="btn btn-ghost more" href={`/?${following ? "feed=following&" : ""}cursor=${feed.nextCursor}`}>
-            {following ? "Older posts" : "More posts"}
-          </Link>
-        ) : feed.items.length > 0 ? (
-          <p className="muted end">{following ? "You are all caught up." : "That is everything from the last 7 days."}</p>
+        {feed.items.length === 0 && mates.length > 0 ? (
+          <section className="mates" aria-label="Mates of your mates">
+            <h2 className="list-title">Mates of your mates</h2>
+            <ul className="people">
+              {mates.map((person) => (
+                <PersonRow key={person.userId} person={person} />
+              ))}
+            </ul>
+          </section>
         ) : null}
       </section>
 
