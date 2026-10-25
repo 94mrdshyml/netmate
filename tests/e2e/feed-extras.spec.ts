@@ -103,8 +103,10 @@ test("posts load as you scroll, each only once", async ({ browser }) => {
     const ids = await articles.evaluateAll((all) => all.map((el) => (el as HTMLElement).dataset.postId));
     expect(new Set(ids).size).toBe(ids.length);
 
-    // Deleting a post that came in on the second page takes it off the list at once.
-    const last = articles.last();
+    // Deleting a post that came in on the second page takes it off the list at once. Lou's own posts come first, newest first, so
+    // the oldest of them ("list post 0") is the twenty-first and is on the second page.
+    const last = articles.filter({ hasText: "list post 0 " });
+    await expect(last).toHaveCount(1);
     await last.getByRole("button", { name: "More options" }).click();
     await last.getByRole("button", { name: "Delete post" }).click();
     await last.getByRole("button", { name: "Delete", exact: true }).click();
