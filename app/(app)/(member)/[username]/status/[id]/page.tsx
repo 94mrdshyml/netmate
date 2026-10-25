@@ -7,6 +7,7 @@ import { getInstanceState } from "@/instance/request";
 import { currentTime } from "@/lib/time";
 import { readKlipyKey } from "@/server/gifs";
 import { getPost, listReplies } from "@/server/posts";
+import { subscribeState } from "@/server/subscriptions";
 import { Composer } from "../../../_components/composer";
 import { EmptyState } from "../../../_components/empty-state";
 import { PageHeader } from "../../../_components/page-header";
@@ -33,9 +34,20 @@ export default async function PostPage({
   const db = getDb(env.DB);
   const { settings } = await getInstanceState();
 
-  const post = await getPost(db, member.userId, id);
+  const post = await getPost(db, member.userId, id, { allowLocked: true });
   // A post that is missing, hidden or under a different username is simply not found.
   if (!post || post.author.username !== username.toLowerCase()) notFound();
+
+  // A subscribers-only post you cannot read: a locked card with a Subscribe button, no replies and no reply box.
+  if (post.locked) {
+    const subscribe = await subscribeState(db, member.userId, post.author.userId);
+    return (
+      <main className="column">
+        <PageHeader title="Post" back={{ href: "/", label: "Back to Home" }} />
+        <PostCard post={post} viewerId={member.userId} now={currentTime()} linkToPost={false} offer={{ cents: subscribe.offerCents, testMode: subscribe.testMode }} />
+      </main>
+    );
+  }
 
   const replies = await listReplies(db, member.userId, post.id, { cursor });
   const now = currentTime();

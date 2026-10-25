@@ -169,6 +169,13 @@
       "when": 1792837104133,
       "tag": "0023_tax_on_top",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1792905558766,
+      "tag": "0024_subscriber_posts",
+      "breakpoints": true
     }
   ]
 }

@@ -5,7 +5,7 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import type { Db } from "@/db";
 import { alias } from "drizzle-orm/sqlite-core";
-import { bookmarks, follows, likes, POST_PHOTO_MAX, postGifs, postLinks, postMedia, postMentions, posts, postTags, profiles, reposts } from "@/db/schema";
+import { bookmarks, follows, likes, paymentSettings, POST_PHOTO_MAX, postGifs, postLinks, postMedia, postMentions, posts, postTags, profiles, reposts } from "@/db/schema";
 import { checkGif, type PostGif } from "@/lib/gif";
 import { checkLinkCard } from "@/links/card";
 import type { LinkCard } from "@/links/fetch";
@@ -15,7 +15,7 @@ import { checkPlace } from "@/lib/place";
 import { extractEntities } from "@/lib/post-entities";
 import { checkPostText } from "@/lib/post-text";
 import { alertOnLike, alertOnMention, alertOnQuote, alertOnReply, alertOnRepost, removeLikeAlert, removeRepostAlert } from "@/server/notifications";
-import { notBlockedWith, notMutedBy, personVisible, visiblePosts } from "@/server/visibility";
+import { hasSubscriberAccessSql, lockedFor, notBlockedWith, notMutedBy, personVisible, visiblePosts } from "@/server/visibility";
 
 export const PAGE_SIZE = 20;
 
@@ -63,6 +63,14 @@ export type PostView = {
    * and a reply can be quoted but not reposted. The server checks again when the button is pressed.
    */
   share: "repost_or_quote" | "quote" | "none";
+  /**
+   * True when the post is for subscribers only and this reader is not one (docs/PRD.md 8.14). The post then carries
+   * no words, pictures, GIF, card, quote, tags or counts: those never leave the server. Only a profile and the post
+   * page ever hold such a post.
+   */
+  locked: boolean;
+  /** True when the post is for subscribers only (shown to people who may read it as a small label). */
+  subscribersOnly: boolean;
   /** The card of the first web address in its text (title, description, picture, site), or null. */
   link: LinkCard | null;
   /** The post this one quotes, or null for an ordinary post. */
@@ -114,6 +122,8 @@ export const postColumns = (viewerId: string) => ({
   lastName: profiles.lastName,
   avatarKey: profiles.avatarKey,
   authorPrivate: profiles.isPrivate,
+  subscribersOf: posts.subscribersOf,
+  locked: sql<number>`${lockedFor(viewerId)}`,
 });
 
 type Row = {
@@ -135,11 +145,41 @@ type Row = {
   lastName: string;
   avatarKey: string | null;
   authorPrivate: boolean;
+  subscribersOf: string | null;
+  locked: number;
 };
 
 // A post with photos or a GIF and no words keeps one space as its text (the database wants 1 to 280
 // characters); it is never shown.
-const toView = (r: Row): PostView => ({
+const toView = (r: Row): PostView => (r.locked ? lockedView(r) : openView(r));
+
+/** A post this reader may not read: who and when, and nothing of what it says. */
+const lockedView = (r: Row): PostView => ({
+  id: r.id,
+  body: "",
+  createdAt: r.createdAt.getTime(),
+  replyCount: 0,
+  likeCount: 0,
+  likedByMe: false,
+  tags: [],
+  mentions: [],
+  link: null,
+  repostCount: 0,
+  repostedByMe: false,
+  bookmarkedByMe: false,
+  parentId: r.parentId,
+  photos: [],
+  gif: null,
+  place: null,
+  share: "none",
+  locked: true,
+  subscribersOnly: true,
+  quote: null,
+  repostedBy: null,
+  author: { userId: r.userId, username: r.username, firstName: r.firstName, lastName: r.lastName, avatarKey: r.avatarKey },
+});
+
+const openView = (r: Row): PostView => ({
   id: r.id,
   body: r.body.trim(),
   createdAt: r.createdAt.getTime(),
@@ -156,7 +196,10 @@ const toView = (r: Row): PostView => ({
   photos: [],
   gif: null,
   place: r.place,
-  share: r.authorPrivate ? "none" : r.parentId ? "quote" : "repost_or_quote",
+  // A private account's posts and a subscribers-only post can be neither reposted nor quoted.
+  share: r.authorPrivate || r.subscribersOf ? "none" : r.parentId ? "quote" : "repost_or_quote",
+  locked: false,
+  subscribersOnly: r.subscribersOf !== null,
   // Filled in by `hydrate` (the card needs the original, which may not be visible to this reader).
   quote: r.quotedPostId ? { available: false } : null,
   repostedBy: null,
@@ -171,25 +214,31 @@ const toView = (r: Row): PostView => ({
 async function hydrate(db: Db, viewerId: string, rows: Row[], by: (RepostedBy | null)[] = []): Promise<PostView[]> {
   const items = rows.map((r, i) => ({ ...toView(r), repostedBy: by[i] ?? null }));
   if (items.length === 0) return items;
-  const ids = [...new Set(items.map((p) => p.id))];
-  const quotedIds = [...new Set(rows.flatMap((r) => (r.quotedPostId ? [r.quotedPostId] : [])))];
+  // A locked post gets no pictures, GIF, card, tags or quote: it is left out of every query below.
+  const open = items.filter((p) => !p.locked);
+  const ids = [...new Set(open.map((p) => p.id))];
+  const quotedIds = [...new Set(rows.flatMap((r) => (r.quotedPostId && !r.locked ? [r.quotedPostId] : [])))];
   // The pictures and GIFs of the posts and of the posts they quote, in the same two queries (a page holds at most 20 of each).
   const mediaIds = [...new Set([...ids, ...quotedIds])];
   // Tags and mentions can only be in text that has a # or an @, so other posts need no query.
-  const withHash = [...new Set(items.filter((p) => p.body.includes("#")).map((p) => p.id))];
-  const withAt = [...new Set(items.filter((p) => p.body.includes("@")).map((p) => p.id))];
+  const withHash = [...new Set(open.filter((p) => p.body.includes("#")).map((p) => p.id))];
+  const withAt = [...new Set(open.filter((p) => p.body.includes("@")).map((p) => p.id))];
   // A card can only belong to a post whose text has a web address.
-  const withLink = [...new Set(items.filter((p) => /https?:\/\/|www\./i.test(p.body)).map((p) => p.id))];
+  const withLink = [...new Set(open.filter((p) => /https?:\/\/|www\./i.test(p.body)).map((p) => p.id))];
   const [media, gifs, quoted, tagRows, mentionRows, linkRows] = await Promise.all([
-    db
-      .select({ postId: postMedia.postId, key: postMedia.key })
-      .from(postMedia)
-      .where(inArray(postMedia.postId, mediaIds))
-      .orderBy(asc(postMedia.postId), asc(postMedia.position)),
-    db
-      .select({ postId: postGifs.postId, url: postGifs.url, width: postGifs.width, height: postGifs.height, title: postGifs.title })
-      .from(postGifs)
-      .where(inArray(postGifs.postId, mediaIds)),
+    mediaIds.length === 0
+      ? Promise.resolve([])
+      : db
+          .select({ postId: postMedia.postId, key: postMedia.key })
+          .from(postMedia)
+          .where(inArray(postMedia.postId, mediaIds))
+          .orderBy(asc(postMedia.postId), asc(postMedia.position)),
+    mediaIds.length === 0
+      ? Promise.resolve([])
+      : db
+          .select({ postId: postGifs.postId, url: postGifs.url, width: postGifs.width, height: postGifs.height, title: postGifs.title })
+          .from(postGifs)
+          .where(inArray(postGifs.postId, mediaIds)),
     quotedIds.length === 0
       ? Promise.resolve([])
       : db
@@ -246,6 +295,7 @@ async function hydrate(db: Db, viewerId: string, rows: Row[], by: (RepostedBy | 
     });
   }
   return items.map((p, i) => {
+    if (p.locked) return p;
     const quotedId = rows[i]?.quotedPostId;
     return {
       ...p,
@@ -399,7 +449,8 @@ export async function listByAuthor(
     .innerJoin(profiles, eq(profiles.userId, posts.authorId))
     .where(
       and(
-        visiblePosts(viewerId),
+        // On a profile, a subscribers-only post you cannot read still shows, as a locked card. Replies follow the post: hidden.
+        visiblePosts(viewerId, { locked: !opts.replies }),
         eq(posts.authorId, authorId),
         opts.replies ? isNotNull(posts.parentId) : isNull(posts.parentId),
         olderThan(cursor),
@@ -413,14 +464,17 @@ export async function listByAuthor(
   return mergedPage(db, viewerId, originals, repostRows, limit);
 }
 
-/** One post, or null when it does not exist or this person may not see it. */
-export async function getPost(db: Db, viewerId: string, postId: string): Promise<PostView | null> {
+/**
+ * One post, or null when it does not exist or this person may not see it. A subscribers-only post the reader cannot
+ * read is null too, except for the post page, which passes `allowLocked` to draw a locked card (see `PostView.locked`).
+ */
+export async function getPost(db: Db, viewerId: string, postId: string, opts: { allowLocked?: boolean } = {}): Promise<PostView | null> {
   if (!isId("post", postId)) return null;
   const row = await db
     .select(postColumns(viewerId))
     .from(posts)
     .innerJoin(profiles, eq(profiles.userId, posts.authorId))
-    .where(and(visiblePosts(viewerId), eq(posts.id, postId)))
+    .where(and(visiblePosts(viewerId, { locked: opts.allowLocked }), eq(posts.id, postId)))
     .get();
   if (!row) return null;
   return (await hydrate(db, viewerId, [row]))[0] ?? null;
@@ -448,7 +502,7 @@ export async function listReplies(
 
 export type CreatePostResult =
   | { ok: true; id: string }
-  | { ok: false; code: "empty" | "too_long" | "bad_characters" | "parent_not_found" | "bad_photos" | "bad_gif" | "bad_link" | "gif_with_photos" | "quote_and_reply" | "quote_not_found" | "quote_private" | "place_too_long" | "place_bad_characters" };
+  | { ok: false; code: "empty" | "too_long" | "bad_characters" | "parent_not_found" | "bad_photos" | "bad_gif" | "bad_link" | "gif_with_photos" | "quote_and_reply" | "quote_not_found" | "quote_private" | "quote_subscribers" | "audience_reply" | "audience_off" | "place_too_long" | "place_bad_characters" };
 
 const replyCountOf = (parentId: string) =>
   sql`(select count(*) from ${posts} as r where r.parent_id = ${parentId} and r.deleted_at is null)`;
@@ -463,6 +517,9 @@ export function photoKeysAreValid(authorId: string, keys: unknown): keys is stri
 /**
  * Makes a post, or a reply when `parentId` is given. `photoKeys` are keys of pictures already
  * uploaded and checked by the caller (the action); this only checks they are this person's.
+ *
+ * `audience` "subscribers" makes a post only its author's paying subscribers can read. It is for a new post or a quote, not a
+ * reply, and only while subscriptions are on and the author has a price. A reply takes the audience of the post it answers.
  */
 export async function createPost(
   db: Db,
@@ -474,6 +531,7 @@ export async function createPost(
   rawGif?: unknown,
   quotedId?: string,
   rawLink?: unknown,
+  audience: "everyone" | "subscribers" = "everyone",
 ): Promise<CreatePostResult> {
   if (!photoKeysAreValid(authorId, photoKeys)) return { ok: false, code: "bad_photos" };
   const checkedGif = checkGif(rawGif);
@@ -486,7 +544,7 @@ export async function createPost(
   let quotedAuthorId: string | null = null;
   if (quoting) {
     const target = await shareTarget(db, authorId, quotedId);
-    if (!target.ok) return { ok: false, code: target.code === "private" ? "quote_private" : "quote_not_found" };
+    if (!target.ok) return { ok: false, code: target.code === "private" ? "quote_private" : target.code === "subscribers" ? "quote_subscribers" : "quote_not_found" };
     quotedAuthorId = target.authorId;
   }
   const place = checkPlace(rawPlace);
@@ -497,10 +555,21 @@ export async function createPost(
   if (!text.ok) return { ok: false, code: text.reason };
 
   let parentAuthorId: string | null = null;
+  let subscribersOf: string | null = null;
   if (parentId !== undefined) {
+    if (audience === "subscribers") return { ok: false, code: "audience_reply" };
     const parent = await getPost(db, authorId, parentId);
     if (!parent) return { ok: false, code: "parent_not_found" };
     parentAuthorId = parent.author.userId;
+    // The replies follow the post: a reply to a subscribers-only post is for the same creator's subscribers.
+    subscribersOf = (await db.select({ of: posts.subscribersOf }).from(posts).where(eq(posts.id, parentId)).get())?.of ?? null;
+  } else if (audience === "subscribers") {
+    const [settings, me] = await Promise.all([
+      db.select({ enabled: paymentSettings.enabled }).from(paymentSettings).where(eq(paymentSettings.id, "singleton")).get(),
+      db.select({ price: profiles.subscriptionPriceCents }).from(profiles).where(eq(profiles.userId, authorId)).get(),
+    ]);
+    if (!settings?.enabled || me?.price == null) return { ok: false, code: "audience_off" };
+    subscribersOf = authorId;
   }
 
   // Hashtags and mentions are found in the text. Only people who exist, are active and have no block
@@ -512,7 +581,15 @@ export async function createPost(
       : await db
           .select({ userId: profiles.userId })
           .from(profiles)
-          .where(and(inArray(profiles.username, mentions), eq(profiles.status, "active"), notBlockedWith(authorId, profiles.userId)));
+          .where(
+            and(
+              inArray(profiles.username, mentions),
+              eq(profiles.status, "active"),
+              notBlockedWith(authorId, profiles.userId),
+              // Nobody is alerted about a post they cannot read.
+              subscribersOf ? or(eq(profiles.userId, subscribersOf), hasSubscriberAccessSql(profiles.userId, subscribersOf)) : undefined,
+            ),
+          );
   // Nobody is alerted twice for one post: the author of a reply's parent already has the reply alert,
   // and the author of a quoted post has the quote alert (docs/PRD.md section 8.7). Nor are you alerted about yourself.
   const alertMentioned = mentioned.map((m) => m.userId).filter((u) => u !== authorId && u !== parentAuthorId && u !== quotedAuthorId);
@@ -528,7 +605,7 @@ export async function createPost(
   const createdAt = new Date();
   const insert = db
     .insert(posts)
-    .values({ id, authorId, parentId: parentId ?? null, quotedPostId: quotedId ?? null, body: text.text, place: place.place, createdAt });
+    .values({ id, authorId, parentId: parentId ?? null, quotedPostId: quotedId ?? null, subscribersOf, body: text.text, place: place.place, createdAt });
   const photos = photoKeys.map((key, position) => ({ postId: id, position, key }));
   if (parentId === undefined && photos.length === 0 && !gif && !quoting && !link && tags.length === 0 && mentioned.length === 0) {
     await insert;
@@ -561,22 +638,24 @@ async function shareTarget(
   db: Db,
   viewerId: string,
   postId: string,
-): Promise<{ ok: true; authorId: string; isReply: boolean } | { ok: false; code: "not_found" | "private" }> {
+): Promise<{ ok: true; authorId: string; isReply: boolean } | { ok: false; code: "not_found" | "private" | "subscribers" }> {
   if (!isId("post", postId)) return { ok: false, code: "not_found" };
   const row = await db
-    .select({ authorId: posts.authorId, parentId: posts.parentId, isPrivate: profiles.isPrivate })
+    .select({ authorId: posts.authorId, parentId: posts.parentId, isPrivate: profiles.isPrivate, subscribersOf: posts.subscribersOf })
     .from(posts)
     .innerJoin(profiles, eq(profiles.userId, posts.authorId))
     .where(and(visiblePosts(viewerId), eq(posts.id, postId)))
     .get();
   if (!row) return { ok: false, code: "not_found" };
   if (row.isPrivate) return { ok: false, code: "private" };
+  // A post for subscribers only stays with them: it can be neither reposted nor quoted.
+  if (row.subscribersOf) return { ok: false, code: "subscribers" };
   return { ok: true, authorId: row.authorId, isReply: row.parentId !== null };
 }
 
 export type RepostResult =
   | { ok: true; reposted: boolean; repostCount: number }
-  | { ok: false; code: "not_found" | "private" | "reply" };
+  | { ok: false; code: "not_found" | "private" | "reply" | "subscribers" };
 
 /**
  * Sets whether you repost a post (the wanted state, not a flip). The row, the counter on the post and

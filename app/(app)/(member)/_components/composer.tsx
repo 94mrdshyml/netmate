@@ -53,6 +53,7 @@ export function Composer({
   quoteId,
   quoteCard,
   linkPreviews = false,
+  subscribersChoice = false,
 }: {
   parentId?: string;
   placeholder?: string;
@@ -69,6 +70,8 @@ export function Composer({
   quoteCard?: ReactNode;
   /** Show a card for the first web address in the words (the admin has link previews on). Not with pictures, a GIF or a quote. */
   linkPreviews?: boolean;
+  /** Offer "who can see this": Everyone or Subscribers only. For a new post or quote of a member who has a price while subscriptions are on. */
+  subscribersChoice?: boolean;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -79,6 +82,7 @@ export function Composer({
   const [choosingPlace, setChoosingPlace] = useState(false);
   const [gif, setGif] = useState<PostGif | null>(null);
   const [choosingGif, setChoosingGif] = useState(false);
+  const [audience, setAudience] = useState<"everyone" | "subscribers">("everyone");
   const picker = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
   const photosRef = useRef(photos);
@@ -144,6 +148,7 @@ export function Composer({
             gif: gif ?? undefined,
             quote: quoteId,
             linkToken: preview.card ? (preview.token ?? undefined) : undefined,
+            audience: subscribersChoice ? audience : undefined,
           });
           if (result.ok) {
             // A reply stays on the page: clear the box and show it. (A new post goes Home instead.)
@@ -248,6 +253,19 @@ export function Composer({
           ) : null}
         </div>
       </div>
+      {subscribersChoice ? (
+        <fieldset className="audience" disabled={pending}>
+          <legend>Who can see this</legend>
+          <label>
+            <input type="radio" name="audience" value="everyone" checked={audience === "everyone"} onChange={() => setAudience("everyone")} />
+            <span>Everyone</span>
+          </label>
+          <label>
+            <input type="radio" name="audience" value="subscribers" checked={audience === "subscribers"} onChange={() => setAudience("subscribers")} />
+            <span>Subscribers only</span>
+          </label>
+        </fieldset>
+      ) : null}
       <div className="composer-bar">
         <div className="composer-tools">
           <input

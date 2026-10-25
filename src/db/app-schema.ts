@@ -186,6 +186,11 @@ export const posts = sqliteTable(
      * and its card says the post is not available.
      */
     quotedPostId: text("quoted_post_id").references((): AnySQLiteColumn => posts.id, { onDelete: "set null" }),
+    /**
+     * When set, only this person and their paying subscribers can see the post (docs/PRD.md 8.14, step 3). A reply to
+     * such a post carries the same value, so the replies follow the post. Null for everyone else.
+     */
+    subscribersOf: text("subscribers_of").references((): AnySQLiteColumn => user.id, { onDelete: "cascade" }),
     replyCount: integer("reply_count").notNull().default(0),
     likeCount: integer("like_count").notNull().default(0),
     /** How many people reposted it. Never negative (checked by hand in migration 0013). */
