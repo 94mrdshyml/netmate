@@ -85,7 +85,7 @@ test("the admin saves the Polar keys, turns subscriptions on and sets a price", 
 
   // Subscriptions are on but nobody has a price yet: the composer offers no choice of who can see a post.
   await page.goto("/compose");
-  await expect(page.getByRole("group", { name: "Who can see this" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Post for subscribers only" })).toHaveCount(0);
 
   // Members now have a Subscriptions row in Settings, with three tabs inside; the admin sets a price on My price.
   await page.goto("/settings");
@@ -288,14 +288,21 @@ const OPEN_WORD = `banana${STAMP}`;
 
 test("a member with a price can make a post for subscribers only", async ({ page }) => {
   await page.goto("/compose");
-  const audience = page.getByRole("group", { name: "Who can see this" });
-  await expect(audience.getByRole("radio", { name: "Everyone" })).toBeChecked();
+  // A lock button sits in the bar with the picture, GIF and place buttons, off until pressed.
+  const lock = page.getByRole("button", { name: "Post for subscribers only" });
+  await expect(lock).toHaveAttribute("aria-pressed", "false");
+  expect((await lock.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await page.getByLabel("Your post").fill(`Everyone can read this ${OPEN_WORD}`);
   await sendPost(page);
 
   await page.goto("/compose");
-  await page.getByRole("radio", { name: "Subscribers only" }).check({ force: true });
-  await expect(page.getByRole("radio", { name: "Subscribers only" })).toBeChecked();
+  await page.getByRole("button", { name: "Post for subscribers only" }).click();
+  await expect(page.getByRole("button", { name: "Post for subscribers only" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("Only your subscribers can read this")).toBeVisible();
+  // The line under the text can take it back.
+  await page.getByRole("button", { name: "Make it for everyone" }).click();
+  await expect(page.getByText("Only your subscribers can read this")).toHaveCount(0);
+  await page.getByRole("button", { name: "Post for subscribers only" }).click();
   await page.getByLabel("Your post").fill(`Only subscribers read this ${LOCKED_WORD}`);
   await sendPost(page);
 
