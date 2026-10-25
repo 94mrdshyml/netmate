@@ -4,10 +4,12 @@ import { getMember } from "@/auth/session";
 import { getDb } from "@/db";
 import { getInstanceState } from "@/instance/request";
 import { currentTime } from "@/lib/time";
+import { listForYou } from "@/server/for-you";
 import { listFeed } from "@/server/posts";
 import { EmptyState } from "./_components/empty-state";
 import { Icon } from "./_components/icon";
 import { PostCard } from "./_components/post-card";
+import { SeenTracker } from "./_components/seen-tracker";
 import { TopBar } from "./_components/top-bar";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +23,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
   const { env } = await getCloudflareContext({ async: true });
   const db = getDb(env.DB);
   const { settings } = await getInstanceState();
-  const feed = await listFeed(db, member.userId, { cursor, scope: following ? "following" : "all" });
+  // Following is newest first; For you is ranked (docs/PRD.md section 8.3).
+  const feed = following ? await listFeed(db, member.userId, { cursor, scope: "following" }) : await listForYou(db, member.userId, { cursor });
   const now = currentTime();
 
   return (
@@ -29,7 +32,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
       <TopBar instanceName={settings.name} logoKey={settings.logoKey} member={member} />
       <h1 className="sr-only">{settings.name}</h1>
 
-      {/* "For you" is the latest posts from everyone until the ranked feed arrives. */}
       <nav className="tabs" aria-label="Feeds">
         <Link href="/" aria-current={following ? undefined : "page"}>
           For you
@@ -38,6 +40,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
           Following
         </Link>
       </nav>
+
+      {following ? null : <SeenTracker key={cursor ?? "first"} />}
 
       <section aria-label="Posts">
         {feed.items.map((post) => (
@@ -56,10 +60,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
         ) : null}
         {feed.nextCursor ? (
           <Link className="btn btn-ghost more" href={`/?${following ? "feed=following&" : ""}cursor=${feed.nextCursor}`}>
-            Older posts
+            {following ? "Older posts" : "More posts"}
           </Link>
         ) : feed.items.length > 0 ? (
-          <p className="muted end">{following ? "You are all caught up." : "You have seen everything."}</p>
+          <p className="muted end">{following ? "You are all caught up." : "That is everything from the last 7 days."}</p>
         ) : null}
       </section>
 

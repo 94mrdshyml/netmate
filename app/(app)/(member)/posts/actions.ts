@@ -11,8 +11,9 @@ import { firstLink } from "@/lib/post-links";
 import type { LinkCard } from "@/links/fetch";
 import { verifyLinkCard } from "@/links/token";
 import { setBookmark } from "@/server/bookmarks";
+import { markSeen } from "@/server/seen";
 import { createPost, deletePost, setLike, setRepost } from "@/server/posts";
-import { limitLike, limitPost, limitRepost, limitSave, postSubject, tooManyMessage } from "@/server/rate-limit";
+import { limitLike, limitPost, limitRepost, limitSave, limitSeen, postSubject, tooManyMessage } from "@/server/rate-limit";
 import { isAttachable } from "@/storage/upload";
 
 // Every action checks the session itself and never trusts an id from the browser (CLAUDE.md rule 5).
@@ -156,4 +157,22 @@ export async function deletePostAction(postId: string): Promise<{ ok: boolean }>
   const result = await deletePost(getDb(env.DB), member.userId, String(postId));
   revalidatePath("/");
   return { ok: result.ok };
+}
+
+/**
+ * The phone says these posts were half on screen for a second. They are kept for this member only, to rank their own For
+ * you feed lower on the next look (docs/PRD.md section 8.3). Quiet on any failure: seeing a post must never show an error.
+ */
+export async function markSeenAction(ids: string[]): Promise<void> {
+  const member = await getMember();
+  if (!member) redirect("/sign-in");
+  const { env } = await getCloudflareContext({ async: true });
+
+  const limited = await limitSeen(env.DB, env.AUTH_SECRET, member.userId);
+  if (!limited.ok) return;
+  try {
+    await markSeen(getDb(env.DB), member.userId, ids);
+  } catch {
+    // A missed view only means a post may come back once more.
+  }
 }

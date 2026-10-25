@@ -94,6 +94,7 @@ IMPORTANT: these are also enforced by `.claude/hooks/guard.mjs` and CI. Do not t
 2. **Privacy promises.**
    - Analytics is owner-only and counts-only. No query, page or email ever names who viewed someone.
    - Bookmarks are private. Nobody sees a bookmark count on a post.
+   - What a member has seen (`post_seen`, owner decision, session 62) is kept only to rank that member's own For you feed: private to them, never shown, counted, exported, used by analytics or compared between members, only posts they may see (`visiblePosts`), deleted after 7 days. No query, page or email names who saw what.
    - Never store, log or forward a visitor IP address except as a rate-limit key that expires. Never log emails, passwords, tokens, API keys or reset links.
    - Readers' browsers make no request to third parties by default. Fonts, avatars and icons are self-hosted. Only GIF search (if enabled) and link-preview pictures reach outside. One deliberate exception (owner decision, session 51): when a member taps Subscribe on a profile, their browser is sent to Polar's own checkout page (an `https` address on `polar.sh`, checked by the server), and nothing else. Polar is given only what its page needs: our random ids for the two people and, so the page opens filled in (owner decision, session 53), the subscriber's own name and email (editable there). Nothing else about a member, and nothing about the creator beyond their id, is sent; neither is ever logged.
 3. **Setup and admin.**

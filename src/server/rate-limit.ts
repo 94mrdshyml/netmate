@@ -18,6 +18,7 @@ export const LIMITS = {
   likes: { name: "likes", max: 60, windowMs: MINUTE },
   reposts: { name: "reposts", max: 30, windowMs: MINUTE },
   saves: { name: "saves", max: 60, windowMs: MINUTE },
+  seen: { name: "seen", max: 30, windowMs: MINUTE },
   follows: { name: "follows", max: 30, windowMs: 10 * MINUTE },
   uploads: { name: "uploads", max: 30, windowMs: 10 * MINUTE },
   places: { name: "places", max: 40, windowMs: MINUTE },
@@ -122,6 +123,10 @@ export const limitRepost = (db: D1Database, salt: string, userId: string, now?: 
 
 export const limitSave = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.saves, userId, salt, now);
+
+/** The phone tells us which posts were on screen (docs/PRD.md section 8.3): in batches every few seconds, so 30 a minute is generous. */
+export const limitSeen = (db: D1Database, salt: string, userId: string, now?: number) =>
+  takeSlot(db, LIMITS.seen, userId, salt, now);
 
 export const limitFollow = (db: D1Database, salt: string, userId: string, now?: number) =>
   takeSlot(db, LIMITS.follows, userId, salt, now);

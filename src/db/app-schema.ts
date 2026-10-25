@@ -372,6 +372,25 @@ export const bookmarks = sqliteTable(
   (t) => [primaryKey({ columns: [t.userId, t.postId] }), index("bookmarks_user_idx").on(t.userId, t.createdAt)],
 );
 
+/**
+ * Which posts a member has seen, so their own For you feed can rank those lower (docs/PRD.md section 8.3; owner decision,
+ * session 62). Private to the member: it is read only to rank that member's own feed, never shown, counted, exported or
+ * joined to anyone else's rows, and rows older than seven days are deleted whenever any member's phone reports a view.
+ */
+export const postSeen = sqliteTable(
+  "post_seen",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    seenAt: integer("seen_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.postId] }), index("post_seen_at_idx").on(t.seenAt)],
+);
+
 /** Who follows whom. One row per pair; the database refuses following yourself. */
 export const follows = sqliteTable(
   "follows",
