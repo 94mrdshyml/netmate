@@ -18,7 +18,7 @@ let caseId = "";
 test.beforeAll(async ({ browser }) => {
   author = await signUpMember(browser, "198.18.65.1", { first: "Ava", last: "Author" });
   reporter = await signUpMember(browser, "198.18.65.2", { first: "Rex", last: "Reporter" });
-  mod = await signUpMember(browser, "198.18.65.3", { first: "Max", last: "Moderator" });
+  mod = await signUpMember(browser, "198.18.65.3", { first: "Max", last: "Marshal" });
 });
 
 test.afterAll(async () => {
@@ -81,7 +81,7 @@ test("a reported post is taken down from its case: gone for everyone, the author
 test("a moderator can suspend an ordinary member, but not the owner, another moderator or themselves", async ({ page }) => {
   // The admin makes Max a moderator (and Ava another one, to see that a moderator cannot be suspended by a moderator).
   await page.goto("/hq/members");
-  for (const name of ["Max Moderator"]) {
+  for (const name of ["Max Marshal"]) {
     await page.getByLabel("Search members").fill(name);
     await page.getByRole("button", { name: "Search" }).click();
     await page.getByRole("button", { name: `Make ${name} a moderator` }).click();
@@ -98,7 +98,7 @@ test("a moderator can suspend an ordinary member, but not the owner, another mod
   await mod.page.getByLabel("Search members").fill("Riya");
   await mod.page.getByRole("button", { name: "Search" }).click();
   await expect(mod.page.getByRole("button", { name: /^Suspend / })).toHaveCount(0);
-  await mod.page.getByLabel("Search members").fill("Max Moderator");
+  await mod.page.getByLabel("Search members").fill("Max Marshal");
   await mod.page.getByRole("button", { name: "Search" }).click();
   await expect(mod.page.getByRole("button", { name: /^Suspend / })).toHaveCount(0);
   // A moderator sees no email address, and no Make moderator button.
@@ -146,10 +146,10 @@ test("suspending a member signs them out, tells them at sign-in, hides them, and
 
 test("put back: the moderator is an ordinary member again", async ({ page }) => {
   await page.goto("/hq/members");
-  await page.getByLabel("Search members").fill("Max Moderator");
+  await page.getByLabel("Search members").fill("Max Marshal");
   await page.getByRole("button", { name: "Search" }).click();
-  await page.getByRole("button", { name: "Remove Max Moderator as a moderator" }).click();
-  await expect(page.getByRole("button", { name: "Make Max Moderator a moderator" })).toBeVisible();
+  await page.getByRole("button", { name: "Remove Max Marshal as a moderator" }).click();
+  await expect(page.getByRole("button", { name: "Make Max Marshal a moderator" })).toBeVisible();
   expect((await mod.page.goto("/hq/cases"))?.status()).toBe(404);
   expect(E2E.admin.username).toBeTruthy();
 });
