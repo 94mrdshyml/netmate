@@ -176,6 +176,13 @@
       "when": 1792905558766,
       "tag": "0024_subscriber_posts",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1792908679755,
+      "tag": "0025_post_seen",
+      "breakpoints": true
     }
   ]
 }

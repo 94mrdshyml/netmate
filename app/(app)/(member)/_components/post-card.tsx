@@ -30,7 +30,13 @@ export function PostCard({
   const name = `${post.author.firstName} ${post.author.lastName}`;
 
   return (
-    <article className={linkToPost ? "post" : "post post-focus"} aria-label={`Post by ${name}`}>
+    <article className={linkToPost ? "post" : "post post-focus"} aria-label={`Post by ${name}`} data-post-id={post.id}>
+      {post.suggested ? (
+        <p className="post-reposted">
+          <Icon name="users" size={14} />
+          <span>Suggested for you</span>
+        </p>
+      ) : null}
       {post.repostedBy ? (
         <p className="post-reposted">
           <Icon name="repeat" size={14} />

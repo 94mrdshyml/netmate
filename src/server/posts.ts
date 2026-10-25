@@ -71,6 +71,8 @@ export type PostView = {
   locked: boolean;
   /** True when the post is for subscribers only (shown to people who may read it as a small label). */
   subscribersOnly: boolean;
+  /** Set only in For you, on a post by someone the reader does not follow: it is drawn with a "Suggested for you" line. */
+  suggested: boolean;
   /** The card of the first web address in its text (title, description, picture, site), or null. */
   link: LinkCard | null;
   /** The post this one quotes, or null for an ordinary post. */
@@ -126,7 +128,7 @@ export const postColumns = (viewerId: string) => ({
   locked: sql<number>`${lockedFor(viewerId)}`,
 });
 
-type Row = {
+export type Row = {
   id: string;
   body: string;
   place: string | null;
@@ -174,6 +176,7 @@ const lockedView = (r: Row): PostView => ({
   share: "none",
   locked: true,
   subscribersOnly: true,
+  suggested: false,
   quote: null,
   repostedBy: null,
   author: { userId: r.userId, username: r.username, firstName: r.firstName, lastName: r.lastName, avatarKey: r.avatarKey },
@@ -200,6 +203,7 @@ const openView = (r: Row): PostView => ({
   share: r.authorPrivate || r.subscribersOf ? "none" : r.parentId ? "quote" : "repost_or_quote",
   locked: false,
   subscribersOnly: r.subscribersOf !== null,
+  suggested: false,
   // Filled in by `hydrate` (the card needs the original, which may not be visible to this reader).
   quote: r.quotedPostId ? { available: false } : null,
   repostedBy: null,
