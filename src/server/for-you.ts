@@ -7,7 +7,7 @@ import { and, desc, eq, gte, isNull, lte, or, sql, type SQL } from "drizzle-orm"
 import { alias } from "drizzle-orm/sqlite-core";
 import type { Db } from "@/db";
 import { posts, profiles, reposts } from "@/db/schema";
-import { FEED, rank, scorePost } from "@/lib/feed-score";
+import { FEED, isJustPosted, rank, scorePost } from "@/lib/feed-score";
 import { pageOf, postColumns, type Entry, type Page, type RepostedBy, type Row } from "@/server/posts";
 import { notMutedBy, personVisible, visiblePosts } from "@/server/visibility";
 
@@ -37,7 +37,7 @@ type Candidate = {
   near: boolean;
 };
 
-type Scored = Candidate & { id: string; authorId: string; score: number };
+type Scored = Candidate & { id: string; authorId: string; score: number; justPosted: boolean };
 
 /** A page of the For you feed, best first. A cursor from an earlier page keeps the ranking as it was made, so scrolling does not shuffle. */
 export async function listForYou(db: Db, viewerId: string, opts: { cursor?: unknown; now?: number } = {}): Promise<Page> {
@@ -149,9 +149,9 @@ export async function listForYou(db: Db, viewerId: string, opts: { cursor?: unkn
       affinity: affinity.get(r.userId) ?? 0,
       friends: friendCount,
       seen: seen.has(r.id),
-      own: c.by === null && r.userId === viewerId,
     });
-    const entry: Scored = { ...c, id: r.id, authorId: r.userId, score };
+    const justPosted = isJustPosted(c.by === null && r.userId === viewerId, c.at, asOf);
+    const entry: Scored = { ...c, id: r.id, authorId: r.userId, score, justPosted };
     const had = best.get(r.id);
     if (!had || entry.score > had.score) best.set(r.id, entry);
   }

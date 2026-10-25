@@ -296,6 +296,16 @@ describe("the order", () => {
     expect(later.indexOf(busy)).toBeLessThan(later.indexOf(mine));
   });
 
+  it("puts your newest post first even when an older post of yours, from the same ten minutes, has more reactions", async () => {
+    const me = await member();
+    const older = await post(me, "older, with likes", 2 * 60_000);
+    for (let i = 0; i < 6; i++) await setLike(db(), (await member()).id, older, true);
+    const older2 = await post(me, "also older", 90_000);
+    const newest = await post(me, "newest, no reactions");
+    const got = (await ids(me)).filter((x) => [older, older2, newest].includes(x));
+    expect(got).toEqual([newest, older2, older]);
+  });
+
   it("counts a busy author's second post for less, so one author cannot fill the feed", async () => {
     const me = await member();
     const busy = await member();

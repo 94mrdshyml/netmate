@@ -23,12 +23,11 @@ export const FEED = {
   friendStep: 0.25,
   friendMax: 4,
   /**
-   * A post the reader wrote in the last `justPostedMs` goes before everything else, so the post you just wrote is at the top
-   * when you land on Home (owner-facing behaviour from before the ranked feed; the Home tests rely on it). Added to the score,
-   * and larger than any score the other parts can make.
+   * A post the reader wrote in the last `justPostedMs` goes before everything else, newest first, so the post you just wrote
+   * is at the top when you land on Home (how Home always behaved; the Home tests rely on it). They form a group of their own
+   * ahead of the ranked posts, in order of time, so reactions or the same-author rule cannot put an older one first.
    */
   justPostedMs: 10 * MINUTE,
-  justPostedBonus: 1000,
   /** A post the reader has already seen counts this much of its score. */
   seenFactor: 0.15,
   /** The second post by one author counts this much of its score, the third this squared, and so on. */
@@ -59,8 +58,6 @@ export type ScoreInput = {
   /** For a stranger's post: how many people the reader follows liked or reposted it. */
   friends: number;
   seen: boolean;
-  /** The reader wrote this post themself (not a repost of it). */
-  own: boolean;
 };
 
 /** `1 + ln(1 + likes + 2 x reposts + 2 x replies)`: the tenth like counts much less than the first. */
@@ -82,18 +79,30 @@ export function closenessPart(near: boolean, affinity: number, friends: number):
 }
 
 export function scorePost(i: ScoreInput): number {
-  const score = reactionPart(i.likes, i.reposts, i.replies) * freshnessPart(i.reachedAt, i.now) * closenessPart(i.near, i.affinity, i.friends) * (i.seen ? FEED.seenFactor : 1);
-  return i.own && i.now - i.reachedAt < FEED.justPostedMs ? score + FEED.justPostedBonus : score;
+  return reactionPart(i.likes, i.reposts, i.replies) * freshnessPart(i.reachedAt, i.now) * closenessPart(i.near, i.affinity, i.friends) * (i.seen ? FEED.seenFactor : 1);
 }
 
-export type Ranked = { score: number; authorId: string; at: number; id: string };
+/** True for a post the reader wrote themself (not a repost of it) within the last `justPostedMs`. */
+export function isJustPosted(own: boolean, reachedAt: number, now: number): boolean {
+  return own && now - reachedAt >= 0 && now - reachedAt < FEED.justPostedMs;
+}
+
+export type Ranked = { score: number; authorId: string; at: number; id: string; justPosted?: boolean };
 
 /**
  * Puts the entries in order, best first. The best post of each author keeps its score, the author's next counts
  * `sameAuthorFactor` of its own, the one after that that squared, and so on, so one busy author cannot fill the feed.
  * Ties go to the newer post, then to the larger id, so the order is the same every time it is worked out.
+ * Posts the reader just wrote come first as a group, newest first, and take no part in the same-author rule.
  */
 export function rank<T extends Ranked>(entries: T[]): T[] {
+  const newer = (a: Ranked, b: Ranked) => b.at - a.at || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
+  const justPosted = entries.filter((e) => e.justPosted).sort(newer);
+  const others = rankedOthers(entries.filter((e) => !e.justPosted));
+  return [...justPosted, ...others];
+}
+
+function rankedOthers<T extends Ranked>(entries: T[]): T[] {
   const byScore = [...entries].sort((a, b) => b.score - a.score || b.at - a.at || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
   const placed = new Map<string, number>();
   const adjusted = byScore.map((e) => {

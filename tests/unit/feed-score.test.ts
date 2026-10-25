@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { FEED, closenessPart, freshnessPart, rank, reactionPart, scorePost, type ScoreInput } from "@/lib/feed-score";
+import { FEED, closenessPart, freshnessPart, isJustPosted, rank, reactionPart, scorePost, type ScoreInput } from "@/lib/feed-score";
 
 const NOW = Date.UTC(2026, 9, 25, 12, 0, 0);
 const HOUR = 3_600_000;
 
-const base: ScoreInput = { likes: 0, reposts: 0, replies: 0, reachedAt: NOW, now: NOW, near: true, affinity: 0, friends: 0, seen: false, own: false };
+const base: ScoreInput = { likes: 0, reposts: 0, replies: 0, reachedAt: NOW, now: NOW, near: true, affinity: 0, friends: 0, seen: false };
 
 describe("the reaction part", () => {
   it("is 1 for a post nobody reacted to", () => {
@@ -66,14 +66,20 @@ describe("the whole score", () => {
 });
 
 describe("the post you just wrote", () => {
-  it("goes before everything else for ten minutes, then ranks like any post", () => {
-    const busy = scorePost({ ...base, likes: 500, reposts: 100, replies: 100, affinity: 8 });
-    expect(scorePost({ ...base, own: true })).toBeGreaterThan(busy);
-    expect(scorePost({ ...base, own: true, reachedAt: NOW - 9 * 60_000 })).toBeGreaterThan(busy);
-    expect(scorePost({ ...base, own: true, reachedAt: NOW - 11 * 60_000 })).toBeLessThan(1);
+  const e = (id: string, authorId: string, score: number, at: number, justPosted = false) => ({ id, authorId, score, at, justPosted });
+
+  it("counts for ten minutes, and only for your own post", () => {
+    expect(isJustPosted(true, NOW - 9 * 60_000, NOW)).toBe(true);
+    expect(isJustPosted(true, NOW - 11 * 60_000, NOW)).toBe(false);
+    expect(isJustPosted(false, NOW, NOW)).toBe(false);
   });
-  it("is for your own posts only", () => {
-    expect(scorePost({ ...base, own: false })).toBe(1);
+  it("goes before every other post, newest first, whatever the scores are", () => {
+    const out = rank([e("busy", "B", 99, NOW), e("old", "A", 5, NOW - 120_000, true), e("new", "A", 1, NOW - 1000, true), e("mid", "A", 9, NOW - 60_000, true)]);
+    expect(out.map((x) => x.id)).toEqual(["new", "mid", "old", "busy"]);
+  });
+  it("does not count against the same-author rule, and does not change it for the rest", () => {
+    const out = rank([e("a1", "A", 10, 0), e("a2", "A", 9, 0), e("j1", "A", 1, 5, true), e("j2", "A", 1, 4, true)]);
+    expect(out.map((x) => x.id)).toEqual(["j1", "j2", "a1", "a2"]);
   });
 });
 
